@@ -9,4 +9,6 @@
 ### 2026-03-21 — Dokumentacja projektu (nie feature aplikacji)
 - Wdrożenie systemu zarządzania wiedzą (Obsidian vault w projekcie) — narzędzie deweloperskie do dokumentowania decyzji architektonicznych, nie część aplikacji WM Gabi
 - Struktura `docs/`: decisions, concepts, architecture
-- Pierwsze ADR-y: stack technologiczny, RLS
+- ADR-y: stack technologiczny, RLS, auth pattern, data access pattern, UI/lokalizacja
+- Koncepty: RLS, SECURITY DEFINER, JWT, Supabase, FastAPI, Vercel
+- Mapa funkcjonalności: pełny przegląd stron publicznych, panelu mieszkańca i admina
