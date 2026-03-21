@@ -22,6 +22,8 @@ import AdminDocumentsPage from './pages/admin/DocumentsPage'
 import AdminDatesPage from './pages/admin/DatesPage'
 import AdminChargesPage from './pages/admin/ChargesPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
+import { ToastProvider } from './components/ui/Toast'
+import { ConfirmProvider } from './components/ui/ConfirmDialog'
 
 function AppRoutes() {
   return (
@@ -69,9 +71,13 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={auth}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <ConfirmProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ConfirmProvider>
+      </ToastProvider>
     </AuthContext.Provider>
   )
 }

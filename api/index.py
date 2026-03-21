@@ -1,0 +1,31 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from api.core.config import FRONTEND_URL
+from api.routes.residents import router as residents_router
+
+app = FastAPI(
+    title="GABI API",
+    description="API wspólnoty mieszkaniowej GABI",
+    version="0.1.0",
+)
+
+allow_origins = [FRONTEND_URL]
+# W dev akceptuj dowolny localhost port
+if "localhost" in FRONTEND_URL:
+    allow_origins = [f"http://localhost:{p}" for p in range(5170, 5180)]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(residents_router, prefix="/api")
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}

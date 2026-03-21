@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PlusIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface Apartment {
   id: string
@@ -53,6 +54,7 @@ export default function AdminChargesPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { confirm } = useConfirm()
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7))
   const [filterApartment, setFilterApartment] = useState<string>('all')
 
@@ -135,7 +137,13 @@ export default function AdminChargesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć to naliczenie?')) return
+    const ok = await confirm({
+      title: 'Usuń naliczenie',
+      message: 'Czy na pewno chcesz usunąć to naliczenie?',
+      confirmLabel: 'Usuń',
+      danger: true,
+    })
+    if (!ok) return
 
     setDeleting(id)
     await supabase.from('charges').delete().eq('id', id)

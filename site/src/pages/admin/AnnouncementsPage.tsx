@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface Announcement {
   id: string
@@ -31,6 +32,7 @@ export default function AdminAnnouncementsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { confirm } = useConfirm()
 
   const fetchAnnouncements = async () => {
     const { data } = await supabase
@@ -118,7 +120,13 @@ export default function AdminAnnouncementsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć to ogłoszenie?')) return
+    const ok = await confirm({
+      title: 'Usuń ogłoszenie',
+      message: 'Czy na pewno chcesz usunąć to ogłoszenie?',
+      confirmLabel: 'Usuń',
+      danger: true,
+    })
+    if (!ok) return
 
     setDeleting(id)
     await supabase.from('announcements').delete().eq('id', id)

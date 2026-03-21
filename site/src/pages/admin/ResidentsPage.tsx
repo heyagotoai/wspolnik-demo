@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PlusIcon, EditIcon, XIcon } from '../../components/ui/Icons'
+import { api } from '../../lib/api'
+import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { useToast } from '../../components/ui/Toast'
+import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface Resident {
   id: string
@@ -14,12 +17,13 @@ interface Resident {
 
 interface ResidentForm {
   email: string
+  password: string
   full_name: string
   apartment_number: string
   role: string
 }
 
-const emptyForm: ResidentForm = { email: '', full_name: '', apartment_number: '', role: 'resident' }
+const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartment_number: '', role: 'resident' }
 
 export default function ResidentsPage() {
   const [residents, setResidents] = useState<Resident[]>([])
@@ -29,6 +33,9 @@ export default function ResidentsPage() {
   const [form, setForm] = useState<ResidentForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const { toast } = useToast()
+  const { confirm } = useConfirm()
 
   const fetchResidents = async () => {
     const { data } = await supabase
@@ -55,6 +62,7 @@ export default function ResidentsPage() {
     setEditingId(r.id)
     setForm({
       email: r.email,
+      password: '',
       full_name: r.full_name,
       apartment_number: r.apartment_number || '',
       role: r.role,
@@ -79,34 +87,67 @@ export default function ResidentsPage() {
     setSaving(true)
     setError(null)
 
-    if (editingId) {
-      // Update existing resident
-      const { error: updateError } = await supabase
-        .from('residents')
-        .update({
+    try {
+      if (editingId) {
+        // Update via Supabase (RLS allows admin)
+        const { error: updateError } = await supabase
+          .from('residents')
+          .update({
+            full_name: form.full_name.trim(),
+            apartment_number: form.apartment_number.trim() || null,
+            role: form.role,
+          })
+          .eq('id', editingId)
+
+        if (updateError) {
+          setError(updateError.message)
+          setSaving(false)
+          return
+        }
+      } else {
+        // Create via FastAPI backend (uses service_role to create auth user)
+        if (!form.password || form.password.length < 6) {
+          setError('Hasło musi mieć min. 6 znaków.')
+          setSaving(false)
+          return
+        }
+
+        await api.post('/residents', {
+          email: form.email.trim(),
+          password: form.password,
           full_name: form.full_name.trim(),
           apartment_number: form.apartment_number.trim() || null,
           role: form.role,
         })
-        .eq('id', editingId)
-
-      if (updateError) {
-        setError(updateError.message)
-        setSaving(false)
-        return
       }
-    } else {
-      // For new residents, we need to use Supabase Auth invite
-      // For now, we insert into residents table directly
-      // (the auth user must already exist via Supabase invite)
-      setError('Aby dodać nowego mieszkańca, zaproś go przez Supabase Dashboard → Authentication → Invite User. Po rejestracji pojawi się tutaj automatycznie.')
-      setSaving(false)
-      return
+
+      await fetchResidents()
+      closeForm()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wystąpił błąd')
     }
 
-    await fetchResidents()
-    closeForm()
     setSaving(false)
+  }
+
+  const handleDelete = async (r: Resident) => {
+    const ok = await confirm({
+      title: 'Usuń mieszkańca',
+      message: `Czy na pewno chcesz usunąć "${r.full_name}"? Ta operacja jest nieodwracalna.`,
+      confirmLabel: 'Usuń',
+      danger: true,
+    })
+    if (!ok) return
+
+    setDeleting(r.id)
+    try {
+      await api.delete(`/residents/${r.id}`)
+      await fetchResidents()
+      toast('Mieszkaniec został usunięty', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Błąd usuwania', 'error')
+    }
+    setDeleting(null)
   }
 
   const toggleActive = async (id: string, currentlyActive: boolean) => {
@@ -146,7 +187,7 @@ export default function ResidentsPage() {
         </button>
       </div>
 
-      {/* Form modal */}
+      {/* Form */}
       {showForm && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
@@ -184,6 +225,18 @@ export default function ResidentsPage() {
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
               />
             </div>
+            {!editingId && (
+              <div>
+                <label className="block text-sm font-medium text-charcoal mb-1">Hasło *</label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="min. 6 znaków"
+                  className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Nr lokalu</label>
               <input
@@ -228,7 +281,7 @@ export default function ResidentsPage() {
       {/* Residents list */}
       {residents.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
-          <p className="text-slate">Brak mieszkańców. Zaproś pierwszego przez Supabase Dashboard.</p>
+          <p className="text-slate">Brak mieszkańców. Kliknij „Dodaj" aby utworzyć pierwszego.</p>
         </div>
       ) : (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient overflow-hidden">
@@ -269,7 +322,7 @@ export default function ResidentsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => openEdit(r)}
                           className="p-1.5 text-outline hover:text-sage transition-colors"
@@ -286,6 +339,14 @@ export default function ResidentsPage() {
                           }`}
                         >
                           {r.is_active ? 'Dezaktywuj' : 'Aktywuj'}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r)}
+                          disabled={deleting === r.id}
+                          className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                          title="Usuń"
+                        >
+                          <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

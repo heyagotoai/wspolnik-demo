@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { UploadIcon, TrashIcon, FileIcon } from '../../components/ui/Icons'
+import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface Document {
   id: string
@@ -32,6 +33,7 @@ export default function AdminDocumentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { confirm } = useConfirm()
 
   // Upload form state
   const [showUpload, setShowUpload] = useState(false)
@@ -133,7 +135,13 @@ export default function AdminDocumentsPage() {
   }
 
   const handleDelete = async (doc: Document) => {
-    if (!confirm(`Czy na pewno chcesz usunąć "${doc.name}"?`)) return
+    const ok = await confirm({
+      title: 'Usuń dokument',
+      message: `Czy na pewno chcesz usunąć "${doc.name}"?`,
+      confirmLabel: 'Usuń',
+      danger: true,
+    })
+    if (!ok) return
 
     setDeleting(doc.id)
 

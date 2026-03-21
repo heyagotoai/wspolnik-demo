@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface ImportantDate {
   id: string
@@ -26,6 +27,7 @@ export default function AdminDatesPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { confirm } = useConfirm()
 
   const fetchDates = async () => {
     const { data } = await supabase
@@ -110,7 +112,13 @@ export default function AdminDatesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć ten termin?')) return
+    const ok = await confirm({
+      title: 'Usuń termin',
+      message: 'Czy na pewno chcesz usunąć ten termin?',
+      confirmLabel: 'Usuń',
+      danger: true,
+    })
+    if (!ok) return
 
     setDeleting(id)
     await supabase.from('important_dates').delete().eq('id', id)

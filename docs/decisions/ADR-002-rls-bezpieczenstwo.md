@@ -18,7 +18,14 @@ Polityki opisane w [[002_rls_policies.sql|migracji RLS]].
 - Helpery `SECURITY DEFINER` = czytelne, reużywalne polityki
 - Admin widzi wszystko, mieszkaniec tylko swoje — prosty model
 
+## Kluczowy koncept: SECURITY DEFINER
+Funkcje `is_admin()` i `my_apartment_ids()` muszą być `SECURITY DEFINER`, bo:
+- Użytkownik normalnie nie ma dostępu do tabeli `residents` (chroniona przez RLS)
+- Ale te funkcje muszą odczytać `residents` żeby sprawdzić rolę/lokale
+- `SECURITY DEFINER` = funkcja działa z uprawnieniami **twórcy** (superuser), nie wywołującego
+- Bez tego RLS blokowałby sam siebie (zapętlenie)
+
 ## Edge cases
-- Głosy (`votes`) — brak UPDATE/DELETE policy = głosu nie da się zmienić ani cofnąć (celowe)
-- Ogłoszenia (`announcements`) — publiczne, widoczne bez logowania
-- Dokumenty — `is_public` flag decyduje o widoczności
+- Głosy (`votes`) — brak UPDATE/DELETE policy = głosu nie da się zmienić ani cofnąć (celowe, chroni integralność głosowania)
+- Ogłoszenia (`announcements`) — `USING (true)` = w pełni publiczne, każdy widzi wszystkie
+- Dokumenty — dwa poziomy: niezalogowany widzi tylko `is_public = true`, zalogowany widzi wszystkie
