@@ -1,0 +1,15 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Tool configs (Claude Code, Stitch, MCP)
+.agents/
+.claude/
+.mcp.json
+.stitch/
+skills-lock.json
+
+# OS
+.DS_Store
+Thumbs.db

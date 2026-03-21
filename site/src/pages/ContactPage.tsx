@@ -1,0 +1,194 @@
+import { useState } from 'react'
+import { communityInfo, emergencyContacts, contactSubjects } from '../data/mockData'
+import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
+
+export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    apartment: '',
+    subject: contactSubjects[0],
+    message: '',
+  })
+  const [submitted, setSubmitted] = useState(false)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitted(true)
+    setTimeout(() => setSubmitted(false), 4000)
+    setFormData({ name: '', email: '', apartment: '', subject: contactSubjects[0], message: '' })
+  }
+
+  return (
+    <>
+      {/* Page hero */}
+      <section className="bg-cream-dark">
+        <div className="mx-auto max-w-[1280px] px-6 py-20">
+          <h1 className="text-4xl md:text-5xl font-semibold text-charcoal tracking-tight mb-4">
+            Kontakt
+          </h1>
+          <p className="text-lg text-slate max-w-xl">
+            Skontaktuj się z nami — jesteśmy do Twojej dyspozycji.
+          </p>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-[1280px] px-6 py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+          {/* Contact form */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-[24px] p-8 shadow-[0_12px_32px_rgba(45,52,54,0.05)]">
+              <h2 className="text-xl font-semibold text-charcoal mb-6">
+                Wyślij wiadomość
+              </h2>
+
+              {submitted && (
+                <div className="mb-6 p-4 bg-sage-pale/30 text-sage rounded-[12px] text-sm font-medium">
+                  Wiadomość została wysłana. Dziękujemy!
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    Imię i nazwisko
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-charcoal mb-1.5">
+                      Adres e-mail
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-charcoal mb-1.5">
+                      Numer mieszkania
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.apartment}
+                      onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                      className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    Temat
+                  </label>
+                  <select
+                    value={formData.subject}
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors appearance-none"
+                  >
+                    {contactSubjects.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    Wiadomość
+                  </label>
+                  <textarea
+                    required
+                    rows={5}
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3.5 bg-sage text-white rounded-[10px] font-medium text-sm hover:bg-sage-light transition-colors"
+                >
+                  Wyślij wiadomość
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Contact info */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white rounded-[24px] p-7 shadow-[0_12px_32px_rgba(45,52,54,0.05)]">
+              <h3 className="text-lg font-semibold text-charcoal mb-5">
+                Dane kontaktowe
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <MapPinIcon className="w-5 h-5 text-sage mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Adres</p>
+                    <p className="text-sm text-slate">{communityInfo.address}</p>
+                    <p className="text-sm text-slate">{communityInfo.city}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MailIcon className="w-5 h-5 text-sage mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Email</p>
+                    <a
+                      href={`mailto:${communityInfo.email}`}
+                      className="text-sm text-sage hover:text-sage-light"
+                    >
+                      {communityInfo.email}
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Map placeholder */}
+              <div className="mt-6 bg-cream-dark rounded-[12px] h-48 flex items-center justify-center">
+                <div className="text-center text-outline">
+                  <MapPinIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs">Mapa — ul. Gdańska 58, Chojnice</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency contacts */}
+            <div className="bg-white rounded-[24px] p-7 shadow-[0_12px_32px_rgba(45,52,54,0.05)]">
+              <h3 className="text-lg font-semibold text-charcoal mb-5 flex items-center gap-2">
+                <PhoneIcon className="w-5 h-5 text-error" />
+                Numery alarmowe
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {emergencyContacts.map((contact) => (
+                  <div
+                    key={contact.number}
+                    className="bg-error-container/30 rounded-[12px] p-4 text-center"
+                  >
+                    <p className="text-lg font-bold text-charcoal">
+                      {contact.number}
+                    </p>
+                    <p className="text-xs text-slate mt-1">{contact.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
