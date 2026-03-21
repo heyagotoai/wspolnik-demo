@@ -22,6 +22,7 @@ import AdminDocumentsPage from './pages/admin/DocumentsPage'
 import AdminDatesPage from './pages/admin/DatesPage'
 import AdminChargesPage from './pages/admin/ChargesPage'
 import AdminApartmentsPage from './pages/admin/ApartmentsPage'
+import AdminMessagesPage from './pages/admin/MessagesPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -62,6 +63,7 @@ function AppRoutes() {
           <Route path="/admin/dokumenty" element={<AdminDocumentsPage />} />
           <Route path="/admin/terminy" element={<AdminDatesPage />} />
           <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
+          <Route path="/admin/wiadomosci" element={<AdminMessagesPage />} />
         </Route>
       </Route>
     </Routes>

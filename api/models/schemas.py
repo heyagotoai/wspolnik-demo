@@ -28,3 +28,11 @@ class ResidentOut(BaseModel):
 
 class MessageOut(BaseModel):
     detail: str
+
+
+class ContactMessageCreate(BaseModel):
+    name: str
+    email: EmailStr
+    apartment_number: str | None = None
+    subject: str
+    message: str

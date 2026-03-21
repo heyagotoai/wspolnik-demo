@@ -1,22 +1,44 @@
 import { useState } from 'react'
 import { communityInfo, emergencyContacts, contactSubjects } from '../data/mockData'
 import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
+import { useToast } from '../components/ui/Toast'
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    apartment: '',
+    apartment_number: '',
     subject: contactSubjects[0],
     message: '',
   })
-  const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const { toast } = useToast()
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 4000)
-    setFormData({ name: '', email: '', apartment: '', subject: contactSubjects[0], message: '' })
+    setSending(true)
+
+    try {
+      const res = await fetch(`${API_BASE}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || 'Błąd wysyłania')
+      }
+
+      toast('Wiadomość została wysłana. Dziękujemy!', 'success')
+      setFormData({ name: '', email: '', apartment_number: '', subject: contactSubjects[0], message: '' })
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Nie udało się wysłać wiadomości.', 'error')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -41,12 +63,6 @@ export default function ContactPage() {
               <h2 className="text-xl font-semibold text-charcoal mb-6">
                 Wyślij wiadomość
               </h2>
-
-              {submitted && (
-                <div className="mb-6 p-4 bg-sage-pale/30 text-sage rounded-[12px] text-sm font-medium">
-                  Wiadomość została wysłana. Dziękujemy!
-                </div>
-              )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
@@ -81,8 +97,8 @@ export default function ContactPage() {
                     </label>
                     <input
                       type="text"
-                      value={formData.apartment}
-                      onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
+                      value={formData.apartment_number}
+                      onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
                       className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
                     />
                   </div>
@@ -120,9 +136,10 @@ export default function ContactPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-sage text-white rounded-[10px] font-medium text-sm hover:bg-sage-light transition-colors"
+                  disabled={sending}
+                  className="w-full py-3.5 bg-sage text-white rounded-[10px] font-medium text-sm hover:bg-sage-light transition-colors disabled:opacity-50"
                 >
-                  Wyślij wiadomość
+                  {sending ? 'Wysyłanie...' : 'Wyślij wiadomość'}
                 </button>
               </form>
             </div>

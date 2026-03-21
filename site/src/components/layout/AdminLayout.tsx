@@ -9,6 +9,7 @@ import {
   FolderIcon,
   CalendarIcon,
   WalletIcon,
+  MailIcon,
   LogOutIcon,
   UserIcon,
 } from '../ui/Icons'
@@ -21,6 +22,7 @@ const sidebarLinks = [
   { label: 'Dokumenty', path: '/admin/dokumenty', icon: FolderIcon },
   { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon },
   { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon },
+  { label: 'Wiadomości', path: '/admin/wiadomosci', icon: MailIcon },
 ]
 
 export default function AdminLayout() {
