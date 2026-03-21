@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { UploadIcon, TrashIcon, FileIcon } from '../../components/ui/Icons'
+import { UploadIcon, TrashIcon, FileIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { useToast } from '../../components/ui/Toast'
 
 interface Document {
   id: string
@@ -34,6 +35,7 @@ export default function AdminDocumentsPage() {
   const [filter, setFilter] = useState<string>('all')
   const [deleting, setDeleting] = useState<string | null>(null)
   const { confirm } = useConfirm()
+  const { toast } = useToast()
 
   // Upload form state
   const [showUpload, setShowUpload] = useState(false)
@@ -123,15 +125,30 @@ export default function AdminDocumentsPage() {
     setUploadPublic(false)
     if (fileRef.current) fileRef.current.value = ''
     setUploading(false)
+    toast('Dokument został przesłany.', 'success')
+  }
+
+  const handleDownload = async (doc: Document) => {
+    const { data, error: signError } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(doc.file_path, 60)
+
+    if (signError || !data?.signedUrl) {
+      toast('Nie udało się pobrać pliku.', 'error')
+      return
+    }
+    window.open(data.signedUrl, '_blank')
   }
 
   const togglePublic = async (doc: Document) => {
+    const newPublic = !doc.is_public
     await supabase
       .from('documents')
-      .update({ is_public: !doc.is_public })
+      .update({ is_public: newPublic })
       .eq('id', doc.id)
 
     await fetchDocuments()
+    toast(newPublic ? 'Dokument ustawiony jako publiczny.' : 'Dokument ustawiony jako prywatny.', 'info')
   }
 
   const handleDelete = async (doc: Document) => {
@@ -153,6 +170,7 @@ export default function AdminDocumentsPage() {
 
     await fetchDocuments()
     setDeleting(null)
+    toast('Dokument został usunięty.', 'success')
   }
 
   const categories = ['all', ...new Set(documents.map((d) => d.category))]
@@ -316,6 +334,13 @@ export default function AdminDocumentsPage() {
                   title={doc.is_public ? 'Kliknij aby ustawić jako prywatny' : 'Kliknij aby ustawić jako publiczny'}
                 >
                   {doc.is_public ? 'Publiczny' : 'Prywatny'}
+                </button>
+                <button
+                  onClick={() => handleDownload(doc)}
+                  className="p-2 text-outline hover:text-sage transition-colors"
+                  title="Pobierz"
+                >
+                  <DownloadIcon className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(doc)}

@@ -1,19 +1,70 @@
-import { useState } from 'react'
-import { documents, documentCategories } from '../data/mockData'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { FileIcon, DownloadIcon, SearchIcon } from '../components/ui/Icons'
 
+interface Document {
+  id: string
+  name: string
+  category: string
+  file_path: string
+  file_size: string | null
+  created_at: string
+}
+
+const categoryLabels: Record<string, string> = {
+  regulamin: 'Regulaminy',
+  protokol: 'Protokoły',
+  formularz: 'Formularze',
+  uchwala: 'Uchwały',
+  sprawozdanie: 'Sprawozdania',
+  inne: 'Inne',
+}
+
 export default function DocumentsPage() {
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('Wszystkie')
   const [searchQuery, setSearchQuery] = useState('')
 
+  useEffect(() => {
+    const fetchPublicDocuments = async () => {
+      const { data } = await supabase
+        .from('documents')
+        .select('id, name, category, file_path, file_size, created_at')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+
+      if (data) setDocuments(data)
+      setLoading(false)
+    }
+    fetchPublicDocuments()
+  }, [])
+
+  const categories = ['Wszystkie', ...new Set(documents.map((d) => categoryLabels[d.category] || d.category))]
+
   const filtered = documents.filter((doc) => {
-    const matchCategory =
-      activeCategory === 'Wszystkie' || doc.category === activeCategory
-    const matchSearch = doc.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
+    const label = categoryLabels[doc.category] || doc.category
+    const matchCategory = activeCategory === 'Wszystkie' || label === activeCategory
+    const matchSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchCategory && matchSearch
   })
+
+  const handleDownload = async (doc: Document) => {
+    const { data } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(doc.file_path, 60)
+
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank')
+    }
+  }
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('pl-PL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
 
   return (
     <>
@@ -44,7 +95,7 @@ export default function DocumentsPage() {
 
         {/* Category tabs */}
         <div className="flex flex-wrap gap-2 mb-10">
-          {documentCategories.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
@@ -60,43 +111,55 @@ export default function DocumentsPage() {
         </div>
 
         {/* Document list */}
-        <div className="space-y-4">
-          {filtered.length === 0 ? (
-            <div className="bg-white rounded-[24px] p-12 text-center">
-              <p className="text-slate">
-                Nie znaleziono dokumentów spełniających kryteria.
-              </p>
-            </div>
-          ) : (
-            filtered.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-white rounded-[24px] p-6 shadow-[0_12px_32px_rgba(45,52,54,0.05)] flex items-center gap-5 group hover:shadow-[0_16px_40px_rgba(45,52,54,0.08)] transition-shadow"
-              >
-                <div className="w-12 h-12 bg-sage-pale/30 rounded-[12px] flex items-center justify-center shrink-0">
-                  <FileIcon className="w-6 h-6 text-sage" />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-charcoal truncate">
-                    {doc.name}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-xs text-outline">{doc.category}</span>
-                    <span className="text-xs text-outline">
-                      Dodano: {new Date(doc.date).toLocaleDateString('pl-PL')}
-                    </span>
-                    <span className="text-xs text-outline">{doc.size}</span>
-                  </div>
-                </div>
-
-                <button className="shrink-0 w-10 h-10 bg-sage rounded-[10px] flex items-center justify-center text-white hover:bg-sage-light transition-colors">
-                  <DownloadIcon className="w-5 h-5" />
-                </button>
+        {loading ? (
+          <div className="bg-white rounded-[24px] p-12 text-center">
+            <p className="text-slate">Ładowanie...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.length === 0 ? (
+              <div className="bg-white rounded-[24px] p-12 text-center">
+                <p className="text-slate">
+                  Nie znaleziono dokumentów spełniających kryteria.
+                </p>
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              filtered.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="bg-white rounded-[24px] p-6 shadow-[0_12px_32px_rgba(45,52,54,0.05)] flex items-center gap-5 group hover:shadow-[0_16px_40px_rgba(45,52,54,0.08)] transition-shadow"
+                >
+                  <div className="w-12 h-12 bg-sage-pale/30 rounded-[12px] flex items-center justify-center shrink-0">
+                    <FileIcon className="w-6 h-6 text-sage" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-charcoal truncate">
+                      {doc.name}
+                    </h3>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className="text-xs text-outline">{categoryLabels[doc.category] || doc.category}</span>
+                      <span className="text-xs text-outline">
+                        Dodano: {formatDate(doc.created_at)}
+                      </span>
+                      {doc.file_size && (
+                        <span className="text-xs text-outline">{doc.file_size}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleDownload(doc)}
+                    className="shrink-0 w-10 h-10 bg-sage rounded-[10px] flex items-center justify-center text-white hover:bg-sage-light transition-colors"
+                    title="Pobierz"
+                  >
+                    <DownloadIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </>
   )

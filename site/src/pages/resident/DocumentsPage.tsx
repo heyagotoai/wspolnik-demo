@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { FileIcon, DownloadIcon } from '../../components/ui/Icons'
+import { useToast } from '../../components/ui/Toast'
 
 interface Document {
   id: string
@@ -25,6 +26,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetch = async () => {
@@ -43,10 +45,15 @@ export default function DocumentsPage() {
   const filtered = filter === 'all' ? documents : documents.filter((d) => d.category === filter)
 
   const handleDownload = async (doc: Document) => {
-    const { data } = supabase.storage.from('documents').getPublicUrl(doc.file_path)
-    if (data?.publicUrl) {
-      window.open(data.publicUrl, '_blank')
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(doc.file_path, 60)
+
+    if (error || !data?.signedUrl) {
+      toast('Nie udało się pobrać pliku.', 'error')
+      return
     }
+    window.open(data.signedUrl, '_blank')
   }
 
   const formatDate = (dateStr: string) =>
