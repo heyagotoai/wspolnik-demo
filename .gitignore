@@ -10,6 +10,9 @@
 .stitch/
 skills-lock.json
 
+# Obsidian (ustawienia UI - nie wersjonujemy)
+.obsidian/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import PageLayout from './components/layout/PageLayout'
+import ResidentLayout from './components/layout/ResidentLayout'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import NewsPage from './pages/NewsPage'
@@ -8,6 +9,11 @@ import ContactPage from './pages/ContactPage'
 import LoginPage from './components/auth/LoginPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AdminRoute from './components/auth/AdminRoute'
+import DashboardPage from './pages/resident/DashboardPage'
+import ResidentAnnouncementsPage from './pages/resident/AnnouncementsPage'
+import ResidentDocumentsPage from './pages/resident/DocumentsPage'
+import DatesPage from './pages/resident/DatesPage'
+import FinancesPage from './pages/resident/FinancesPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 
 function AppRoutes() {
@@ -27,30 +33,24 @@ function AppRoutes() {
 
       {/* Panel mieszkańca — wymaga zalogowania */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/panel" element={<ResidentDashboard />} />
+        <Route element={<ResidentLayout />}>
+          <Route path="/panel" element={<DashboardPage />} />
+          <Route path="/panel/ogloszenia" element={<ResidentAnnouncementsPage />} />
+          <Route path="/panel/dokumenty" element={<ResidentDocumentsPage />} />
+          <Route path="/panel/terminy" element={<DatesPage />} />
+          <Route path="/panel/finanse" element={<FinancesPage />} />
+        </Route>
       </Route>
 
       {/* Panel admina — wymaga roli admin */}
       <Route element={<AdminRoute />}>
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin" element={<AdminPlaceholder />} />
       </Route>
     </Routes>
   )
 }
 
-// Tymczasowe placeholdery — zostaną zastąpione właściwymi stronami w Fazie 3-4
-function ResidentDashboard() {
-  return (
-    <div className="min-h-screen bg-cream p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-charcoal mb-4">Panel mieszkańca</h1>
-        <p className="text-slate">Strona w budowie. Wkrótce znajdziesz tu swoje naliczenia, wpłaty i dokumenty.</p>
-      </div>
-    </div>
-  )
-}
-
-function AdminDashboard() {
+function AdminPlaceholder() {
   return (
     <div className="min-h-screen bg-cream p-8">
       <div className="max-w-4xl mx-auto">
