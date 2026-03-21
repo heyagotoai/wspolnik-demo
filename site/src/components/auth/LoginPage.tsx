@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   if (loading) {
     return (
@@ -31,7 +32,8 @@ export default function LoginPage() {
     const { error } = await signIn(email, password)
 
     if (error) {
-      setError('Nieprawidłowy email lub hasło')
+      console.error('Supabase auth error:', error)
+      setError(`${error.message} (${error.status || 'brak statusu'})`)
     }
 
     setSubmitting(false)
@@ -73,15 +75,24 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium text-charcoal mb-1">
                 Hasło
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-outline-light rounded-[var(--radius-input)] bg-cream text-charcoal placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-sage focus:border-sage transition-colors"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 pr-12 border border-outline-light rounded-[var(--radius-input)] bg-cream text-charcoal placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-sage focus:border-sage transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-charcoal transition-colors text-sm"
+                >
+                  {showPassword ? 'Ukryj' : 'Pokaż'}
+                </button>
+              </div>
             </div>
 
             {error && (

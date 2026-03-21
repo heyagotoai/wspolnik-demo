@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import PageLayout from './components/layout/PageLayout'
 import ResidentLayout from './components/layout/ResidentLayout'
+import AdminLayout from './components/layout/AdminLayout'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import NewsPage from './pages/NewsPage'
@@ -14,6 +15,12 @@ import ResidentAnnouncementsPage from './pages/resident/AnnouncementsPage'
 import ResidentDocumentsPage from './pages/resident/DocumentsPage'
 import DatesPage from './pages/resident/DatesPage'
 import FinancesPage from './pages/resident/FinancesPage'
+import AdminDashboardPage from './pages/admin/DashboardPage'
+import AdminResidentsPage from './pages/admin/ResidentsPage'
+import AdminAnnouncementsPage from './pages/admin/AnnouncementsPage'
+import AdminDocumentsPage from './pages/admin/DocumentsPage'
+import AdminDatesPage from './pages/admin/DatesPage'
+import AdminChargesPage from './pages/admin/ChargesPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 
 function AppRoutes() {
@@ -44,20 +51,16 @@ function AppRoutes() {
 
       {/* Panel admina — wymaga roli admin */}
       <Route element={<AdminRoute />}>
-        <Route path="/admin" element={<AdminPlaceholder />} />
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/mieszkancy" element={<AdminResidentsPage />} />
+          <Route path="/admin/ogloszenia" element={<AdminAnnouncementsPage />} />
+          <Route path="/admin/dokumenty" element={<AdminDocumentsPage />} />
+          <Route path="/admin/terminy" element={<AdminDatesPage />} />
+          <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
+        </Route>
       </Route>
     </Routes>
-  )
-}
-
-function AdminPlaceholder() {
-  return (
-    <div className="min-h-screen bg-cream p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-charcoal mb-4">Panel administratora</h1>
-        <p className="text-slate">Strona w budowie. Wkrótce znajdziesz tu zarządzanie mieszkańcami, naliczeniami i dokumentami.</p>
-      </div>
-    </div>
   )
 }
 
