@@ -4,17 +4,19 @@ import { useAuth } from '../../hooks/useAuth'
 import {
   LayoutDashboardIcon,
   UsersIcon,
+  HomeIcon,
   MegaphoneIcon,
   FolderIcon,
   CalendarIcon,
   WalletIcon,
   LogOutIcon,
-  HomeIcon,
+  UserIcon,
 } from '../ui/Icons'
 
 const sidebarLinks = [
   { label: 'Pulpit', path: '/admin', icon: LayoutDashboardIcon },
   { label: 'Mieszkańcy', path: '/admin/mieszkancy', icon: UsersIcon },
+  { label: 'Lokale', path: '/admin/lokale', icon: HomeIcon },
   { label: 'Ogłoszenia', path: '/admin/ogloszenia', icon: MegaphoneIcon },
   { label: 'Dokumenty', path: '/admin/dokumenty', icon: FolderIcon },
   { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon },
@@ -66,7 +68,7 @@ export default function AdminLayout() {
             to="/panel"
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-slate hover:bg-cream hover:text-charcoal transition-colors"
           >
-            <HomeIcon className="w-5 h-5" />
+            <UserIcon className="w-5 h-5" />
             Panel mieszkańca
           </Link>
           <button

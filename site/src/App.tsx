@@ -21,6 +21,7 @@ import AdminAnnouncementsPage from './pages/admin/AnnouncementsPage'
 import AdminDocumentsPage from './pages/admin/DocumentsPage'
 import AdminDatesPage from './pages/admin/DatesPage'
 import AdminChargesPage from './pages/admin/ChargesPage'
+import AdminApartmentsPage from './pages/admin/ApartmentsPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/mieszkancy" element={<AdminResidentsPage />} />
+          <Route path="/admin/lokale" element={<AdminApartmentsPage />} />
           <Route path="/admin/ogloszenia" element={<AdminAnnouncementsPage />} />
           <Route path="/admin/dokumenty" element={<AdminDocumentsPage />} />
           <Route path="/admin/terminy" element={<AdminDatesPage />} />

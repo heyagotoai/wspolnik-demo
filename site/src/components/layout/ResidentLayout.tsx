@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 import {
   LayoutDashboardIcon,
   MegaphoneIcon,
@@ -9,6 +10,7 @@ import {
   WalletIcon,
   LogOutIcon,
   HomeIcon,
+  SettingsIcon,
 } from '../ui/Icons'
 
 const sidebarLinks = [
@@ -21,6 +23,7 @@ const sidebarLinks = [
 
 export default function ResidentLayout() {
   const { user, signOut } = useAuth()
+  const { isAdmin } = useRole()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -57,6 +60,15 @@ export default function ResidentLayout() {
         </nav>
 
         <div className="px-3 py-4 border-t border-cream-medium space-y-1">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-amber hover:bg-amber-light/30 transition-colors"
+            >
+              <SettingsIcon className="w-5 h-5" />
+              Panel admina
+            </Link>
+          )}
           <Link
             to="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-slate hover:bg-cream hover:text-charcoal transition-colors"
@@ -117,6 +129,16 @@ export default function ResidentLayout() {
               </Link>
             ))}
             <hr className="border-cream-medium my-2" />
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-amber"
+              >
+                <SettingsIcon className="w-5 h-5" />
+                Panel admina
+              </Link>
+            )}
             <Link
               to="/"
               onClick={() => setMobileOpen(false)}

@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { navLinks, communityInfo } from '../../data/mockData'
+import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 
 export default function Header() {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { user, signOut } = useAuth()
+  const { isAdmin } = useRole()
 
   return (
     <header className="sticky top-0 z-50 bg-cream/80 backdrop-blur-xl">
@@ -28,6 +32,37 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          {user ? (
+            <div className="flex items-center gap-3 ml-2">
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="px-4 py-2 bg-amber text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-amber/80 transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                to="/panel"
+                className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+              >
+                Panel
+              </Link>
+              <button
+                onClick={signOut}
+                className="px-4 py-2 border border-cream-medium text-sm font-medium text-slate rounded-[var(--radius-button)] hover:bg-cream hover:text-charcoal transition-colors"
+              >
+                Wyloguj
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/logowanie"
+              className="ml-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+            >
+              Zaloguj się
+            </Link>
+          )}
         </nav>
 
         {/* Mobile hamburger */}
@@ -61,6 +96,40 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          {user ? (
+            <>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="block mt-2 px-4 py-2 bg-amber text-white text-sm font-medium rounded-[var(--radius-button)] text-center hover:bg-amber/80 transition-colors"
+                >
+                  Panel admina
+                </Link>
+              )}
+              <Link
+                to="/panel"
+                onClick={() => setMobileOpen(false)}
+                className="block mt-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] text-center hover:bg-sage-light transition-colors"
+              >
+                Panel mieszkańca
+              </Link>
+              <button
+                onClick={() => { setMobileOpen(false); signOut() }}
+                className="block w-full mt-2 px-4 py-2 border border-cream-medium text-sm font-medium text-slate rounded-[var(--radius-button)] text-center hover:bg-cream hover:text-charcoal transition-colors"
+              >
+                Wyloguj się
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/logowanie"
+              onClick={() => setMobileOpen(false)}
+              className="block mt-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] text-center hover:bg-sage-light transition-colors"
+            >
+              Zaloguj się
+            </Link>
+          )}
         </nav>
       )}
     </header>

@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [dates, setDates] = useState<ImportantDate[]>([])
+  const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,11 +44,34 @@ export default function DashboardPage() {
 
       if (annRes.data) setAnnouncements(annRes.data)
       if (datesRes.data) setDates(datesRes.data)
+
+      // Fetch balance: payments - charges for user's apartment
+      if (user) {
+        const { data: apt } = await supabase
+          .from('apartments')
+          .select('id')
+          .eq('owner_resident_id', user.id)
+          .maybeSingle()
+
+        if (apt) {
+          const [chargesRes, paymentsRes] = await Promise.all([
+            supabase.from('charges').select('amount').eq('apartment_id', apt.id),
+            supabase.from('payments').select('amount, confirmed_by_admin').eq('apartment_id', apt.id),
+          ])
+
+          const totalCharges = (chargesRes.data || []).reduce((s, c) => s + Number(c.amount), 0)
+          const totalPayments = (paymentsRes.data || [])
+            .filter((p) => p.confirmed_by_admin)
+            .reduce((s, p) => s + Number(p.amount), 0)
+          setBalance(totalPayments - totalCharges)
+        }
+      }
+
       setLoading(false)
     }
 
     fetchData()
-  }, [])
+  }, [user])
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pl-PL', {
@@ -94,9 +118,10 @@ export default function DashboardPage() {
         <DashboardCard
           icon={<WalletIcon className="w-6 h-6" />}
           label="Finanse"
-          value="Wkrótce"
+          value={balance !== null
+            ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(balance)
+            : 'Brak lokalu'}
           to="/panel/finanse"
-          disabled
         />
       </div>
 

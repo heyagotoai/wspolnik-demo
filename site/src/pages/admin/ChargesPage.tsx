@@ -71,12 +71,14 @@ export default function AdminChargesPage() {
     ])
 
     if (aptsRes.data) {
-      setApartments(aptsRes.data.map((a) => ({
+      const mapped = aptsRes.data.map((a) => ({
         id: a.id,
         number: a.number,
         area_m2: a.area_m2,
         owner_name: null,
-      })))
+      }))
+      mapped.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+      setApartments(mapped)
     }
     if (chargesRes.data) setCharges(chargesRes.data)
     setLoading(false)
