@@ -47,6 +47,11 @@ cd api && pytest
 
 ## Zasady implementacji
 
+### Podejście do implementacji (WYMAGANE — "Junior Review")
+- **Po zakończeniu implementacji nowej funkcjonalności, przed uznaniem za gotową** — zadaj użytkownikowi co najmniej 3 pytania sprawdzające poprawność działania. Pytaj o edge cases, zachowanie brzegowe, scenariusze które mogły umknąć.
+- **Cel:** zapobieganie zamknięciu zadania z błędnymi założeniami. Użytkownik weryfikuje, nie Claude.
+- Korzystaj z notatek w Obsidian (`docs/`) jako źródła kontekstu przy formułowaniu pytań.
+
 ### UI/UX
 - **Toasty zamiast alert/confirm** — nigdy nie używaj natywnych `alert()`, `confirm()`, `prompt()`. Zawsze toast lub custom modal.
 
