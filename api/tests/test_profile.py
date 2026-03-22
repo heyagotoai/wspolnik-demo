@@ -42,8 +42,7 @@ def test_update_profile_name(fake_sb, resident_client):
 
 def test_update_profile_empty_name(fake_sb, resident_client):
     r = resident_client.patch("/api/profile", json={"full_name": "  "})
-    assert r.status_code == 400
-    assert "puste" in r.json()["detail"].lower()
+    assert r.status_code == 422  # Pydantic validation
 
 
 def test_change_password_success(fake_sb, resident_client):
@@ -74,5 +73,4 @@ def test_change_password_too_short(fake_sb, resident_client):
         "current_password": "old123",
         "new_password": "ab",
     })
-    assert r.status_code == 400
-    assert "6 znaków" in r.json()["detail"]
+    assert r.status_code == 422  # Pydantic validation (min_length=6)

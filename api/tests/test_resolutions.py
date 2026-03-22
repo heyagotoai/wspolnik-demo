@@ -146,7 +146,7 @@ class TestCastVote:
         response = resident_client.post("/api/resolutions/res-1/vote", json={
             "vote": "invalid",
         })
-        assert response.status_code == 400
+        assert response.status_code == 422  # Pydantic Literal validation
 
     def test_glosowanie_na_nieaktywna_uchwale(self, resident_client, fake_sb):
         closed_resolution = {**RESOLUTION_DATA, "status": "closed"}

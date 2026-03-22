@@ -75,8 +75,8 @@ cd api && pytest
 - `CHANGELOG.md` — aktualizuj przy większych zmianach
 
 ## Role użytkowników
-- **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, wiadomości kontaktowe)
-- **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy
+- **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
+- **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
 
 ## Supabase
 - Region: EU (Frankfurt)
