@@ -33,7 +33,7 @@ export default function LoginPage() {
 
     if (error) {
       console.error('Supabase auth error:', error)
-      setError(`${error.message} (${error.status || 'brak statusu'})`)
+      setError(`${error.message} (${'status' in error ? error.status : 'brak statusu'})`)
     }
 
     setSubmitting(false)
@@ -44,6 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8">
           <div className="text-center mb-8">
+            <img src="/logo.png" alt="WM GABI" className="h-20 w-20 object-contain mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-charcoal mb-2">
               Wspólnota Mieszkaniowa GABI
             </h1>

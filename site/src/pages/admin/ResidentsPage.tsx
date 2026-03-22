@@ -159,13 +159,6 @@ export default function ResidentsPage() {
     await fetchResidents()
   }
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('pl-PL', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">

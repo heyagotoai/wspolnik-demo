@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { WalletIcon, CalendarIcon, ArrowRightIcon } from '../../components/ui/Icons'
+import { WalletIcon } from '../../components/ui/Icons'
 
 interface Charge {
   id: string

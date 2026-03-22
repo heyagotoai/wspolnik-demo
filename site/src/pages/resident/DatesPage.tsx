@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { CalendarIcon } from '../../components/ui/Icons'
 
 interface ImportantDate {
   id: string
