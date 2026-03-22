@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { announcements, communityInfo } from '../data/mockData'
+import { announcements } from '../data/mockData'
 import { MegaphoneIcon, FolderIcon, MailIcon, ArrowRightIcon } from '../components/ui/Icons'
 
 function formatDate(dateStr: string) {
@@ -52,23 +52,16 @@ export default function HomePage() {
           <div className="absolute -right-32 top-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-sage-pale/20 blur-[120px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 max-w-xl">
-            <span className="inline-flex items-center bg-sage text-white px-4 py-1.5 rounded-full mb-8 text-[11px] font-bold tracking-[0.15em] uppercase">
-              {communityInfo.fullAddress}
-            </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-charcoal tracking-tight leading-[0.95] mb-8">
               Witamy w naszej{' '}
               <span className="text-sage">wspólnocie</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate leading-relaxed mb-12 max-w-lg">
-              Komfortowe mieszkanie w sercu Chojnic. Razem tworzymy miejsce,
-              które z dumą nazywamy domem.
-            </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                to="/o-nas"
+                to="/logowanie"
                 className="px-8 py-4 bg-sage text-white rounded-full font-semibold text-sm shadow-lg shadow-sage/10 hover:shadow-sage/20 hover:bg-sage-light transition-all active:scale-95"
               >
-                Poznaj nas
+                Zaloguj się
               </Link>
               <Link
                 to="/kontakt"
@@ -127,29 +120,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* About preview */}
-      <section className="bg-cream-dark">
-        <div className="mx-auto max-w-[1280px] px-6 py-20">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-semibold text-charcoal mb-6">
-              O naszej wspólnocie
-            </h2>
-            <p className="text-slate leading-relaxed mb-6">
-              Wspólnota Mieszkaniowa GABI to społeczność mieszkańców budynku
-              przy ul. Gdańskiej 58 w Chojnicach. Od lat dbamy o komfort
-              i bezpieczeństwo naszych lokatorów, wspólnie tworząc przyjazne
-              miejsce do życia. Nasze działania opierają się na wzajemnym
-              szacunku, współpracy i trosce o wspólną przestrzeń.
-            </p>
-            <Link
-              to="/o-nas"
-              className="inline-flex items-center gap-2 text-sage font-medium hover:gap-3 transition-all"
-            >
-              Dowiedz się więcej <ArrowRightIcon />
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Latest news */}
       <section className="mx-auto max-w-[1280px] px-6 py-20">

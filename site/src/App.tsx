@@ -3,7 +3,6 @@ import PageLayout from './components/layout/PageLayout'
 import ResidentLayout from './components/layout/ResidentLayout'
 import AdminLayout from './components/layout/AdminLayout'
 import HomePage from './pages/HomePage'
-import AboutPage from './pages/AboutPage'
 import NewsPage from './pages/NewsPage'
 import DocumentsPage from './pages/DocumentsPage'
 import ContactPage from './pages/ContactPage'
@@ -36,7 +35,6 @@ function AppRoutes() {
       {/* Strony publiczne z layoutem */}
       <Route element={<PageLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/o-nas" element={<AboutPage />} />
         <Route path="/aktualnosci" element={<NewsPage />} />
         <Route path="/dokumenty" element={<DocumentsPage />} />
         <Route path="/kontakt" element={<ContactPage />} />

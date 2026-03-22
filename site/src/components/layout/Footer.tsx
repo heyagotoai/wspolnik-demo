@@ -5,15 +5,17 @@ export default function Footer() {
   return (
     <footer className="bg-cream-dark mt-auto">
       <div className="mx-auto max-w-[1280px] px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          {/* Brand */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 justify-items-center text-center">
+          {/* Legal docs */}
           <div>
-            <h3 className="text-lg font-semibold text-charcoal mb-3">
-              {communityInfo.name}
-            </h3>
-            <p className="text-sm text-slate leading-relaxed">
-              Razem tworzymy miejsce, które z dumą nazywamy domem.
-            </p>
+            <h4 className="text-sm font-semibold uppercase tracking-wider text-charcoal mb-4">
+              Dokumenty prawne
+            </h4>
+            <nav className="space-y-2">
+              <a href="/docs/polityka-prywatnosci.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności</a>
+              <a href="/docs/klauzula-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Klauzula informacyjna RODO</a>
+              <a href="/docs/regulamin-wspolnoty.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin wspólnoty</a>
+            </nav>
           </div>
 
           {/* Navigation */}

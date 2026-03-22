@@ -176,14 +176,6 @@ export default function ContactPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Map placeholder */}
-              <div className="mt-6 bg-cream-dark rounded-[12px] h-48 flex items-center justify-center">
-                <div className="text-center text-outline">
-                  <MapPinIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-xs">Mapa — ul. Gdańska 58, Chojnice</p>
-                </div>
-              </div>
             </div>
 
             {/* Emergency contacts */}

@@ -8,7 +8,6 @@ export const communityInfo = {
 
 export const navLinks = [
   { label: 'Strona Główna', path: '/' },
-  { label: 'O Nas', path: '/o-nas' },
   { label: 'Aktualności', path: '/aktualnosci' },
   { label: 'Dokumenty', path: '/dokumenty' },
   { label: 'Kontakt', path: '/kontakt' },
