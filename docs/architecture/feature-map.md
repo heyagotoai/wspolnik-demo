@@ -17,6 +17,7 @@
 | Dokumenty | `/panel/dokumenty` | Download z Supabase Storage |
 | Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem |
 | Finanse | `/panel/finanse` | ⏳ Placeholder — czeka na integrację bankową |
+| Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów, wyniki |
 
 ## Panel admina (wymaga roli admin → [[ADR-003-auth-pattern|AdminRoute]])
 | Strona | Route | Operacje |
@@ -27,8 +28,11 @@
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
 | Naliczenia | `/admin/naliczenia` | Dodawanie naliczeń per lokal per miesiąc |
+| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania |
+| Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
 ## Powiązania
 - [[ADR-004-data-access-pattern]] — kiedy frontend vs backend
 - [[ADR-002-rls-bezpieczenstwo]] — kto co widzi
+- [[ADR-010-voting-system]] — system głosowania nad uchwałami
 - [[system-overview]] — architektura techniczna

@@ -6,6 +6,14 @@
 - Schemat bazy danych (migracja 001) — tabele: residents, apartments, charges, payments, bank_statements, documents, announcements, important_dates, resolutions, votes, audit_log
 - Polityki RLS (migracja 002) — bezpieczeństwo na poziomie wierszy dla wszystkich tabel
 
+### 2026-03-21 — System głosowania nad uchwałami
+- Backend: 7 endpointów API (`/api/resolutions`) — CRUD (admin) + głosowanie + wyniki
+- Admin panel: `/admin/uchwaly` — tworzenie/edycja/usuwanie uchwał, workflow statusów (szkic → głosowanie → zamknięta), podgląd wyników
+- Panel mieszkańca: `/panel/glosowania` — lista aktywnych uchwał, przyciski głosowania (za/przeciw/wstrzymuję), pasek wyników, info o oddanym głosie
+- Głosy jednorazowe i nieodwracalne (UNIQUE constraint + brak UPDATE/DELETE policy)
+- Testy: 14 backend (pytest) + 12 frontend (vitest)
+- Dokumentacja: [[ADR-010-voting-system]], aktualizacja feature-map
+
 ### 2026-03-21 — Dokumentacja projektu (nie feature aplikacji)
 - Wdrożenie systemu zarządzania wiedzą (Obsidian vault w projekcie) — narzędzie deweloperskie do dokumentowania decyzji architektonicznych, nie część aplikacji WM Gabi
 - Struktura `docs/`: decisions, concepts, architecture
