@@ -14,6 +14,14 @@
 - Testy: 14 backend (pytest) + 12 frontend (vitest)
 - Dokumentacja: [[ADR-010-voting-system]], aktualizacja feature-map
 
+### 2026-03-22 — Mailing ogłoszeń do mieszkańców
+- Backend: endpoint `POST /api/announcements/{id}/send-email` (admin only)
+- Wysyłka email do wszystkich aktywnych mieszkańców przez Edge Function
+- Frontend: przycisk wysyłki email + badge "Wysłano" w panelu ogłoszeń admina
+- Dialog potwierdzenia przed wysyłką, toast z wynikiem
+- Zabezpieczenie przed duplikatem (kolumna `email_sent_at`, migracja 006)
+- Testy: 6 backend + 5 frontend
+
 ### 2026-03-22 — Deployment na Vercel + domena wmgabi.pl
 - Frontend wdrożony na Vercel (monorepo: site/ + api/ serverless functions)
 - Domena wmgabi.pl podpięta (DNS: az.pl → Vercel)

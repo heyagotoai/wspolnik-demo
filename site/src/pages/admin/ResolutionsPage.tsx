@@ -115,6 +115,14 @@ export default function AdminResolutionsPage() {
       setError('Tytuł jest wymagany.')
       return
     }
+    if (form.title.trim().length < 3) {
+      setError('Tytuł musi mieć min. 3 znaki.')
+      return
+    }
+    if (form.voting_start && form.voting_end && form.voting_end < form.voting_start) {
+      setError('Data końca głosowania musi być późniejsza niż data początku.')
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -216,6 +224,7 @@ export default function AdminResolutionsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Tytuł *</label>
               <input
                 type="text"
+                maxLength={500}
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
@@ -227,6 +236,7 @@ export default function AdminResolutionsPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={4}
+                maxLength={5000}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage resize-y"
               />
             </div>

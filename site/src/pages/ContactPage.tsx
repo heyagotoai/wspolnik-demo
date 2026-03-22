@@ -72,6 +72,7 @@ export default function ContactPage() {
                   <input
                     type="text"
                     required
+                    maxLength={255}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
@@ -97,6 +98,7 @@ export default function ContactPage() {
                     </label>
                     <input
                       type="text"
+                      maxLength={20}
                       value={formData.apartment_number}
                       onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
                       className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
@@ -128,6 +130,7 @@ export default function ContactPage() {
                   <textarea
                     required
                     rows={5}
+                    maxLength={5000}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors resize-none"

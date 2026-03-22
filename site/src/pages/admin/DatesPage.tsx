@@ -180,6 +180,7 @@ export default function AdminDatesPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Tytuł *</label>
               <input
                 type="text"
+                maxLength={255}
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
@@ -200,6 +201,7 @@ export default function AdminDatesPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
+                maxLength={2000}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage resize-y"
               />
             </div>

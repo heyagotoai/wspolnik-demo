@@ -52,6 +52,10 @@ export default function ProfilePage() {
       toast('Imię i nazwisko nie może być puste', 'error')
       return
     }
+    if (newName.trim().length < 2) {
+      toast('Imię i nazwisko musi mieć min. 2 znaki', 'error')
+      return
+    }
     setSavingName(true)
     try {
       const updated = await api.patch<Profile>('/profile', { full_name: newName.trim() })
@@ -148,6 +152,7 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <input
                   type="text"
+                  maxLength={255}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="flex-1 px-3 py-2 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { api } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { useToast } from '../../components/ui/Toast'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 
 interface Announcement {
@@ -10,6 +12,7 @@ interface Announcement {
   content: string
   excerpt: string | null
   is_pinned: boolean
+  email_sent_at: string | null
   created_at: string
 }
 
@@ -24,6 +27,7 @@ const emptyForm: AnnouncementForm = { title: '', content: '', excerpt: '', is_pi
 
 export default function AdminAnnouncementsPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -32,12 +36,13 @@ export default function AdminAnnouncementsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [sending, setSending] = useState<string | null>(null)
   const { confirm } = useConfirm()
 
   const fetchAnnouncements = async () => {
     const { data } = await supabase
       .from('announcements')
-      .select('id, title, content, excerpt, is_pinned, created_at')
+      .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -78,6 +83,10 @@ export default function AdminAnnouncementsPage() {
   const handleSave = async () => {
     if (!form.title.trim() || !form.content.trim()) {
       setError('Tytuł i treść są wymagane.')
+      return
+    }
+    if (form.title.trim().length < 3) {
+      setError('Tytuł musi mieć min. 3 znaki.')
       return
     }
 
@@ -134,6 +143,26 @@ export default function AdminAnnouncementsPage() {
     setDeleting(null)
   }
 
+  const handleSendEmail = async (a: Announcement) => {
+    const ok = await confirm({
+      title: 'Wyślij ogłoszenie emailem',
+      message: `Czy wysłać ogłoszenie "${a.title}" do wszystkich aktywnych mieszkańców?`,
+      confirmLabel: 'Wyślij',
+    })
+    if (!ok) return
+
+    setSending(a.id)
+    try {
+      const result = await api.post<{ detail: string }>(`/announcements/${a.id}/send-email`, {})
+      toast(result.detail, 'success')
+      await fetchAnnouncements()
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Błąd wysyłki', 'error')
+    } finally {
+      setSending(null)
+    }
+  }
+
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pl-PL', {
       day: 'numeric',
@@ -185,6 +214,7 @@ export default function AdminAnnouncementsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Tytuł *</label>
               <input
                 type="text"
+                maxLength={500}
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
@@ -196,6 +226,7 @@ export default function AdminAnnouncementsPage() {
                 value={form.content}
                 onChange={(e) => setForm({ ...form, content: e.target.value })}
                 rows={6}
+                maxLength={10000}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage resize-y"
               />
             </div>
@@ -203,6 +234,7 @@ export default function AdminAnnouncementsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Skrót (opcjonalnie)</label>
               <input
                 type="text"
+                maxLength={500}
                 value={form.excerpt}
                 onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
                 placeholder="Krótki opis widoczny na liście"
@@ -263,6 +295,25 @@ export default function AdminAnnouncementsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {a.email_sent_at ? (
+                    <span className="px-2 py-1 bg-sage-pale/40 text-sage text-xs font-medium rounded-full flex items-center gap-1" title={`Wysłano ${formatDate(a.email_sent_at)}`}>
+                      <MailIcon className="w-3 h-3" />
+                      Wysłano
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleSendEmail(a)}
+                      disabled={sending === a.id}
+                      className="p-2 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                      title="Wyślij emailem do mieszkańców"
+                    >
+                      {sending === a.id ? (
+                        <span className="w-4 h-4 block border-2 border-sage/30 border-t-sage rounded-full animate-spin" />
+                      ) : (
+                        <MailIcon className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => openEdit(a)}
                     className="p-2 text-outline hover:text-sage transition-colors"

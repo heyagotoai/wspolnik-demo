@@ -22,13 +22,12 @@ def get_profile(user: dict = Depends(get_current_user)):
 @router.patch("", response_model=ProfileOut)
 def update_profile(body: ProfileUpdate, user: dict = Depends(get_current_user)):
     """Update current user's profile (name only)."""
-    if not body.full_name or not body.full_name.strip():
-        raise HTTPException(status_code=400, detail="Imię i nazwisko nie może być puste")
+    # full_name validation (min 2 chars, not blank) handled by Pydantic
 
     sb = get_supabase()
     result = (
         sb.table("residents")
-        .update({"full_name": body.full_name.strip()})
+        .update({"full_name": body.full_name})
         .eq("id", user["sub"])
         .execute()
     )
@@ -42,10 +41,7 @@ def update_profile(body: ProfileUpdate, user: dict = Depends(get_current_user)):
 @router.post("/change-password", response_model=MessageOut)
 def change_password(body: ChangePassword, user: dict = Depends(get_current_user)):
     """Change current user's password. Verifies old password first."""
-    if len(body.new_password) < 6:
-        raise HTTPException(
-            status_code=400, detail="Nowe hasło musi mieć minimum 6 znaków"
-        )
+    # password length validation (min 6) handled by Pydantic
 
     sb = get_supabase()
 

@@ -111,8 +111,8 @@ export default function AdminChargesPage() {
     }
 
     const amount = parseFloat(form.amount)
-    if (isNaN(amount) || amount <= 0) {
-      setError('Podaj prawidłową kwotę.')
+    if (isNaN(amount) || amount <= 0 || amount > 99999999.99) {
+      setError('Podaj prawidłową kwotę (0.01–99 999 999.99 PLN).')
       return
     }
 

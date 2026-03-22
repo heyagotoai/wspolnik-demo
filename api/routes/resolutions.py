@@ -133,8 +133,7 @@ def cast_vote(
     user: dict = Depends(get_current_user),
 ):
     """Cast a vote on a resolution. Can only vote once (no changes)."""
-    if body.vote not in ("za", "przeciw", "wstrzymuje"):
-        raise HTTPException(status_code=400, detail="Nieprawidłowy głos. Dozwolone: za, przeciw, wstrzymuje")
+    # vote value is now validated by Pydantic (Literal type)
 
     sb = get_supabase()
 

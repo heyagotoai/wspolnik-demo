@@ -104,6 +104,22 @@ export default function ApartmentsPage() {
       return
     }
 
+    if (form.area_m2) {
+      const area = parseFloat(form.area_m2)
+      if (isNaN(area) || area <= 0 || area > 10000) {
+        setError('Powierzchnia musi być liczbą z zakresu 0.01–10000 m².')
+        return
+      }
+    }
+
+    if (form.share) {
+      const share = parseFloat(form.share)
+      if (isNaN(share) || share <= 0 || share > 100) {
+        setError('Udział musi być liczbą z zakresu 0.01–100%.')
+        return
+      }
+    }
+
     setSaving(true)
     setError(null)
 
@@ -208,6 +224,7 @@ export default function ApartmentsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Numer lokalu *</label>
               <input
                 type="text"
+                maxLength={20}
                 value={form.number}
                 onChange={(e) => setForm({ ...form, number: e.target.value })}
                 placeholder="np. 1, 2A, 10"

@@ -83,6 +83,10 @@ export default function ResidentsPage() {
       setError('Imię i email są wymagane.')
       return
     }
+    if (form.full_name.trim().length < 2) {
+      setError('Imię i nazwisko musi mieć min. 2 znaki.')
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -203,6 +207,7 @@ export default function ResidentsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Imię i nazwisko *</label>
               <input
                 type="text"
+                maxLength={255}
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
@@ -223,6 +228,7 @@ export default function ResidentsPage() {
                 <label className="block text-sm font-medium text-charcoal mb-1">Hasło *</label>
                 <input
                   type="password"
+                  maxLength={128}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="min. 6 znaków"
@@ -234,6 +240,7 @@ export default function ResidentsPage() {
               <label className="block text-sm font-medium text-charcoal mb-1">Nr lokalu</label>
               <input
                 type="text"
+                maxLength={20}
                 value={form.apartment_number}
                 onChange={(e) => setForm({ ...form, apartment_number: e.target.value })}
                 placeholder="np. 1, 2A"
