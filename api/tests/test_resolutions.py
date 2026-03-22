@@ -62,6 +62,17 @@ class TestCreateResolution:
         assert response.status_code == 201
         assert response.json()["title"] == "Wymiana windy"
 
+    def test_tworzenie_ze_statusem_voting_tworzy_ogloszenie(self, admin_client, fake_sb):
+        """Creating a resolution with status 'voting' auto-creates an announcement."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("announcements", [])
+
+        response = admin_client.post("/api/resolutions", json={
+            "title": "Nowa uchwała",
+            "status": "voting",
+        })
+        assert response.status_code == 201
+
     def test_tworzenie_wymaga_admina(self, resident_client, fake_sb):
         """Resident (non-admin) cannot create resolutions."""
         # resident_client only overrides get_current_user, not require_admin
@@ -86,8 +97,39 @@ class TestUpdateResolution:
         assert response.json()["status"] == "closed"
 
     def test_aktualizacja_puste_dane(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
         response = admin_client.patch("/api/resolutions/res-1", json={})
         assert response.status_code == 400
+
+    def test_zmiana_na_voting_tworzy_ogloszenie(self, admin_client, fake_sb):
+        """Changing status to 'voting' auto-creates an announcement."""
+        draft = {**RESOLUTION_DATA, "status": "draft"}
+        voting = {**RESOLUTION_DATA, "status": "voting"}
+        # First select returns draft (old status), update returns voting
+        fake_sb.set_table_data("resolutions", [draft])
+        fake_sb.set_table_data("announcements", [])
+
+        # FakeSupabase returns same data for all queries on a table,
+        # so we patch to return draft first, then voting for update
+        from unittest.mock import patch as _patch
+        call_count = {"n": 0}
+        original_table = fake_sb.table
+
+        def table_with_status_change(name):
+            builder = original_table(name)
+            if name == "resolutions":
+                call_count["n"] += 1
+                # Second call is the update — return voting status
+                if call_count["n"] >= 2:
+                    builder._data = [voting]
+            return builder
+
+        with _patch.object(fake_sb, "table", side_effect=table_with_status_change):
+            response = admin_client.patch("/api/resolutions/res-1", json={
+                "status": "voting",
+            })
+
+        assert response.status_code == 200
 
 
 # --- DELETE /api/resolutions/:id --------------------------------------------

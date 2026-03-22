@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon } from '../../components/ui/Icons'
+import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 
 interface Announcement {
   id: string
@@ -12,22 +12,24 @@ interface Announcement {
   created_at: string
 }
 
-interface ImportantDate {
+interface Resolution {
   id: string
   title: string
-  date: string
+  voting_end: string | null
 }
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [dates, setDates] = useState<ImportantDate[]>([])
+  const [nextDate, setNextDate] = useState<string | null>(null)
+  const [resolutions, setResolutions] = useState<Resolution[]>([])
+  const [votedResolutionTitles, setVotedResolutionTitles] = useState<Set<string>>(new Set())
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
-      const [annRes, datesRes] = await Promise.all([
+      const [annRes, datesRes, resRes] = await Promise.all([
         supabase
           .from('announcements')
           .select('id, title, excerpt, is_pinned, created_at')
@@ -36,14 +38,48 @@ export default function DashboardPage() {
           .limit(3),
         supabase
           .from('important_dates')
-          .select('id, title, date')
+          .select('date')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
-          .limit(5),
+          .limit(1),
+        supabase
+          .from('resolutions')
+          .select('id, title, voting_end')
+          .eq('status', 'voting')
+          .order('created_at', { ascending: false })
+          .limit(3),
       ])
 
       if (annRes.data) setAnnouncements(annRes.data)
-      if (datesRes.data) setDates(datesRes.data)
+      if (resRes.data) setResolutions(resRes.data)
+
+      // Check which active resolutions the user already voted on
+      const votedIds = new Set<string>()
+      if (resRes.data?.length && user) {
+        const { data: votes } = await supabase
+          .from('votes')
+          .select('resolution_id')
+          .eq('resident_id', user.id)
+          .in('resolution_id', resRes.data.map((r: Resolution) => r.id))
+        if (votes) {
+          for (const v of votes) votedIds.add(v.resolution_id)
+          const titles = new Set(
+            resRes.data
+              .filter((r: Resolution) => votedIds.has(r.id))
+              .map((r: Resolution) => r.title)
+          )
+          setVotedResolutionTitles(titles)
+        }
+      }
+
+      // Pick nearest upcoming date — exclude voting deadlines user already voted on
+      const allDates: string[] = []
+      if (datesRes.data?.[0]) allDates.push(datesRes.data[0].date)
+      for (const r of resRes.data || []) {
+        if (r.voting_end && !votedIds.has(r.id)) allDates.push(r.voting_end)
+      }
+      allDates.sort()
+      if (allDates.length > 0) setNextDate(allDates[0])
 
       // Fetch balance: payments - charges for user's apartment
       if (user) {
@@ -96,7 +132,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick stats / cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <DashboardCard
           icon={<MegaphoneIcon className="w-6 h-6" />}
           label="Ogłoszenia"
@@ -105,8 +141,8 @@ export default function DashboardPage() {
         />
         <DashboardCard
           icon={<CalendarIcon className="w-6 h-6" />}
-          label="Najbliższy termin"
-          value={dates.length > 0 ? formatDate(dates[0].date) : 'Brak'}
+          label="Terminy"
+          value={nextDate ? formatDate(nextDate) : 'Brak'}
           to="/panel/terminy"
         />
         <DashboardCard
@@ -123,70 +159,57 @@ export default function DashboardPage() {
             : 'Brak lokalu'}
           to="/panel/finanse"
         />
+        <DashboardCard
+          icon={<VoteIcon className="w-6 h-6" />}
+          label="Głosowania"
+          value={`${resolutions.length} aktywnych`}
+          to="/panel/glosowania"
+        />
       </div>
 
-      {/* Announcements + Important dates */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Announcements */}
-        <div className="lg:col-span-2 bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-charcoal">Ostatnie ogłoszenia</h2>
-            <Link to="/panel/ogloszenia" className="text-sm text-sage hover:text-sage-light flex items-center gap-1">
-              Wszystkie <ArrowRightIcon className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          {announcements.length === 0 ? (
-            <p className="text-slate text-sm">Brak ogłoszeń.</p>
-          ) : (
-            <div className="space-y-4">
-              {announcements.map((a) => (
-                <div key={a.id} className="border-b border-cream-medium pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start gap-2">
-                    {a.is_pinned && (
-                      <span className="mt-0.5 px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">
-                        Ważne
-                      </span>
+      {/* Announcements */}
+      <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-charcoal">Ostatnie ogłoszenia</h2>
+          <Link to="/panel/ogloszenia" className="text-sm text-sage hover:text-sage-light flex items-center gap-1">
+            Wszystkie <ArrowRightIcon className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        {announcements.length === 0 ? (
+          <p className="text-slate text-sm">Brak ogłoszeń.</p>
+        ) : (
+          <div className="space-y-4">
+            {announcements.map((a) => (
+              <div key={a.id} className="border-b border-cream-medium pb-4 last:border-0 last:pb-0">
+                <div className="flex items-start gap-2">
+                  {a.is_pinned && (
+                    <span className="mt-0.5 px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">
+                      Ważne
+                    </span>
+                  )}
+                  <div>
+                    {a.title.startsWith('Nowe głosowanie:') ? (
+                      <>
+                        <Link to="/panel/glosowania" className="text-sm font-medium text-sage hover:text-sage-light">{a.title}</Link>
+                        {votedResolutionTitles.has(a.title.replace('Nowe głosowanie: ', '')) ? (
+                          <p className="text-xs text-sage mt-1">Oddałeś już głos w tej uchwale.</p>
+                        ) : (
+                          <p className="text-xs text-error mt-1">Czeka na Twój głos</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-sm font-medium text-charcoal">{a.title}</h3>
+                        {a.excerpt && <p className="text-sm text-slate mt-1">{a.excerpt}</p>}
+                      </>
                     )}
-                    <div>
-                      <h3 className="text-sm font-medium text-charcoal">{a.title}</h3>
-                      {a.excerpt && <p className="text-sm text-slate mt-1">{a.excerpt}</p>}
-                      <p className="text-xs text-outline mt-1">{formatDate(a.created_at)}</p>
-                    </div>
+                    <p className="text-xs text-outline mt-1">{formatDate(a.created_at)}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Important dates */}
-        <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-charcoal">Najbliższe terminy</h2>
-            <Link to="/panel/terminy" className="text-sm text-sage hover:text-sage-light flex items-center gap-1">
-              Więcej <ArrowRightIcon className="w-3.5 h-3.5" />
-            </Link>
+              </div>
+            ))}
           </div>
-          {dates.length === 0 ? (
-            <p className="text-slate text-sm">Brak nadchodzących terminów.</p>
-          ) : (
-            <div className="space-y-3">
-              {dates.map((d) => (
-                <div key={d.id} className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-[var(--radius-input)] bg-sage-pale/30 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-sage leading-none">
-                      {new Date(d.date).getDate()}
-                    </span>
-                    <span className="text-[10px] text-sage uppercase">
-                      {new Date(d.date).toLocaleDateString('pl-PL', { month: 'short' })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-charcoal pt-1">{d.title}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )

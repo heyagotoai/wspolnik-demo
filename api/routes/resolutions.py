@@ -37,6 +37,22 @@ def create_resolution(body: ResolutionCreate, _admin: dict = Depends(require_adm
     if not result.data:
         raise HTTPException(status_code=500, detail="Nie udało się utworzyć uchwały")
 
+    # Auto-create announcement when created directly with "voting" status
+    if body.status == "voting":
+        voting_end = result.data[0].get("voting_end")
+        end_info = ""
+        if voting_end:
+            end_info = f" Głosowanie trwa do {voting_end}."
+
+        title = body.title
+        content = f'Rozpoczęto głosowanie nad uchwałą "{title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
+        sb.table("announcements").insert({
+            "title": f"Nowe głosowanie: {title}",
+            "content": content,
+            "excerpt": f'Głosowanie nad uchwałą "{title}" jest otwarte.',
+            "is_pinned": True,
+        }).execute()
+
     return result.data[0]
 
 
@@ -48,6 +64,14 @@ def update_resolution(
 ):
     """Update a resolution (admin only)."""
     sb = get_supabase()
+
+    # Check current status before update
+    current = sb.table("resolutions").select("status, title").eq("id", resolution_id).execute()
+    if not current.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+
+    old_status = current.data[0]["status"]
+    resolution_title = body.title or current.data[0]["title"]
 
     update_data = body.model_dump(exclude_none=True)
     if not update_data:
@@ -62,6 +86,21 @@ def update_resolution(
 
     if not result.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+
+    # Auto-create announcement when status changes to "voting"
+    if body.status == "voting" and old_status != "voting":
+        voting_end = result.data[0].get("voting_end")
+        end_info = ""
+        if voting_end:
+            end_info = f" Głosowanie trwa do {voting_end}."
+
+        content = f'Rozpoczęto głosowanie nad uchwałą "{resolution_title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
+        sb.table("announcements").insert({
+            "title": f"Nowe głosowanie: {resolution_title}",
+            "content": content,
+            "excerpt": f'Głosowanie nad uchwałą "{resolution_title}" jest otwarte.',
+            "is_pinned": True,
+        }).execute()
 
     return result.data[0]
 
