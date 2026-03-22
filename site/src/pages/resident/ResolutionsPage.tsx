@@ -121,6 +121,11 @@ export default function ResidentResolutionsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Głosowania</h1>
 
+      <p className="text-sm text-slate leading-relaxed">
+        Przed oddaniem głosu prosimy o uważne zapoznanie się z treścią uchwały.
+        Głos jest ostateczny — po jego oddaniu nie ma możliwości zmiany.
+      </p>
+
       {resolutions.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
           <p className="text-slate">Brak aktywnych głosowań.</p>
