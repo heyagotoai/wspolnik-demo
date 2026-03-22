@@ -1,0 +1,228 @@
+{
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "text": "# WM GABI\n### System zarządzania wspólnotą mieszkaniową",
+      "x": -100,
+      "y": -600,
+      "width": 340,
+      "height": 80,
+      "color": "1"
+    },
+    {
+      "id": "frontend",
+      "type": "text",
+      "text": "## 🖥️ Frontend\nReact 19 + TypeScript\nVite + Tailwind CSS 4\nReact Router 7\n\n**Hosting:** Vercel",
+      "x": -700,
+      "y": -400,
+      "width": 220,
+      "height": 140,
+      "color": "4"
+    },
+    {
+      "id": "backend",
+      "type": "text",
+      "text": "## ⚙️ Backend\nFastAPI (Python)\nServerless na Vercel\n\n**service_role** do operacji\nuprzywilejowanych",
+      "x": -100,
+      "y": -400,
+      "width": 220,
+      "height": 140,
+      "color": "6"
+    },
+    {
+      "id": "supabase",
+      "type": "text",
+      "text": "## 🗄️ Supabase\nPostgreSQL + RLS\nAuth (email whitelist)\nStorage (dokumenty PDF)\nEdge Function (SMTP)",
+      "x": 500,
+      "y": -400,
+      "width": 220,
+      "height": 140,
+      "color": "5"
+    },
+    {
+      "id": "auth",
+      "type": "text",
+      "text": "## 🔐 Auth\nEmail + hasło\nWhitelist — admin\ndodaje mieszkańców\n\nRole: admin / mieszkaniec",
+      "x": 500,
+      "y": -160,
+      "width": 220,
+      "height": 120,
+      "color": "5"
+    },
+    {
+      "id": "rls",
+      "type": "file",
+      "file": "decisions/ADR-002-rls-bezpieczenstwo.md",
+      "x": 800,
+      "y": -160,
+      "width": 200,
+      "height": 60
+    },
+    {
+      "id": "panel_mieszkanca",
+      "type": "text",
+      "text": "## 👤 Panel mieszkańca\n- Saldo i naliczenia\n- Wpłaty\n- Ogłoszenia\n- Dokumenty PDF\n- Terminy\n- Głosowania\n- Profil",
+      "x": -1000,
+      "y": -160,
+      "width": 200,
+      "height": 200,
+      "color": "3"
+    },
+    {
+      "id": "panel_admina",
+      "type": "text",
+      "text": "## 🔧 Panel admina\n- Mieszkańcy (CRUD)\n- Lokale\n- Naliczenia + stawki\n- Ogłoszenia\n- Dokumenty\n- Uchwały + głosowania\n- Wiadomości kontaktowe",
+      "x": -700,
+      "y": -160,
+      "width": 200,
+      "height": 200,
+      "color": "1"
+    },
+    {
+      "id": "db_schema",
+      "type": "text",
+      "text": "## 📋 Schemat bazy\nresidents, apartments\ncharges, payments\nannouncements, documents\nresolutions, votes\nread_announcements\ncharge_rates, system_settings\nbank_statements, audit_log",
+      "x": 200,
+      "y": -160,
+      "width": 220,
+      "height": 180,
+      "color": "5"
+    },
+    {
+      "id": "email",
+      "type": "text",
+      "text": "## 📧 Email\nSMTP relay: az.pl\npowiadomienia@wmgabi.pl\nEdge Function: send-email",
+      "x": 800,
+      "y": -400,
+      "width": 200,
+      "height": 110,
+      "color": "2"
+    },
+    {
+      "id": "domena",
+      "type": "text",
+      "text": "## 🌐 Domena\nwmgabi.pl\nDNS: az.pl\nHosting: Vercel",
+      "x": -400,
+      "y": -160,
+      "width": 180,
+      "height": 90,
+      "color": "4"
+    },
+    {
+      "id": "migrations",
+      "type": "text",
+      "text": "## 🗃️ Migracje SQL\n001 — initial schema\n002 — RLS policies\n003 — resolutions+votes\n004 — storage+docs\n005 — announcements\n006 — read tracking\n007 — RLS apartment fix\n008 — charge_rates\n009 — system_settings\n010 — initial_balance",
+      "x": 200,
+      "y": 80,
+      "width": 220,
+      "height": 200,
+      "color": "5"
+    },
+    {
+      "id": "todo",
+      "type": "text",
+      "text": "## 🚧 Do zrobienia\n- Import MT940 (format z banku nieznany)\n- Testy integracyjne end-to-end\n- Weryfikacja SMTP (maile testowe)",
+      "x": -100,
+      "y": 80,
+      "width": 220,
+      "height": 140,
+      "color": "2"
+    },
+    {
+      "id": "adr_stack",
+      "type": "file",
+      "file": "decisions/ADR-001-stack-technologiczny.md",
+      "x": -700,
+      "y": -580,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "adr_auth",
+      "type": "file",
+      "file": "decisions/ADR-003-auth-pattern.md",
+      "x": 500,
+      "y": -580,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "adr_email",
+      "type": "file",
+      "file": "decisions/ADR-011-edge-function-email.md",
+      "x": 800,
+      "y": -560,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "adr_voting",
+      "type": "file",
+      "file": "decisions/ADR-010-voting-system.md",
+      "x": -1000,
+      "y": 80,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "adr_charges",
+      "type": "file",
+      "file": "decisions/ADR-012-charge-generation.md",
+      "x": -700,
+      "y": 80,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "adr_testing",
+      "type": "file",
+      "file": "decisions/ADR-009-testing-strategy.md",
+      "x": -400,
+      "y": 80,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "cron",
+      "type": "text",
+      "text": "## ⏱️ Vercel Cron\n`0 6 * * *`\nAuto-generowanie naliczeń\nChroniony: CRON_SECRET\nDomyślnie: wyłączone",
+      "x": 500,
+      "y": 80,
+      "width": 220,
+      "height": 120,
+      "color": "6"
+    },
+    {
+      "id": "feature_map",
+      "type": "file",
+      "file": "architecture/feature-map.md",
+      "x": -100,
+      "y": -580,
+      "width": 260,
+      "height": 60
+    },
+    {
+      "id": "system_overview",
+      "type": "file",
+      "file": "architecture/system-overview.md",
+      "x": 200,
+      "y": -580,
+      "width": 260,
+      "height": 60
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "frontend", "fromSide": "right", "toNode": "backend", "toSide": "left", "label": "REST API" },
+    { "id": "e2", "fromNode": "frontend", "fromSide": "right", "toNode": "supabase", "toSide": "left", "label": "Auth + Storage" },
+    { "id": "e3", "fromNode": "backend", "fromSide": "right", "toNode": "supabase", "toSide": "left", "label": "service_role" },
+    { "id": "e4", "fromNode": "supabase", "fromSide": "bottom", "toNode": "auth", "toSide": "top" },
+    { "id": "e5", "fromNode": "supabase", "fromSide": "bottom", "toNode": "db_schema", "toSide": "top" },
+    { "id": "e6", "fromNode": "auth", "fromSide": "top", "toNode": "rls", "toSide": "left", "label": "RLS" },
+    { "id": "e7", "fromNode": "supabase", "fromSide": "right", "toNode": "email", "toSide": "left", "label": "Edge Function" },
+    { "id": "e8", "fromNode": "frontend", "fromSide": "bottom", "toNode": "panel_mieszkanca", "toSide": "top" },
+    { "id": "e9", "fromNode": "frontend", "fromSide": "bottom", "toNode": "panel_admina", "toSide": "top" },
+    { "id": "e10", "fromNode": "db_schema", "fromSide": "bottom", "toNode": "migrations", "toSide": "top" },
+    { "id": "e11", "fromNode": "cron", "fromSide": "left", "toNode": "backend", "toSide": "right", "label": "CRON_SECRET" }
+  ]
+}
