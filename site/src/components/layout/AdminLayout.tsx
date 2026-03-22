@@ -10,6 +10,7 @@ import {
   CalendarIcon,
   WalletIcon,
   MailIcon,
+  VoteIcon,
   LogOutIcon,
   UserIcon,
 } from '../ui/Icons'
@@ -23,6 +24,7 @@ const sidebarLinks = [
   { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon },
   { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon },
   { label: 'Wiadomości', path: '/admin/wiadomosci', icon: MailIcon },
+  { label: 'Uchwały', path: '/admin/uchwaly', icon: VoteIcon },
 ]
 
 export default function AdminLayout() {
@@ -40,7 +42,8 @@ export default function AdminLayout() {
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-cream-medium">
         <div className="px-6 h-[72px] flex items-center border-b border-cream-medium">
-          <Link to="/" className="text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
+          <Link to="/" className="flex items-center gap-2 text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
+            <img src="/logo.png" alt="WM GABI" className="h-8 w-8 object-contain" />
             WM GABI
           </Link>
           <span className="ml-2 px-2 py-0.5 bg-amber-light text-amber text-[10px] font-bold rounded-full uppercase tracking-wider">

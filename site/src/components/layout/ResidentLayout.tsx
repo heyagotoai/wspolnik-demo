@@ -8,6 +8,7 @@ import {
   FolderIcon,
   CalendarIcon,
   WalletIcon,
+  VoteIcon,
   LogOutIcon,
   HomeIcon,
   SettingsIcon,
@@ -19,6 +20,7 @@ const sidebarLinks = [
   { label: 'Dokumenty', path: '/panel/dokumenty', icon: FolderIcon },
   { label: 'Terminy', path: '/panel/terminy', icon: CalendarIcon },
   { label: 'Finanse', path: '/panel/finanse', icon: WalletIcon },
+  { label: 'Głosowania', path: '/panel/glosowania', icon: VoteIcon },
 ]
 
 export default function ResidentLayout() {
@@ -37,7 +39,8 @@ export default function ResidentLayout() {
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-cream-medium">
         <div className="px-6 h-[72px] flex items-center border-b border-cream-medium">
-          <Link to="/" className="text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
+          <Link to="/" className="flex items-center gap-2 text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
+            <img src="/logo.png" alt="WM GABI" className="h-8 w-8 object-contain" />
             WM GABI
           </Link>
         </div>

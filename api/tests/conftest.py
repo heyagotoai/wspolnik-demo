@@ -80,7 +80,8 @@ def fake_sb():
     """Create a FakeSupabase and patch get_supabase everywhere it's imported."""
     sb = FakeSupabase()
     with patch("api.core.security.get_supabase", return_value=sb), \
-         patch("api.routes.residents.get_supabase", return_value=sb):
+         patch("api.routes.residents.get_supabase", return_value=sb), \
+         patch("api.routes.resolutions.get_supabase", return_value=sb):
         yield sb
 
 
@@ -133,3 +134,14 @@ def resident_headers(fake_sb):
     )
     fake_sb.set_table_data("residents", [{"role": "resident"}])
     return {"Authorization": "Bearer fake-resident-token"}
+
+
+@pytest.fixture()
+def resident_client(fake_sb, app):
+    """Return a TestClient where get_current_user is overridden to a resident."""
+    from api.core.security import get_current_user
+
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "res-1", "email": "jan@gabi.pl",
+    }
+    return TestClient(app)

@@ -23,6 +23,8 @@ import AdminDatesPage from './pages/admin/DatesPage'
 import AdminChargesPage from './pages/admin/ChargesPage'
 import AdminApartmentsPage from './pages/admin/ApartmentsPage'
 import AdminMessagesPage from './pages/admin/MessagesPage'
+import AdminResolutionsPage from './pages/admin/ResolutionsPage'
+import ResidentResolutionsPage from './pages/resident/ResolutionsPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -50,6 +52,7 @@ function AppRoutes() {
           <Route path="/panel/dokumenty" element={<ResidentDocumentsPage />} />
           <Route path="/panel/terminy" element={<DatesPage />} />
           <Route path="/panel/finanse" element={<FinancesPage />} />
+          <Route path="/panel/glosowania" element={<ResidentResolutionsPage />} />
         </Route>
       </Route>
 
@@ -64,6 +67,7 @@ function AppRoutes() {
           <Route path="/admin/terminy" element={<AdminDatesPage />} />
           <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
           <Route path="/admin/wiadomosci" element={<AdminMessagesPage />} />
+          <Route path="/admin/uchwaly" element={<AdminResolutionsPage />} />
         </Route>
       </Route>
     </Routes>

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.core.config import FRONTEND_URL
 from api.routes.residents import router as residents_router
 from api.routes.contact import router as contact_router
+from api.routes.resolutions import router as resolutions_router
 
 app = FastAPI(
     title="GABI API",
@@ -26,6 +27,7 @@ app.add_middleware(
 
 app.include_router(residents_router, prefix="/api")
 app.include_router(contact_router, prefix="/api")
+app.include_router(resolutions_router, prefix="/api")
 
 
 @app.get("/api/health")
