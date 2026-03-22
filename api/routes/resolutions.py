@@ -9,6 +9,7 @@ from api.models.schemas import (
     VoteCreate,
     VoteOut,
     VoteResults,
+    VoteDetail,
     MessageOut,
 )
 
@@ -145,6 +146,47 @@ def get_vote_results(resolution_id: str, _user: dict = Depends(get_current_user)
         wstrzymuje=counts["wstrzymuje"],
         total=sum(counts.values()),
     )
+
+
+@router.get("/{resolution_id}/votes", response_model=list[VoteDetail])
+def get_resolution_vote_details(resolution_id: str, _admin: dict = Depends(require_admin)):
+    """Get all individual votes with resident details for a resolution (admin only)."""
+    sb = get_supabase()
+
+    check = sb.table("resolutions").select("id").eq("id", resolution_id).execute()
+    if not check.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+
+    votes = (
+        sb.table("votes")
+        .select("*")
+        .eq("resolution_id", resolution_id)
+        .order("voted_at")
+        .execute()
+    )
+
+    if not votes.data:
+        return []
+
+    resident_ids = list({v["resident_id"] for v in votes.data})
+    residents_result = (
+        sb.table("residents")
+        .select("id, full_name, apartment_number")
+        .in_("id", resident_ids)
+        .execute()
+    )
+    residents_map = {r["id"]: r for r in residents_result.data}
+
+    return [
+        VoteDetail(
+            resident_id=v["resident_id"],
+            full_name=residents_map.get(v["resident_id"], {}).get("full_name", "—"),
+            apartment_number=residents_map.get(v["resident_id"], {}).get("apartment_number"),
+            vote=v["vote"],
+            voted_at=v["voted_at"],
+        )
+        for v in votes.data
+    ]
 
 
 @router.get("/{resolution_id}/my-vote", response_model=VoteOut | None)

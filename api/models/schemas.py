@@ -152,6 +152,14 @@ class VoteResults(BaseModel):
     total: int = 0
 
 
+class VoteDetail(BaseModel):
+    resident_id: str
+    full_name: str
+    apartment_number: str | None
+    vote: str
+    voted_at: str
+
+
 # --- Profile ---
 
 class ProfileOut(BaseModel):

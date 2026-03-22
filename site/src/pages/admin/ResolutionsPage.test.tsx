@@ -35,6 +35,7 @@ vi.mock('../../components/ui/Icons', () => ({
   EditIcon: ({ className }: { className?: string }) => <span data-testid="edit-icon" className={className}>✎</span>,
   TrashIcon: ({ className }: { className?: string }) => <span data-testid="trash-icon" className={className}>🗑</span>,
   XIcon: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className}>×</span>,
+  DownloadIcon: ({ className }: { className?: string }) => <span data-testid="download-icon" className={className}>⬇</span>,
 }))
 
 import AdminResolutionsPage from './ResolutionsPage'
@@ -75,10 +76,13 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
 
-  // Default: api.get returns resolutions list, results return empty
+  // Default: api.get returns resolutions list, results and votes return mock data
   mockGet.mockImplementation((path: string) => {
     if (path === '/resolutions') return Promise.resolve(mockResolutions)
     if (path.includes('/results')) return Promise.resolve({ za: 1, przeciw: 0, wstrzymuje: 0, total: 1 })
+    if (path.includes('/votes')) return Promise.resolve([
+      { resident_id: 'r1', full_name: 'Jan Kowalski', apartment_number: '12', vote: 'za', voted_at: '2026-03-21T12:00:00' },
+    ])
     return Promise.resolve(null)
   })
 })
@@ -146,5 +150,59 @@ describe('AdminResolutionsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Za: 1')).toBeInTheDocument()
     })
+  })
+
+  it('pokazuje przycisk eksportu PDF dla uchwały w głosowaniu', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Wymiana windy')).toBeInTheDocument()
+    })
+
+    const exportButtons = screen.getAllByTitle('Eksportuj wyniki głosowania (PDF)')
+    expect(exportButtons).toHaveLength(1) // tylko uchwała "voting", nie "draft"
+  })
+
+  it('nie pokazuje przycisku eksportu PDF dla szkicu', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Remont klatki')).toBeInTheDocument()
+    })
+
+    // "Remont klatki" ma status draft — brak przycisku eksportu
+    const exportButtons = screen.queryAllByTitle('Eksportuj wyniki głosowania (PDF)')
+    expect(exportButtons).toHaveLength(1) // tylko dla "voting"
+  })
+
+  it('wywołuje window.open przy eksporcie PDF i zawiera dane mieszkańca', async () => {
+    const mockWin = {
+      document: { write: vi.fn(), close: vi.fn() },
+      focus: vi.fn(),
+      print: vi.fn(),
+    }
+    const mockOpen = vi.fn().mockReturnValue(mockWin)
+    vi.stubGlobal('open', mockOpen)
+
+    renderPage()
+    const user = userEvent.setup()
+
+    await waitFor(() => {
+      expect(screen.getByText('Wymiana windy')).toBeInTheDocument()
+    })
+
+    const exportBtn = screen.getByTitle('Eksportuj wyniki głosowania (PDF)')
+    await user.click(exportBtn)
+
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledWith('', '_blank', expect.any(String))
+    })
+
+    // PDF zawiera dane mieszkańca z listy głosów
+    const writtenHtml: string = mockWin.document.write.mock.calls[0][0]
+    expect(writtenHtml).toContain('Jan Kowalski')
+    expect(writtenHtml).toContain('Lista głosów mieszkańców')
+
+    vi.unstubAllGlobals()
   })
 })

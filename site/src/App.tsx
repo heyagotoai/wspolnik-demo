@@ -25,6 +25,7 @@ import AdminMessagesPage from './pages/admin/MessagesPage'
 import AdminResolutionsPage from './pages/admin/ResolutionsPage'
 import ResidentResolutionsPage from './pages/resident/ResolutionsPage'
 import ProfilePage from './pages/resident/ProfilePage'
+import NotFoundPage from './pages/NotFoundPage'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -70,6 +71,9 @@ function AppRoutes() {
           <Route path="/admin/uchwaly" element={<AdminResolutionsPage />} />
         </Route>
       </Route>
+
+      {/* Catch-all — 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

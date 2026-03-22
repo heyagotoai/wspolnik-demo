@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 
@@ -20,6 +20,14 @@ interface VoteResults {
   przeciw: number
   wstrzymuje: number
   total: number
+}
+
+interface VoteDetail {
+  resident_id: string
+  full_name: string
+  apartment_number: string | null
+  vote: string
+  voted_at: string
 }
 
 interface ResolutionForm {
@@ -180,6 +188,154 @@ export default function AdminResolutionsPage() {
       year: 'numeric',
     })
 
+  const exportVotingPdf = async (r: Resolution) => {
+    let voteDetails: VoteDetail[] = []
+    try {
+      voteDetails = await api.get<VoteDetail[]>(`/resolutions/${r.id}/votes`)
+    } catch {
+      toast('Błąd pobierania listy głosów', 'error')
+      return
+    }
+
+    const voteData = results[r.id]
+    const status = statusLabels[r.status] || statusLabels.draft
+    const generated = new Date().toLocaleString('pl-PL')
+
+    const percentOf = (n: number) =>
+      voteData && voteData.total > 0 ? ((n / voteData.total) * 100).toFixed(1) + '%' : '—'
+
+    const html = `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Wyniki głosowania — ${r.title}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 40px; font-size: 13px; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 12px; margin-bottom: 28px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 12px; }
+    .badge-voting { background: #d1fae5; color: #065f46; }
+    .badge-closed { background: #fee2e2; color: #991b1b; }
+    .badge-draft  { background: #f1f5f9; color: #475569; }
+    section { margin-bottom: 24px; }
+    h2 { font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    p { line-height: 1.6; color: #334155; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { text-align: left; padding: 8px 12px; background: #f8fafc; font-size: 12px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; }
+    td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+    .vote-za { color: #065f46; font-weight: 700; }
+    .vote-przeciw { color: #991b1b; font-weight: 700; }
+    .vote-wstrzymuje { color: #475569; font-weight: 700; }
+    .vote-total { font-weight: 700; }
+    .bar-row td { padding: 4px 12px; }
+    .bar { height: 10px; border-radius: 5px; }
+    .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <span class="badge badge-${r.status}">${status.label}</span>
+  <h1>${r.title}</h1>
+  <p class="subtitle">Wygenerowano: ${generated}</p>
+
+  ${r.description ? `<section>
+    <h2>Opis uchwały</h2>
+    <p>${r.description.replace(/\n/g, '<br>')}</p>
+  </section>` : ''}
+
+  ${r.voting_start || r.voting_end ? `<section>
+    <h2>Okres głosowania</h2>
+    <p>
+      ${r.voting_start ? 'Od: ' + formatDate(r.voting_start) : ''}
+      ${r.voting_start && r.voting_end ? ' &mdash; ' : ''}
+      ${r.voting_end ? 'Do: ' + formatDate(r.voting_end) : ''}
+    </p>
+  </section>` : ''}
+
+  <section>
+    <h2>Podsumowanie głosowania</h2>
+    ${voteData && voteData.total > 0 ? `
+    <table>
+      <thead>
+        <tr>
+          <th>Opcja</th>
+          <th>Liczba głosów</th>
+          <th>Udział</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="vote-za">Za</td>
+          <td>${voteData.za}</td>
+          <td>${percentOf(voteData.za)}</td>
+        </tr>
+        <tr>
+          <td class="vote-przeciw">Przeciw</td>
+          <td>${voteData.przeciw}</td>
+          <td>${percentOf(voteData.przeciw)}</td>
+        </tr>
+        <tr>
+          <td class="vote-wstrzymuje">Wstrzymuje się</td>
+          <td>${voteData.wstrzymuje}</td>
+          <td>${percentOf(voteData.wstrzymuje)}</td>
+        </tr>
+        <tr>
+          <td class="vote-total">Łącznie</td>
+          <td class="vote-total">${voteData.total}</td>
+          <td>100%</td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
+  </section>
+
+  <section>
+    <h2>Lista głosów mieszkańców</h2>
+    ${voteDetails.length > 0 ? `
+    <table>
+      <thead>
+        <tr>
+          <th>Lokal</th>
+          <th>Imię i nazwisko</th>
+          <th>Głos</th>
+          <th>Data oddania głosu</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${voteDetails
+          .slice()
+          .sort((a, b) => (a.apartment_number ?? '').localeCompare(b.apartment_number ?? '', 'pl'))
+          .map(v => {
+            const voteLabel = v.vote === 'za' ? '<span class="vote-za">Za</span>'
+              : v.vote === 'przeciw' ? '<span class="vote-przeciw">Przeciw</span>'
+              : '<span class="vote-wstrzymuje">Wstrzymuje się</span>'
+            const votedAt = new Date(v.voted_at).toLocaleString('pl-PL')
+            return `<tr>
+              <td>${v.apartment_number ?? '—'}</td>
+              <td>${v.full_name}</td>
+              <td>${voteLabel}</td>
+              <td>${votedAt}</td>
+            </tr>`
+          }).join('')}
+      </tbody>
+    </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
+  </section>
+
+  <div class="footer">WM Gabi &bull; wmgabi.pl &bull; Dokument wygenerowany automatycznie</div>
+</body>
+</html>`
+
+    const win = window.open('', '_blank', 'width=800,height=600')
+    if (!win) {
+      toast('Zablokowano otwarcie okna — zezwól na pop-upy dla tej strony', 'error')
+      return
+    }
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 400)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -334,6 +490,15 @@ export default function AdminResolutionsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {(r.status === 'voting' || r.status === 'closed') && (
+                      <button
+                        onClick={() => exportVotingPdf(r)}
+                        className="p-2 text-outline hover:text-sage transition-colors"
+                        title="Eksportuj wyniki głosowania (PDF)"
+                      >
+                        <DownloadIcon className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(r)}
                       className="p-2 text-outline hover:text-sage transition-colors"

@@ -6,6 +6,7 @@ Pokryte scenariusze:
 - PATCH  /api/resolutions/:id          — aktualizacja (admin)
 - DELETE /api/resolutions/:id          — usuwanie (admin)
 - GET    /api/resolutions/:id/results  — wyniki głosowania
+- GET    /api/resolutions/:id/votes    — lista głosów z danymi mieszkańców (admin)
 - GET    /api/resolutions/:id/my-vote  — mój głos
 - POST   /api/resolutions/:id/vote     — oddanie głosu
 """
@@ -28,6 +29,13 @@ VOTE_DATA = {
     "resident_id": "res-1",
     "vote": "za",
     "voted_at": "2026-03-21T12:00:00",
+}
+
+RESIDENT_DATA = {
+    "id": "res-1",
+    "full_name": "Jan Kowalski",
+    "apartment_number": "12",
+    "role": "resident",
 }
 
 
@@ -198,6 +206,43 @@ class TestCastVote:
             "vote": "za",
         })
         assert response.status_code == 400
+
+
+# --- GET /api/resolutions/:id/votes ----------------------------------------
+
+class TestVoteDetails:
+    def test_lista_glosow_z_danymi_mieszkancow(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [VOTE_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_DATA])
+
+        response = admin_client.get("/api/resolutions/res-1/votes")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["full_name"] == "Jan Kowalski"
+        assert data[0]["apartment_number"] == "12"
+        assert data[0]["vote"] == "za"
+
+    def test_pusta_lista_gdy_brak_glosow(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [])
+
+        response = admin_client.get("/api/resolutions/res-1/votes")
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_niedostepne_dla_mieszkanca(self, resident_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+
+        response = resident_client.get("/api/resolutions/res-1/votes")
+        assert response.status_code == 403
+
+    def test_404_dla_nieistniejacego(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [])
+
+        response = admin_client.get("/api/resolutions/nonexistent/votes")
+        assert response.status_code == 404
 
 
 # --- GET /api/resolutions/:id/my-vote --------------------------------------

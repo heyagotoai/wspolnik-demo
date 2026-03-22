@@ -40,6 +40,9 @@ class FakeSupabaseBuilder:
     def eq(self, *_a, **_kw):
         return self
 
+    def in_(self, *_a, **_kw):
+        return self
+
     def order(self, *_a, **_kw):
         return self
 
