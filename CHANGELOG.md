@@ -2,6 +2,24 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-22 — Saldo początkowe lokalu
+- Nowe pole `initial_balance` w tabeli `apartments` (migracja 010)
+- Admin: edycja salda początkowego w formularzu lokalu (ujemne = zaległość, dodatnie = nadpłata)
+- Panel mieszkańca: saldo uwzględnia bilans otwarcia (Finanse + Dashboard)
+- Wartość domyślna: 0 (brak wpływu na istniejące lokale)
+
+### 2026-03-22 — System automatycznego generowania naliczeń
+- Nowa tabela `charge_rates` — stawki z wersjonowaniem (`valid_from`), snapshot approach
+- Wzory: eksploatacja = m² × stawka, fundusz remontowy = m² × stawka, śmieci = osoby × stawka
+- Backend: 4 endpointy API (`/api/charges`) — generowanie + CRUD stawek
+- Admin panel: zakładki Naliczenia/Stawki, przycisk "Generuj naliczenia", CRUD stawek
+- Pole `declared_occupants` w tabeli `apartments` + w UI lokali
+- Flaga `is_auto_generated` w tabeli `charges` — badge "Auto"/"Ręczne" w tabelach
+- Usunięcie typów woda/ogrzewanie (rozliczane bezpośrednio przez dostawców)
+- Opcja auto-generowania: toggle + dzień miesiąca, Vercel Cron Job (`CRON_SECRET`)
+- Migracja 008 (stawki), migracja 009 (system_settings), testy: 21 backend (pytest)
+- Dokumentacja: [[ADR-012-charge-generation]]
+
 ### 2026-03-15
 - Schemat bazy danych (migracja 001) — tabele: residents, apartments, charges, payments, bank_statements, documents, announcements, important_dates, resolutions, votes, audit_log
 - Polityki RLS (migracja 002) — bezpieczeństwo na poziomie wierszy dla wszystkich tabel

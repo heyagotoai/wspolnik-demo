@@ -22,14 +22,13 @@ interface Payment {
 interface ApartmentInfo {
   id: string
   number: string
+  initial_balance: number
 }
 
 const CHARGE_TYPE_LABELS: Record<string, string> = {
   eksploatacja: 'Eksploatacja',
   fundusz_remontowy: 'Fundusz remontowy',
-  woda: 'Woda',
   smieci: 'Śmieci',
-  ogrzewanie: 'Ogrzewanie',
   inne: 'Inne',
 }
 
@@ -59,7 +58,7 @@ export default function FinancesPage() {
 
     const { data: aptByOwner, error: aptErr } = await supabase
       .from('apartments')
-      .select('id, number')
+      .select('id, number, initial_balance')
       .eq('owner_resident_id', user!.id)
       .maybeSingle()
 
@@ -82,7 +81,7 @@ export default function FinancesPage() {
       if (resident?.apartment_number) {
         const { data: aptByNumber } = await supabase
           .from('apartments')
-          .select('id, number')
+          .select('id, number, initial_balance')
           .eq('number', resident.apartment_number)
           .maybeSingle()
         apt = aptByNumber ?? null
@@ -117,11 +116,12 @@ export default function FinancesPage() {
   }
 
   // Calculations
+  const initialBalance = apartment ? Number(apartment.initial_balance) || 0 : 0
   const totalCharges = charges.reduce((sum, c) => sum + Number(c.amount), 0)
   const totalPayments = payments
     .filter((p) => p.confirmed_by_admin)
     .reduce((sum, p) => sum + Number(p.amount), 0)
-  const balance = totalPayments - totalCharges
+  const balance = initialBalance + totalPayments - totalCharges
 
   // Current month charges
   const monthCharges = charges.filter((c) => c.month.startsWith(selectedMonth))

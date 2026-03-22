@@ -93,11 +93,11 @@ export default function DashboardPage() {
       // Fetch balance: payments - charges for user's apartment
       // Try owner_resident_id first, fallback to apartment_number
       if (user) {
-        let apt: { id: string } | null = null
+        let apt: { id: string; initial_balance: number } | null = null
 
         const { data: aptByOwner } = await supabase
           .from('apartments')
-          .select('id')
+          .select('id, initial_balance')
           .eq('owner_resident_id', user.id)
           .maybeSingle()
 
@@ -113,7 +113,7 @@ export default function DashboardPage() {
           if (resident?.apartment_number) {
             const { data: aptByNumber } = await supabase
               .from('apartments')
-              .select('id')
+              .select('id, initial_balance')
               .eq('number', resident.apartment_number)
               .maybeSingle()
             apt = aptByNumber ?? null
@@ -130,7 +130,8 @@ export default function DashboardPage() {
           const totalPayments = (paymentsRes.data || [])
             .filter((p) => p.confirmed_by_admin)
             .reduce((s, p) => s + Number(p.amount), 0)
-          setBalance(totalPayments - totalCharges)
+          const initialBalance = Number(apt.initial_balance) || 0
+          setBalance(initialBalance + totalPayments - totalCharges)
         }
       }
 

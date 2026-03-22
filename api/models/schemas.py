@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -8,6 +9,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 RoleType = Literal["admin", "resident"]
 ResolutionStatus = Literal["draft", "voting", "closed"]
 VoteValue = Literal["za", "przeciw", "wstrzymuje"]
+ChargeRateType = Literal["eksploatacja", "fundusz_remontowy", "smieci"]
 
 
 # --- Residents ---
@@ -186,3 +188,43 @@ class ProfileUpdate(BaseModel):
 class ChangePassword(BaseModel):
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=6, max_length=128)
+
+
+# --- Charge Rates (Stawki naliczeń) ---
+
+class ChargeRateCreate(BaseModel):
+    type: ChargeRateType
+    rate_per_unit: Decimal = Field(..., gt=0, max_digits=10, decimal_places=4)
+    valid_from: str  # "YYYY-MM-DD"
+
+
+class ChargeRateOut(BaseModel):
+    id: str
+    type: str
+    rate_per_unit: str
+    valid_from: str
+    created_at: str
+
+
+class ChargeGenerateRequest(BaseModel):
+    month: str  # "YYYY-MM-DD" (1. dzień miesiąca)
+
+
+class ChargeGenerateSummary(BaseModel):
+    month: str
+    apartments_count: int
+    charges_created: int
+    total_amount: str
+    warnings: list[str] = []
+
+
+# --- Auto-charge settings ---
+
+class AutoChargesConfig(BaseModel):
+    enabled: bool = False
+    day: int = Field(default=1, ge=1, le=28)
+
+
+class AutoChargesConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    day: int | None = Field(default=None, ge=1, le=28)

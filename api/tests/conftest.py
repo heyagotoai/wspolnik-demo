@@ -86,7 +86,8 @@ def fake_sb():
          patch("api.routes.residents.get_supabase", return_value=sb), \
          patch("api.routes.resolutions.get_supabase", return_value=sb), \
          patch("api.routes.profile.get_supabase", return_value=sb), \
-         patch("api.routes.announcements.get_supabase", return_value=sb):
+         patch("api.routes.announcements.get_supabase", return_value=sb), \
+         patch("api.routes.charges.get_supabase", return_value=sb):
         yield sb
 
 

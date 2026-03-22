@@ -15,6 +15,8 @@ interface Apartment {
   number: string
   area_m2: number | null
   share: number | null
+  declared_occupants: number
+  initial_balance: number
   owner_resident_id: string | null
   owner_name: string | null
 }
@@ -23,10 +25,12 @@ interface ApartmentForm {
   number: string
   area_m2: string
   share: string
+  declared_occupants: string
+  initial_balance: string
   owner_resident_id: string
 }
 
-const emptyForm: ApartmentForm = { number: '', area_m2: '', share: '', owner_resident_id: '' }
+const emptyForm: ApartmentForm = { number: '', area_m2: '', share: '', declared_occupants: '', initial_balance: '', owner_resident_id: '' }
 
 export default function ApartmentsPage() {
   const [apartments, setApartments] = useState<Apartment[]>([])
@@ -45,7 +49,7 @@ export default function ApartmentsPage() {
     const [aptsRes, resRes] = await Promise.all([
       supabase
         .from('apartments')
-        .select('id, number, area_m2, share, owner_resident_id')
+        .select('id, number, area_m2, share, declared_occupants, initial_balance, owner_resident_id')
         .order('number', { ascending: true }),
       supabase
         .from('residents')
@@ -85,6 +89,8 @@ export default function ApartmentsPage() {
       number: apt.number,
       area_m2: apt.area_m2?.toString() || '',
       share: apt.share ? (apt.share * 100).toString() : '',
+      declared_occupants: apt.declared_occupants?.toString() || '0',
+      initial_balance: apt.initial_balance ? apt.initial_balance.toString() : '0',
       owner_resident_id: apt.owner_resident_id || '',
     })
     setError(null)
@@ -127,6 +133,8 @@ export default function ApartmentsPage() {
       number: form.number.trim(),
       area_m2: form.area_m2 ? parseFloat(form.area_m2) : null,
       share: form.share ? parseFloat(form.share) / 100 : null,
+      declared_occupants: form.declared_occupants ? parseInt(form.declared_occupants) : 0,
+      initial_balance: form.initial_balance ? parseFloat(form.initial_balance) : 0,
       owner_resident_id: form.owner_resident_id || null,
     }
 
@@ -257,6 +265,29 @@ export default function ApartmentsPage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-charcoal mb-1">Liczba mieszkańców</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={form.declared_occupants}
+                onChange={(e) => setForm({ ...form, declared_occupants: e.target.value })}
+                placeholder="np. 2"
+                className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-charcoal mb-1">Saldo początkowe (PLN)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.initial_balance}
+                onChange={(e) => setForm({ ...form, initial_balance: e.target.value })}
+                placeholder="0.00 (ujemne = zaległość)"
+                className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Właściciel</label>
               <select
                 value={form.owner_resident_id}
@@ -306,6 +337,8 @@ export default function ApartmentsPage() {
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Nr</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Powierzchnia</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Udział</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Mieszkańcy</th>
+                  <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Saldo pocz.</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Właściciel</th>
                   <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>
                 </tr>
@@ -316,6 +349,10 @@ export default function ApartmentsPage() {
                     <td className="px-5 py-3 font-medium text-charcoal">{apt.number}</td>
                     <td className="px-5 py-3 text-slate">{apt.area_m2 ? `${apt.area_m2} m²` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.share ? `${(apt.share * 100).toFixed(2)}%` : '—'}</td>
+                    <td className="px-5 py-3 text-slate">{apt.declared_occupants || 0}</td>
+                    <td className={`px-5 py-3 text-right font-medium ${apt.initial_balance < 0 ? 'text-error' : apt.initial_balance > 0 ? 'text-sage' : 'text-slate'}`}>
+                      {apt.initial_balance ? `${apt.initial_balance.toFixed(2)} zł` : '—'}
+                    </td>
                     <td className="px-5 py-3 text-slate">{apt.owner_name || '—'}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
