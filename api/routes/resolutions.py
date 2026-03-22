@@ -88,6 +88,10 @@ def update_resolution(
     if not result.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
+    # When resetting to draft — delete all votes (fresh start)
+    if body.status == "draft" and old_status in ("voting", "closed"):
+        sb.table("votes").delete().eq("resolution_id", resolution_id).execute()
+
     # Auto-create announcement when status changes to "voting"
     if body.status == "voting" and old_status != "voting":
         voting_end = result.data[0].get("voting_end")
@@ -236,11 +240,17 @@ def cast_vote(
     if existing.data:
         raise HTTPException(status_code=409, detail="Już oddałeś głos w tej uchwale")
 
-    result = sb.table("votes").insert({
-        "resolution_id": resolution_id,
-        "resident_id": user["sub"],
-        "vote": body.vote,
-    }).execute()
+    try:
+        result = sb.table("votes").insert({
+            "resolution_id": resolution_id,
+            "resident_id": user["sub"],
+            "vote": body.vote,
+        }).execute()
+    except Exception as e:
+        # Unique constraint violation (race condition) — treat as already voted
+        if "23505" in str(e) or "unique" in str(e).lower():
+            raise HTTPException(status_code=409, detail="Już oddałeś głos w tej uchwale")
+        raise HTTPException(status_code=500, detail="Nie udało się zapisać głosu")
 
     if not result.data:
         raise HTTPException(status_code=500, detail="Nie udało się zapisać głosu")

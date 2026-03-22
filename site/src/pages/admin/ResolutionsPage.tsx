@@ -58,6 +58,7 @@ export default function AdminResolutionsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingOriginalStatus, setEditingOriginalStatus] = useState<string | null>(null)
   const [form, setForm] = useState<ResolutionForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +101,7 @@ export default function AdminResolutionsPage() {
 
   const openEdit = (r: Resolution) => {
     setEditingId(r.id)
+    setEditingOriginalStatus(r.status)
     setForm({
       title: r.title,
       description: r.description || '',
@@ -132,6 +134,25 @@ export default function AdminResolutionsPage() {
       return
     }
 
+    // Warn when resetting to draft — votes will be deleted
+    const resettingToDraft =
+      editingId &&
+      form.status === 'draft' &&
+      editingOriginalStatus !== null &&
+      ['voting', 'closed'].includes(editingOriginalStatus)
+
+    if (resettingToDraft) {
+      const voteCount = results[editingId!]?.total ?? 0
+      const voteInfo = voteCount > 0 ? ` Zostaną usunięte ${voteCount} oddane głosy.` : ''
+      const ok = await confirm({
+        title: 'Cofnięcie uchwały do szkicu',
+        message: `Cofnięcie do szkicu zresetuje głosowanie.${voteInfo} Czy na pewno chcesz kontynuować?`,
+        confirmLabel: 'Cofnij do szkicu',
+        danger: true,
+      })
+      if (!ok) return
+    }
+
     setSaving(true)
     setError(null)
 
@@ -146,7 +167,12 @@ export default function AdminResolutionsPage() {
     try {
       if (editingId) {
         await api.patch(`/resolutions/${editingId}`, payload)
-        toast('Uchwała zaktualizowana', 'success')
+        toast(
+          form.status === 'draft' && resettingToDraft
+            ? 'Uchwała cofnięta do szkicu, głosy usunięte'
+            : 'Uchwała zaktualizowana',
+          'success',
+        )
       } else {
         await api.post('/resolutions', payload)
         toast('Uchwała utworzona', 'success')

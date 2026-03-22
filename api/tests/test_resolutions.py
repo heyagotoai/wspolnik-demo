@@ -109,6 +109,31 @@ class TestUpdateResolution:
         response = admin_client.patch("/api/resolutions/res-1", json={})
         assert response.status_code == 400
 
+    def test_cofniecie_do_draft_usuwa_glosy(self, admin_client, fake_sb):
+        """Resetting to draft deletes all votes for the resolution."""
+        voting_res = {**RESOLUTION_DATA, "status": "voting"}
+        draft_res = {**RESOLUTION_DATA, "status": "draft"}
+        fake_sb.set_table_data("resolutions", [voting_res])
+        fake_sb.set_table_data("votes", [VOTE_DATA])
+
+        from unittest.mock import patch as _patch
+        call_count = {"n": 0}
+        original_table = fake_sb.table
+
+        def table_returning_draft(name):
+            builder = original_table(name)
+            if name == "resolutions":
+                call_count["n"] += 1
+                if call_count["n"] >= 2:
+                    builder._data = [draft_res]
+            return builder
+
+        with _patch.object(fake_sb, "table", side_effect=table_returning_draft):
+            response = admin_client.patch("/api/resolutions/res-1", json={"status": "draft"})
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "draft"
+
     def test_zmiana_na_voting_tworzy_ogloszenie(self, admin_client, fake_sb):
         """Changing status to 'voting' auto-creates an announcement."""
         draft = {**RESOLUTION_DATA, "status": "draft"}
