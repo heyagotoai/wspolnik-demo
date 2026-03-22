@@ -1,7 +1,7 @@
 import logging
-import smtplib
-from email.mime.text import MIMEText
+import os
 
+import httpx
 from fastapi import APIRouter, HTTPException
 
 from api.core.supabase_client import get_supabase
@@ -12,19 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def _try_send_email(msg: ContactMessageCreate) -> None:
-    """Send email notification to admin if SMTP is configured."""
-    import os
-
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_pass = os.getenv("SMTP_PASS")
+    """Send email notification to admin via Supabase Edge Function."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
     admin_email = os.getenv("ADMIN_EMAIL")
 
-    if not all([smtp_host, smtp_user, smtp_pass, admin_email]):
-        logger.info("SMTP not configured — skipping email notification")
+    if not all([supabase_url, supabase_anon_key, admin_email]):
+        logger.info("Email notification not configured — skipping")
         return
-
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
 
     body = (
         f"Nowa wiadomość z formularza kontaktowego:\n\n"
@@ -34,20 +29,27 @@ def _try_send_email(msg: ContactMessageCreate) -> None:
         f"{msg.message}"
     )
 
-    email = MIMEText(body, "plain", "utf-8")
-    email["Subject"] = f"[WM GABI] {msg.subject}"
-    email["From"] = smtp_user
-    email["To"] = admin_email
-    email["Reply-To"] = msg.email
-
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(email)
-        logger.info("Email notification sent to %s", admin_email)
+        response = httpx.post(
+            f"{supabase_url}/functions/v1/send-email",
+            json={
+                "to": admin_email,
+                "subject": f"[WM GABI] {msg.subject}",
+                "body": body,
+                "replyTo": msg.email,
+            },
+            headers={
+                "Authorization": f"Bearer {supabase_anon_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+        if response.status_code == 200:
+            logger.info("Email notification sent to %s", admin_email)
+        else:
+            logger.warning("Edge function returned %s: %s", response.status_code, response.text)
     except Exception as e:
-        logger.warning("Failed to send email: %s", e)
+        logger.warning("Failed to send email via edge function: %s", e)
 
 
 @router.post("/contact", response_model=MessageOut)
