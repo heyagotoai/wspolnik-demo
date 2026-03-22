@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { getReadIds } from '../../lib/readAnnouncements'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 
 interface Announcement {
@@ -21,6 +22,8 @@ interface Resolution {
 export default function DashboardPage() {
   const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
+  const unreadCount = unreadIds.size
   const [nextDate, setNextDate] = useState<string | null>(null)
   const [resolutions, setResolutions] = useState<Resolution[]>([])
   const [votedResolutionTitles, setVotedResolutionTitles] = useState<Set<string>>(new Set())
@@ -50,7 +53,13 @@ export default function DashboardPage() {
           .limit(3),
       ])
 
-      if (annRes.data) setAnnouncements(annRes.data)
+      if (annRes.data) {
+        setAnnouncements(annRes.data)
+        if (user) {
+          const readIds = getReadIds(user.id)
+          setUnreadIds(new Set(annRes.data.filter((a: Announcement) => !readIds.has(a.id)).map((a: Announcement) => a.id)))
+        }
+      }
       if (resRes.data) setResolutions(resRes.data)
 
       // Check which active resolutions the user already voted on
@@ -72,7 +81,7 @@ export default function DashboardPage() {
         }
       }
 
-      // Pick nearest upcoming date — exclude voting deadlines user already voted on
+      // Nearest upcoming date: important_dates + voting deadlines user hasn't voted on yet
       const allDates: string[] = []
       if (datesRes.data?.[0]) allDates.push(datesRes.data[0].date)
       for (const r of resRes.data || []) {
@@ -82,12 +91,34 @@ export default function DashboardPage() {
       if (allDates.length > 0) setNextDate(allDates[0])
 
       // Fetch balance: payments - charges for user's apartment
+      // Try owner_resident_id first, fallback to apartment_number
       if (user) {
-        const { data: apt } = await supabase
+        let apt: { id: string } | null = null
+
+        const { data: aptByOwner } = await supabase
           .from('apartments')
           .select('id')
           .eq('owner_resident_id', user.id)
           .maybeSingle()
+
+        if (aptByOwner) {
+          apt = aptByOwner
+        } else {
+          const { data: resident } = await supabase
+            .from('residents')
+            .select('apartment_number')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          if (resident?.apartment_number) {
+            const { data: aptByNumber } = await supabase
+              .from('apartments')
+              .select('id')
+              .eq('number', resident.apartment_number)
+              .maybeSingle()
+            apt = aptByNumber ?? null
+          }
+        }
 
         if (apt) {
           const [chargesRes, paymentsRes] = await Promise.all([
@@ -136,7 +167,7 @@ export default function DashboardPage() {
         <DashboardCard
           icon={<MegaphoneIcon className="w-6 h-6" />}
           label="Ogłoszenia"
-          value={announcements.length > 0 ? `${announcements.length} nowe` : 'Brak'}
+          value={unreadCount > 0 ? `${unreadCount} ${unreadCount === 1 ? 'nowe' : 'nowych'}` : 'Brak nowych'}
           to="/panel/ogloszenia"
         />
         <DashboardCard
@@ -199,7 +230,12 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <>
-                        <h3 className="text-sm font-medium text-charcoal">{a.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium text-charcoal">{a.title}</h3>
+                          {unreadIds.has(a.id) && (
+                            <span className="px-1.5 py-0.5 bg-sage text-white text-xs font-medium rounded-full">Nowe</span>
+                          )}
+                        </div>
                         {a.excerpt && <p className="text-sm text-slate mt-1">{a.excerpt}</p>}
                       </>
                     )}

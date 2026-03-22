@@ -1,30 +1,76 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 
-interface ImportantDate {
+interface DateEntry {
   id: string
   title: string
   date: string
   description: string | null
+  kind: 'date' | 'voting'
 }
 
 export default function DatesPage() {
-  const [dates, setDates] = useState<ImportantDate[]>([])
+  const { user } = useAuth()
+  const [entries, setEntries] = useState<DateEntry[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('important_dates')
-        .select('id, title, date, description')
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
+    const fetchAll = async () => {
+      const today = new Date().toISOString().split('T')[0]
 
-      if (data) setDates(data)
+      const [datesRes, resRes] = await Promise.all([
+        supabase
+          .from('important_dates')
+          .select('id, title, date, description')
+          .gte('date', today)
+          .order('date', { ascending: true }),
+        supabase
+          .from('resolutions')
+          .select('id, title, voting_end')
+          .eq('status', 'voting')
+          .not('voting_end', 'is', null)
+          .gte('voting_end', today),
+      ])
+
+      const result: DateEntry[] = []
+
+      if (datesRes.data) {
+        for (const d of datesRes.data) {
+          result.push({ ...d, kind: 'date' })
+        }
+      }
+
+      if (resRes.data?.length && user) {
+        const { data: votes } = await supabase
+          .from('votes')
+          .select('resolution_id')
+          .eq('resident_id', user.id)
+          .in('resolution_id', resRes.data.map((r) => r.id))
+
+        const votedIds = new Set((votes || []).map((v) => v.resolution_id))
+
+        for (const r of resRes.data) {
+          if (!votedIds.has(r.id)) {
+            result.push({
+              id: r.id,
+              title: `Koniec głosowania: ${r.title}`,
+              date: r.voting_end!,
+              description: 'Nie oddałeś jeszcze głosu w tej uchwale.',
+              kind: 'voting',
+            })
+          }
+        }
+      }
+
+      result.sort((a, b) => a.date.localeCompare(b.date))
+      setEntries(result)
       setLoading(false)
     }
-    fetch()
-  }, [])
+
+    fetchAll()
+  }, [user])
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pl-PL', {
@@ -53,32 +99,68 @@ export default function DatesPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Ważne terminy</h1>
 
-      {dates.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
           <p className="text-slate">Brak nadchodzących terminów.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {dates.map((d) => (
-            <div key={d.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 flex items-start gap-4">
-              <div className="w-14 h-14 rounded-[var(--radius-input)] bg-sage-pale/30 flex flex-col items-center justify-center shrink-0">
-                <span className="text-lg font-bold text-sage leading-none">
+          {entries.map((d) => (
+            <div
+              key={`${d.kind}-${d.id}`}
+              className={`bg-white rounded-[var(--radius-card)] shadow-ambient p-5 flex items-start gap-4 ${
+                d.kind === 'voting' ? 'border-l-4 border-error' : ''
+              }`}
+            >
+              <div
+                className={`w-14 h-14 rounded-[var(--radius-input)] flex flex-col items-center justify-center shrink-0 ${
+                  d.kind === 'voting' ? 'bg-error-container' : 'bg-sage-pale/30'
+                }`}
+              >
+                <span
+                  className={`text-lg font-bold leading-none ${
+                    d.kind === 'voting' ? 'text-error' : 'text-sage'
+                  }`}
+                >
                   {new Date(d.date).getDate()}
                 </span>
-                <span className="text-[10px] text-sage uppercase mt-0.5">
+                <span
+                  className={`text-[10px] uppercase mt-0.5 ${
+                    d.kind === 'voting' ? 'text-error' : 'text-sage'
+                  }`}
+                >
                   {new Date(d.date).toLocaleDateString('pl-PL', { month: 'short' })}
                 </span>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-semibold text-charcoal">{d.title}</h3>
-                  <span className="text-xs text-sage bg-sage-pale/30 px-2 py-0.5 rounded-full">
+                  {d.kind === 'voting' && (
+                    <span className="text-xs text-error bg-error-container px-2 py-0.5 rounded-full font-medium">
+                      Głosowanie
+                    </span>
+                  )}
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      d.kind === 'voting'
+                        ? 'text-error bg-error-container'
+                        : 'text-sage bg-sage-pale/30'
+                    }`}
+                  >
                     {daysUntil(d.date)}
                   </span>
                 </div>
                 <p className="text-xs text-outline mt-1 capitalize">{formatDate(d.date)}</p>
                 {d.description && (
                   <p className="text-sm text-slate mt-2">{d.description}</p>
+                )}
+                {d.kind === 'voting' && (
+                  <Link
+                    to="/panel/glosowania"
+                    className="inline-block mt-2 text-xs text-error font-medium hover:underline"
+                  >
+                    Przejdź do głosowania →
+                  </Link>
                 )}
               </div>
             </div>

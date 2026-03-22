@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
+import { getReadIds, markRead } from '../../lib/readAnnouncements'
 
 interface Announcement {
   id: string
@@ -11,7 +13,9 @@ interface Announcement {
 }
 
 export default function AnnouncementsPage() {
+  const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -23,17 +27,40 @@ export default function AnnouncementsPage() {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
 
-      if (data) setAnnouncements(data)
+      if (data && user) {
+        const readIds = getReadIds(user.id)
+        const unread = new Set(data.filter((a) => !readIds.has(a.id)).map((a) => a.id))
+
+        // Short announcements are fully visible — mark as read immediately
+        const shortIds = data.filter((a) => a.content.length <= 200).map((a) => a.id)
+        if (shortIds.length > 0) {
+          markRead(user.id, shortIds)
+          shortIds.forEach((id) => unread.delete(id))
+        }
+
+        setUnreadIds(unread)
+        setAnnouncements(data)
+      } else if (data) {
+        setAnnouncements(data)
+      }
       setLoading(false)
     }
     fetch()
-  }, [])
+  }, [user])
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+        // Mark as read when user expands a long announcement
+        if (user && unreadIds.has(id)) {
+          markRead(user.id, [id])
+          setUnreadIds((u) => { const s = new Set(u); s.delete(id); return s })
+        }
+      }
       return next
     })
   }
@@ -68,6 +95,11 @@ export default function AnnouncementsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
+                    {unreadIds.has(a.id) && (
+                      <span className="px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
+                        Nowe
+                      </span>
+                    )}
                     {a.is_pinned && (
                       <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">
                         Ważne

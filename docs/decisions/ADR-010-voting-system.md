@@ -31,7 +31,7 @@ Admin ręcznie zmienia status. W przyszłości można dodać automatyczne zamyka
 - [[RLS]] zapewnia izolację głosów między mieszkańcami
 - Brak DELETE/UPDATE policy na `votes` — głosy nieodwracalne
 - Admin nie może głosować "za kogoś" — `resident_id = auth.uid()` w INSERT policy
-- Wyniki agregowane przez API (admin widzi zbiorczy wynik, nie indywidualne głosy mieszkańców w UI)
+- Wyniki agregowane przez API; szczegółowe głosy (kto jak głosował) dostępne tylko dla admina przez endpoint `GET /resolutions/:id/votes`
 
 ## Alternatywy rozważane
 - **Głosowanie z możliwością zmiany** — odrzucone; w kontekście uchwał wspólnoty głos powinien być świadomy i ostateczny
@@ -40,9 +40,10 @@ Admin ręcznie zmienia status. W przyszłości można dodać automatyczne zamyka
 
 ## Konsekwencje
 - Schemat DB nie wymaga zmian (tabele i RLS gotowe od migracji 001/002)
-- Nowe endpointy: 7 routes w `/api/resolutions`
+- Endpointy: 8 routes w `/api/resolutions` (w tym `GET /:id/votes` — admin, indywidualne głosy z danymi mieszkańców)
 - Nowe strony: `/admin/uchwaly` + `/panel/glosowania`
-- Testy: 14 backend (pytest) + 12 frontend (vitest)
+- Eksport PDF wyników głosowania: podsumowanie (za/przeciw/wstrzymuje + %) + lista imiennych głosów sortowana po numerze lokalu
+- Testy: 20 backend (pytest) + 8 frontend (vitest)
 
 ## Powiązania
 - [[ADR-002-rls-bezpieczenstwo]] — polityki RLS dla votes/resolutions

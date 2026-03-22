@@ -54,8 +54,10 @@ export default function FinancesPage() {
     setLoading(true)
     setError(null)
 
-    // 1. Get resident's apartment
-    const { data: apt, error: aptErr } = await supabase
+    // 1. Get resident's apartment — try owner_resident_id first, fallback to apartment_number
+    let apt: ApartmentInfo | null = null
+
+    const { data: aptByOwner, error: aptErr } = await supabase
       .from('apartments')
       .select('id, number')
       .eq('owner_resident_id', user!.id)
@@ -65,6 +67,26 @@ export default function FinancesPage() {
       setError('Nie udało się pobrać danych lokalu.')
       setLoading(false)
       return
+    }
+
+    if (aptByOwner) {
+      apt = aptByOwner
+    } else {
+      // Fallback: look up resident's apartment_number, then find matching apartment
+      const { data: resident } = await supabase
+        .from('residents')
+        .select('apartment_number')
+        .eq('id', user!.id)
+        .maybeSingle()
+
+      if (resident?.apartment_number) {
+        const { data: aptByNumber } = await supabase
+          .from('apartments')
+          .select('id, number')
+          .eq('number', resident.apartment_number)
+          .maybeSingle()
+        apt = aptByNumber ?? null
+      }
     }
 
     if (!apt) {

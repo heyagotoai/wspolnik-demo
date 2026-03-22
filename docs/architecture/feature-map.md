@@ -13,10 +13,10 @@
 | Strona | Route | Dane z Supabase |
 |--------|-------|-----------------|
 | Dashboard | `/panel` | Statystyki, ostatnie ogłoszenia, nadchodzące daty |
-| Ogłoszenia | `/panel/ogloszenia` | Pełna lista z rozwijaniem treści |
+| Ogłoszenia | `/panel/ogloszenia` | Pełna lista z rozwijaniem treści; badge "Nowe" (localStorage); krótkie → przeczytane od razu, długie → po rozwinięciu |
 | Dokumenty | `/panel/dokumenty` | Download z Supabase Storage |
-| Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem |
-| Finanse | `/panel/finanse` | ⏳ Placeholder — czeka na integrację bankową |
+| Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem + terminy głosowań (nieodgłosowane uchwały), wyróżnione wizualnie |
+| Finanse | `/panel/finanse` | Saldo, naliczenia miesięczne, historia wpłat; lookup lokalu przez owner_resident_id lub apartment_number (fallback) |
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów, wyniki |
 | Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
 
@@ -29,7 +29,7 @@
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
 | Naliczenia | `/admin/naliczenia` | Dodawanie naliczeń per lokal per miesiąc |
-| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania |
+| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
 ## Powiązania

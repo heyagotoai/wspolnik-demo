@@ -14,6 +14,31 @@
 - Testy: 14 backend (pytest) + 12 frontend (vitest)
 - Dokumentacja: [[ADR-010-voting-system]], aktualizacja feature-map
 
+### 2026-03-22 — Naprawa lokalu w Finanse (RLS fallback)
+- Problem: mieszkaniec z ustawionym `residents.apartment_number` nie widział lokalu w Finanse, bo RLS apartments blokował odczyt gdy `owner_resident_id` nie był ustawiony
+- Migracja 007: aktualizacja funkcji `my_apartment_ids()` i policy `apartments_select` — fallback do `residents.apartment_number`
+- Backend: przy update mieszkańca z nowym `apartment_number` automatycznie synchronizuje `apartments.owner_resident_id`
+- Frontend: Finanse i Dashboard używają dwuetapowego lookup (owner_resident_id → fallback apartment_number)
+
+### 2026-03-22 — Terminy głosowań w panelu Terminy
+- Strona Terminy pokazuje teraz daty końca głosowania jako wydarzenia wymagające uwagi
+- Tylko uchwały, w których użytkownik jeszcze nie głosował; znikają po oddaniu głosu
+- Wyróżnienie wizualne: czerwona ramka, badge "Głosowanie", link do panelu głosowań
+- Dashboard: karta TERMINY uwzględnia obie źródła (important_dates + voting_end nieodgłosowanych uchwał)
+
+### 2026-03-22 — Eksport PDF wyników głosowania (uchwały)
+- Backend: nowy endpoint `GET /api/resolutions/{id}/votes` (admin) — lista głosów z danymi mieszkańców (imię, lokal, głos, data)
+- Frontend: przycisk eksportu PDF przy każdej uchwale w statusie voting/closed (panel admina)
+- PDF: podsumowanie (za/przeciw/wstrzymuje + procenty) + tabela imiennych głosów sortowana po numerze lokalu
+- Generowanie przez natywny browser print API — bez zewnętrznych bibliotek
+- Testy: 4 backend + 3 frontend
+
+### 2026-03-22 — Śledzenie przeczytanych ogłoszeń
+- Frontend: badge "Nowe" na liście ogłoszeń i w dashboardzie
+- Logika: krótkie ogłoszenia (≤200 znaków) oznaczane jako przeczytane przy załadowaniu; długie (z "Czytaj więcej") — po rozwinięciu przez użytkownika
+- Przechowywanie w `localStorage` per user ID — bez zmian w bazie
+- Dashboard: karta "Ogłoszenia" wyświetla rzeczywistą liczbę nieprzeczytanych
+
 ### 2026-03-22 — Mailing ogłoszeń do mieszkańców
 - Backend: endpoint `POST /api/announcements/{id}/send-email` (admin only)
 - Wysyłka email do wszystkich aktywnych mieszkańców przez Edge Function

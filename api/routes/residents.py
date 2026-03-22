@@ -93,6 +93,16 @@ def update_resident(
     if not result.data:
         raise HTTPException(status_code=404, detail="Mieszkaniec nie znaleziony")
 
+    # Sync apartments.owner_resident_id when apartment_number changes
+    if body.apartment_number is not None:
+        # Clear previous assignment for this resident
+        sb.table("apartments").update({"owner_resident_id": None}).eq("owner_resident_id", resident_id).execute()
+
+        if body.apartment_number:
+            apt = sb.table("apartments").select("id").eq("number", body.apartment_number).execute()
+            if apt.data:
+                sb.table("apartments").update({"owner_resident_id": resident_id}).eq("id", apt.data[0]["id"]).execute()
+
     return result.data[0]
 
 
