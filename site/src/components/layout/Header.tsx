@@ -13,7 +13,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-cream/80 backdrop-blur-xl">
       <div className="mx-auto max-w-[1280px] px-6 flex items-center justify-between h-[72px]">
-        <Link to="/" className="text-sage font-semibold text-xl tracking-tight hover:text-sage-light">
+        <Link to="/" className="flex items-center gap-3 text-sage font-semibold text-xl tracking-tight hover:text-sage-light">
+          <img src="/logo.png" alt="WM GABI" className="h-10 w-10 object-contain" />
           {communityInfo.name}
         </Link>
 
