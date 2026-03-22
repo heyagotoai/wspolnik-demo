@@ -8,21 +8,22 @@ Komunikuj się po polsku.
 - **Backend:** FastAPI (Python) — deployed na Vercel (serverless functions)
 - **Baza + Auth + Storage:** Supabase (PostgreSQL, RLS, Auth z email whitelist, Storage)
 - **Hosting:** Vercel (darmowy tier) — frontend i backend
-- **Supabase Edge Functions:** NIE używane — cały backend logic w FastAPI
+- **Supabase Edge Functions:** Tylko relay SMTP (send-email) — logika biznesowa w FastAPI
+- **Domena:** wmgabi.pl (DNS: az.pl, hosting: Vercel)
+- **Poczta:** az.pl (powiadomienia@wmgabi.pl → SMTP relay przez Edge Function)
 
 ## Struktura projektu
 ```
 site/           — frontend React (Vite)
   src/
-    components/ — komponenty UI (auth/, admin/, resident/, shared/)
+    components/ — komponenty UI (auth/, layout/, ui/)
     hooks/      — useAuth, useRole
-    lib/        — supabase.ts (klient)
-    pages/      — public/, resident/, admin/
+    lib/        — supabase.ts (klient), api.ts (FastAPI klient)
+    pages/      — publiczne + resident/ + admin/
 api/            — backend FastAPI
-  core/         — konfiguracja, deps
-  models/       — Pydantic models
-  routes/       — endpointy API
-  services/     — logika biznesowa
+  core/         — config, security, supabase_client
+  models/       — Pydantic schemas
+  routes/       — residents.py, contact.py, resolutions.py, profile.py
 supabase/
   migrations/   — SQL migracje (uruchamiane przez Supabase SQL Editor)
 docs/           — Obsidian vault (ADR-y, koncepty, architektura)
@@ -74,10 +75,19 @@ cd api && pytest
 - `CHANGELOG.md` — aktualizuj przy większych zmianach
 
 ## Role użytkowników
-- **admin** — zarządca wspólnoty (CRUD ogłoszeń, dokumentów, naliczeń, mieszkańców, import)
-- **mieszkaniec** — widzi swoje saldo, wpłaty, naliczenia, dokumenty, ogłoszenia
+- **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, wiadomości kontaktowe)
+- **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy
 
 ## Supabase
 - Region: EU (Frankfurt)
 - Auth: email whitelist (publiczna rejestracja wyłączona, admin dodaje mieszkańców)
-- Migracje uruchamiane ręcznie przez SQL Editor w dashboardzie Supabase
+- Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
+- Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
+- Migracje 001-005 uruchomione przez SQL Editor w dashboardzie Supabase
+
+## API endpoints
+- `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
+- `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
+- `/api/resolutions` — CRUD uchwał + głosowanie (7 endpointów)
+- `/api/profile` — profil mieszkańca
+- `GET /api/health` — health check

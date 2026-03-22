@@ -86,3 +86,22 @@ class VoteResults(BaseModel):
     przeciw: int = 0
     wstrzymuje: int = 0
     total: int = 0
+
+
+# --- Profile ---
+
+class ProfileOut(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    apartment_number: str | None
+    role: str
+    is_active: bool
+    created_at: str
+
+class ProfileUpdate(BaseModel):
+    full_name: str
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str

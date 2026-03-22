@@ -12,6 +12,7 @@ import {
   LogOutIcon,
   HomeIcon,
   SettingsIcon,
+  UserIcon,
 } from '../ui/Icons'
 
 const sidebarLinks = [
@@ -63,6 +64,17 @@ export default function ResidentLayout() {
         </nav>
 
         <div className="px-3 py-4 border-t border-cream-medium space-y-1">
+          <Link
+            to="/panel/profil"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium transition-colors ${
+              isActive('/panel/profil')
+                ? 'bg-sage-pale/40 text-sage'
+                : 'text-slate hover:bg-cream hover:text-charcoal'
+            }`}
+          >
+            <UserIcon className="w-5 h-5" />
+            Mój profil
+          </Link>
           {isAdmin && (
             <Link
               to="/admin"
@@ -132,6 +144,16 @@ export default function ResidentLayout() {
               </Link>
             ))}
             <hr className="border-cream-medium my-2" />
+            <Link
+              to="/panel/profil"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium ${
+                isActive('/panel/profil') ? 'bg-sage-pale/40 text-sage' : 'text-slate'
+              }`}
+            >
+              <UserIcon className="w-5 h-5" />
+              Mój profil
+            </Link>
             {isAdmin && (
               <Link
                 to="/admin"

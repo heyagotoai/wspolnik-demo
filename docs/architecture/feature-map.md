@@ -18,6 +18,7 @@
 | Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem |
 | Finanse | `/panel/finanse` | ⏳ Placeholder — czeka na integrację bankową |
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów, wyniki |
+| Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
 
 ## Panel admina (wymaga roli admin → [[ADR-003-auth-pattern|AdminRoute]])
 | Strona | Route | Operacje |

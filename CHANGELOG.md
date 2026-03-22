@@ -14,6 +14,14 @@
 - Testy: 14 backend (pytest) + 12 frontend (vitest)
 - Dokumentacja: [[ADR-010-voting-system]], aktualizacja feature-map
 
+### 2026-03-22 — Deployment na Vercel + domena wmgabi.pl
+- Frontend wdrożony na Vercel (monorepo: site/ + api/ serverless functions)
+- Domena wmgabi.pl podpięta (DNS: az.pl → Vercel)
+- Poczta: powiadomienia@wmgabi.pl na az.pl
+- Email via Supabase Edge Function (Vercel blokuje SMTP — ADR-011)
+- Fix: błędy TypeScript (unused imports, vitest config, error.status)
+- Profil mieszkańca: `/panel/profil` + endpoint `/api/profile`
+
 ### 2026-03-21 — Dokumentacja projektu (nie feature aplikacji)
 - Wdrożenie systemu zarządzania wiedzą (Obsidian vault w projekcie) — narzędzie deweloperskie do dokumentowania decyzji architektonicznych, nie część aplikacji WM Gabi
 - Struktura `docs/`: decisions, concepts, architecture
