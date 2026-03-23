@@ -1,7 +1,10 @@
+import logging
+import os
 import re
 from datetime import date, timezone, datetime
 from decimal import Decimal, ROUND_HALF_UP
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.core.config import CRON_SECRET
@@ -18,6 +21,7 @@ from api.models.schemas import (
 )
 
 router = APIRouter(prefix="/charges", tags=["charges"])
+logger = logging.getLogger(__name__)
 
 RATE_TYPES = ("eksploatacja", "fundusz_remontowy", "smieci")
 
@@ -405,3 +409,124 @@ def cron_generate(request: Request):
         "charges_created": len(charges_to_insert),
         "total_amount": str(total.quantize(Decimal("0.01"))),
     }
+
+
+# ── Balance notification email ────────────────────────────
+
+
+CHARGE_TYPE_LABELS = {
+    "eksploatacja": "Eksploatacja",
+    "fundusz_remontowy": "Fundusz remontowy",
+    "smieci": "Śmieci",
+    "inne": "Inne",
+}
+
+
+@router.post("/balance-notification/{apartment_id}", response_model=MessageOut)
+def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_admin)):
+    """Send balance notification email to apartment owner (admin only)."""
+    sb = get_supabase()
+
+    # Fetch apartment
+    apt_res = (
+        sb.table("apartments")
+        .select("id, number, initial_balance, owner_resident_id")
+        .eq("id", apartment_id)
+        .execute()
+    )
+    if not apt_res.data:
+        raise HTTPException(status_code=404, detail="Lokal nie znaleziony")
+
+    apt = apt_res.data[0]
+    if not apt.get("owner_resident_id"):
+        raise HTTPException(status_code=400, detail="Lokal nie ma przypisanego właściciela")
+
+    # Fetch owner email
+    resident_res = (
+        sb.table("residents")
+        .select("email, full_name")
+        .eq("id", apt["owner_resident_id"])
+        .execute()
+    )
+    if not resident_res.data:
+        raise HTTPException(status_code=400, detail="Nie znaleziono danych właściciela")
+
+    resident = resident_res.data[0]
+
+    # Fetch charges
+    charges_res = (
+        sb.table("charges")
+        .select("type, amount")
+        .eq("apartment_id", apartment_id)
+        .execute()
+    )
+    total_charges = sum(Decimal(str(c["amount"])) for c in (charges_res.data or []))
+
+    # Fetch confirmed payments
+    payments_res = (
+        sb.table("payments")
+        .select("amount")
+        .eq("apartment_id", apartment_id)
+        .eq("confirmed_by_admin", True)
+        .execute()
+    )
+    total_payments = sum(Decimal(str(p["amount"])) for p in (payments_res.data or []))
+
+    initial_balance = Decimal(str(apt.get("initial_balance") or 0))
+    balance = initial_balance + total_payments - total_charges
+
+    # Build email body
+    body = (
+        f"Szanowny/a {resident['full_name']},\n\n"
+        f"Informacja o saldzie lokalu nr {apt['number']}:\n\n"
+        f"  Saldo początkowe: {initial_balance:.2f} zł\n"
+        f"  Suma naliczeń:    {total_charges:.2f} zł\n"
+        f"  Suma wpłat:       {total_payments:.2f} zł\n"
+        f"  ─────────────────────────\n"
+        f"  Saldo aktualne:   {balance:.2f} zł\n\n"
+    )
+    if balance < 0:
+        body += "Prosimy o uregulowanie zaległości.\n\n"
+    elif balance > 0:
+        body += "Lokal posiada nadpłatę.\n\n"
+    else:
+        body += "Lokal jest rozliczony.\n\n"
+
+    body += "Z poważaniem,\nZarząd Wspólnoty Mieszkaniowej"
+
+    # Send via Edge Function
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
+
+    if not supabase_url or not anon_key:
+        raise HTTPException(status_code=500, detail="Brak konfiguracji SMTP (Supabase URL/klucz)")
+
+    try:
+        resp = httpx.post(
+            f"{supabase_url}/functions/v1/send-email",
+            json={
+                "to": resident["email"],
+                "subject": f"[WM GABI] Informacja o saldzie — lokal {apt['number']}",
+                "body": body,
+            },
+            headers={
+                "Authorization": f"Bearer {anon_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            logger.warning("Edge function returned %s: %s", resp.status_code, resp.text)
+            raise HTTPException(
+                status_code=502,
+                detail="Nie udało się wysłać emaila (błąd serwera pocztowego)",
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout przy wysyłaniu emaila")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("Failed to send balance notification: %s", e)
+        raise HTTPException(status_code=500, detail="Błąd przy wysyłaniu emaila")
+
+    return {"detail": f"Powiadomienie wysłane na {resident['email']}"}

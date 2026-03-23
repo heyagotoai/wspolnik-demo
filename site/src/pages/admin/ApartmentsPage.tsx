@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { api } from '../../lib/api'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 
@@ -44,6 +45,9 @@ export default function ApartmentsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [balances, setBalances] = useState<Record<string, { charges: number; payments: number; balance: number }>>({})
+  const [printingApt, setPrintingApt] = useState<Apartment | null>(null)
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null)
   const [showBulkDateForm, setShowBulkDateForm] = useState(false)
   const [bulkDate, setBulkDate] = useState('')
   const [bulkDateSaving, setBulkDateSaving] = useState(false)
@@ -52,7 +56,7 @@ export default function ApartmentsPage() {
   const { confirm } = useConfirm()
 
   const fetchData = async () => {
-    const [aptsRes, resRes] = await Promise.all([
+    const [aptsRes, resRes, chargesRes, paymentsRes] = await Promise.all([
       supabase
         .from('apartments')
         .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id')
@@ -62,11 +66,35 @@ export default function ApartmentsPage() {
         .select('id, full_name, email')
         .eq('is_active', true)
         .order('full_name', { ascending: true }),
+      supabase
+        .from('charges')
+        .select('apartment_id, amount'),
+      supabase
+        .from('payments')
+        .select('apartment_id, amount')
+        .eq('confirmed_by_admin', true),
     ])
 
     if (resRes.data) setResidents(resRes.data)
 
+    // Calculate balances per apartment
+    const balMap: Record<string, { charges: number; payments: number; balance: number }> = {}
+    for (const c of chargesRes.data || []) {
+      if (!balMap[c.apartment_id]) balMap[c.apartment_id] = { charges: 0, payments: 0, balance: 0 }
+      balMap[c.apartment_id].charges += Number(c.amount)
+    }
+    for (const p of paymentsRes.data || []) {
+      if (!balMap[p.apartment_id]) balMap[p.apartment_id] = { charges: 0, payments: 0, balance: 0 }
+      balMap[p.apartment_id].payments += Number(p.amount)
+    }
+
     if (aptsRes.data) {
+      for (const a of aptsRes.data) {
+        if (!balMap[a.id]) balMap[a.id] = { charges: 0, payments: 0, balance: 0 }
+        const ib = Number(a.initial_balance) || 0
+        balMap[a.id].balance = ib + balMap[a.id].payments - balMap[a.id].charges
+      }
+
       const mapped = aptsRes.data.map((a) => ({
         ...a,
         owner_name: resRes.data?.find((r) => r.id === a.owner_resident_id)?.full_name || null,
@@ -75,6 +103,7 @@ export default function ApartmentsPage() {
       setApartments(mapped)
     }
 
+    setBalances(balMap)
     setLoading(false)
   }
 
@@ -232,6 +261,36 @@ export default function ApartmentsPage() {
     setBulkDate('')
     setBulkDateSaving(false)
   }
+
+  const handlePrint = (apt: Apartment) => {
+    setPrintingApt(apt)
+    setTimeout(() => window.print(), 100)
+  }
+
+  const handleSendEmail = async (apt: Apartment) => {
+    if (!apt.owner_resident_id) {
+      toast('Lokal nie ma przypisanego właściciela.', 'error')
+      return
+    }
+    const ok = await confirm({
+      title: 'Wyślij powiadomienie',
+      message: `Wysłać informację o saldzie na email właściciela lokalu ${apt.number}?`,
+      confirmLabel: 'Wyślij',
+    })
+    if (!ok) return
+
+    setSendingEmail(apt.id)
+    try {
+      const result = await api.post<{ detail: string }>(`/charges/balance-notification/${apt.id}`, {})
+      toast(result.detail, 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Błąd wysyłki emaila', 'error')
+    } finally {
+      setSendingEmail(null)
+    }
+  }
+
+  const formatCurrency = (n: number) => `${n.toFixed(2)} zł`
 
   if (loading) {
     return (
@@ -447,6 +506,7 @@ export default function ApartmentsPage() {
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Udział</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Mieszkańcy</th>
                   <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Saldo pocz.</th>
+                  <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Saldo</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Właściciel</th>
                   <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>
                 </tr>
@@ -464,9 +524,27 @@ export default function ApartmentsPage() {
                         <div className="text-xs text-outline">na {apt.initial_balance_date}</div>
                       )}
                     </td>
+                    <td className={`px-5 py-3 text-right font-medium ${(balances[apt.id]?.balance ?? 0) < 0 ? 'text-error' : (balances[apt.id]?.balance ?? 0) > 0 ? 'text-sage' : 'text-slate'}`}>
+                      {formatCurrency(balances[apt.id]?.balance ?? 0)}
+                    </td>
                     <td className="px-5 py-3 text-slate">{apt.owner_name || '—'}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handlePrint(apt)}
+                          className="p-1.5 text-outline hover:text-sage transition-colors"
+                          title="Drukuj saldo"
+                        >
+                          <PrinterIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleSendEmail(apt)}
+                          disabled={sendingEmail === apt.id}
+                          className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                          title="Wyślij powiadomienie email"
+                        >
+                          <SendIcon className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => openEdit(apt)}
                           className="p-1.5 text-outline hover:text-sage transition-colors"
@@ -488,6 +566,42 @@ export default function ApartmentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Print area — hidden on screen, visible on print */}
+      {printingApt && (
+        <div className="print-area hidden print:block">
+          <div className="p-8 max-w-xl mx-auto font-sans text-sm">
+            <h1 className="text-lg font-bold mb-1">Wspólnota Mieszkaniowa GABI</h1>
+            <h2 className="text-base font-semibold mb-4">Informacja o saldzie — lokal nr {printingApt.number}</h2>
+            {printingApt.owner_name && (
+              <p className="mb-4">Właściciel: {printingApt.owner_name}</p>
+            )}
+            <table className="w-full border-collapse mb-4">
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-1.5">Saldo początkowe</td>
+                  <td className="py-1.5 text-right">{formatCurrency(printingApt.initial_balance || 0)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-1.5">Suma naliczeń</td>
+                  <td className="py-1.5 text-right">{formatCurrency(balances[printingApt.id]?.charges ?? 0)}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-1.5">Suma wpłat (potwierdzonych)</td>
+                  <td className="py-1.5 text-right">{formatCurrency(balances[printingApt.id]?.payments ?? 0)}</td>
+                </tr>
+                <tr className="border-t-2 font-bold">
+                  <td className="py-2">Saldo aktualne</td>
+                  <td className="py-2 text-right">{formatCurrency(balances[printingApt.id]?.balance ?? 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-xs text-gray-500">
+              Wygenerowano: {new Date().toLocaleDateString('pl-PL')}
+            </p>
           </div>
         </div>
       )}
