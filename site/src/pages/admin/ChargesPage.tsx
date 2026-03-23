@@ -813,7 +813,7 @@ export default function AdminChargesPage() {
                         <tr key={r.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
                           <td className="px-5 py-3 font-medium text-charcoal">{rateTypes[r.type] || r.type}</td>
                           <td className="px-5 py-3 text-right font-medium text-charcoal">
-                            {parseFloat(r.rate_per_unit).toFixed(4)} {rateUnits[r.type] || 'zł'}
+                            {parseFloat(r.rate_per_unit).toFixed(2)} {rateUnits[r.type] || 'zł'}
                           </td>
                           <td className="px-5 py-3 text-slate">{r.valid_from}</td>
                           <td className="px-5 py-3">
