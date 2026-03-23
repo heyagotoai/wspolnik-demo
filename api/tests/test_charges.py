@@ -41,6 +41,14 @@ APARTMENT_NO_OCCUPANTS = {
     "declared_occupants": 0,
 }
 
+APARTMENT_WITH_BALANCE_DATE = {
+    "id": "apt-5",
+    "number": "5",
+    "area_m2": "60.00",
+    "declared_occupants": 2,
+    "initial_balance_date": "2026-03-01",
+}
+
 RATE_EKSPLOATACJA = {
     "id": "rate-1",
     "type": "eksploatacja",
@@ -115,6 +123,29 @@ class TestGenerateCharges:
         assert response.status_code == 409
         assert "już wygenerowane" in response.json()["detail"]
 
+    def test_regeneracja_z_force(self, admin_client, fake_sb):
+        existing = [{"id": "ch-1"}]
+        _setup_generate(fake_sb, [APARTMENT_1, APARTMENT_2], ALL_RATES, existing_charges=existing)
+
+        response = admin_client.post("/api/charges/generate", json={
+            "month": "2026-03-01",
+            "force": True,
+        })
+        assert response.status_code == 201
+        data = response.json()
+        assert data["charges_created"] == 6
+        assert data["regenerated"] is True
+
+    def test_force_bez_istniejacych_nie_ustawia_regenerated(self, admin_client, fake_sb):
+        _setup_generate(fake_sb, [APARTMENT_1], ALL_RATES)
+
+        response = admin_client.post("/api/charges/generate", json={
+            "month": "2026-03-01",
+            "force": True,
+        })
+        assert response.status_code == 201
+        assert response.json()["regenerated"] is False
+
     def test_brak_stawek_400(self, admin_client, fake_sb):
         _setup_generate(fake_sb, [APARTMENT_1], [])
 
@@ -158,6 +189,27 @@ class TestGenerateCharges:
         assert data["charges_created"] == 2
         assert data["total_amount"] == "260.00"
         assert any("0 mieszkańców" in w for w in data["warnings"])
+
+    def test_ostrzezenie_data_salda_poczatkowego(self, admin_client, fake_sb):
+        _setup_generate(fake_sb, [APARTMENT_WITH_BALANCE_DATE], ALL_RATES)
+
+        response = admin_client.post("/api/charges/generate", json={
+            "month": "2026-03-01",
+        })
+        assert response.status_code == 201
+        data = response.json()
+        assert any("saldo początkowe" in w for w in data["warnings"])
+        assert any("podwójne" in w for w in data["warnings"])
+
+    def test_brak_ostrzezenia_gdy_miesiac_po_dacie_salda(self, admin_client, fake_sb):
+        _setup_generate(fake_sb, [APARTMENT_WITH_BALANCE_DATE], ALL_RATES)
+
+        response = admin_client.post("/api/charges/generate", json={
+            "month": "2026-04-01",
+        })
+        assert response.status_code == 201
+        data = response.json()
+        assert not any("saldo początkowe" in w for w in data["warnings"])
 
     def test_nieprawidlowy_format_miesiaca(self, admin_client, fake_sb):
         response = admin_client.post("/api/charges/generate", json={

@@ -55,6 +55,7 @@ interface GenerateSummary {
   charges_created: number
   total_amount: string
   warnings: string[]
+  regenerated: boolean
 }
 
 const chargeTypes: Record<string, string> = {
@@ -254,13 +255,33 @@ export default function AdminChargesPage() {
   // --- Generate handler ---
 
   const handleGenerate = async () => {
+    const monthValue = generateMonth + '-01'
+
+    // Check if auto-generated charges already exist for this month
+    const existingAuto = charges.some(
+      (c) => c.month === monthValue && c.is_auto_generated,
+    )
+
+    let force = false
+    if (existingAuto) {
+      const ok = await confirm({
+        title: 'Aktualizacja naliczeń',
+        message: `Naliczenia za ${generateMonth} zostały już wygenerowane. Czy chcesz je przeliczyć? Istniejące naliczenia automatyczne zostaną zastąpione nowymi.`,
+        confirmLabel: 'Aktualizuj',
+      })
+      if (!ok) return
+      force = true
+    }
+
     setGenerating(true)
     try {
       const result = await api.post<GenerateSummary>('/charges/generate', {
-        month: generateMonth + '-01',
+        month: monthValue,
+        force,
       })
+      const action = result.regenerated ? 'Zaktualizowano' : 'Wygenerowano'
       toast(
-        `Wygenerowano ${result.charges_created} naliczeń na łączną kwotę ${result.total_amount} zł.`,
+        `${action} ${result.charges_created} naliczeń na łączną kwotę ${result.total_amount} zł.`,
         'success',
       )
       if (result.warnings.length > 0) {

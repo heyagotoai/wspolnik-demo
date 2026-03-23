@@ -208,6 +208,7 @@ class ChargeRateOut(BaseModel):
 
 class ChargeGenerateRequest(BaseModel):
     month: str  # "YYYY-MM-DD" (1. dzień miesiąca)
+    force: bool = False  # True = usuń istniejące auto-naliczenia i wygeneruj ponownie
 
 
 class ChargeGenerateSummary(BaseModel):
@@ -216,6 +217,7 @@ class ChargeGenerateSummary(BaseModel):
     charges_created: int
     total_amount: str
     warnings: list[str] = []
+    regenerated: bool = False
 
 
 # --- Auto-charge settings ---

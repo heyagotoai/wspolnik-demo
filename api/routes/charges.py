@@ -79,11 +79,14 @@ def generate_charges(body: ChargeGenerateRequest, admin: dict = Depends(require_
         .execute()
     )
     if existing.data:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Naliczenia za {month[:7]} zostały już wygenerowane. "
-                   "Usuń istniejące naliczenia automatyczne, aby wygenerować ponownie.",
-        )
+        if not body.force:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Naliczenia za {month[:7]} zostały już wygenerowane. "
+                       "Użyj opcji 'Aktualizuj', aby przeliczyć naliczenia.",
+            )
+        # force=True → delete existing auto-generated charges before regenerating
+        sb.table("charges").delete().eq("month", month).eq("is_auto_generated", True).execute()
 
     # Fetch active rates
     rates = _get_active_rates(sb, month)
@@ -96,7 +99,7 @@ def generate_charges(body: ChargeGenerateRequest, admin: dict = Depends(require_
     # Fetch all apartments
     apartments = (
         sb.table("apartments")
-        .select("id, number, area_m2, declared_occupants")
+        .select("id, number, area_m2, declared_occupants, initial_balance_date")
         .order("number")
         .execute()
     )
@@ -110,6 +113,14 @@ def generate_charges(body: ChargeGenerateRequest, admin: dict = Depends(require_
     for apt in apartments.data:
         apt_id = apt["id"]
         apt_number = apt["number"]
+
+        # Warn if generating for a month covered by initial balance
+        balance_date = apt.get("initial_balance_date")
+        if balance_date and month[:7] <= balance_date[:7]:
+            warnings.append(
+                f"Lokal {apt_number} — saldo początkowe na dzień {balance_date}, "
+                f"naliczenie za {month[:7]} może powodować podwójne obciążenie"
+            )
         area = Decimal(str(apt["area_m2"])) if apt.get("area_m2") else None
         occupants = apt.get("declared_occupants") or 0
 
@@ -164,6 +175,7 @@ def generate_charges(body: ChargeGenerateRequest, admin: dict = Depends(require_
         charges_created=len(charges_to_insert),
         total_amount=str(total.quantize(Decimal("0.01"))),
         warnings=warnings,
+        regenerated=body.force and bool(existing.data),
     )
 
 
@@ -334,7 +346,7 @@ def cron_generate(request: Request):
 
     apartments = (
         sb.table("apartments")
-        .select("id, number, area_m2, declared_occupants")
+        .select("id, number, area_m2, declared_occupants, initial_balance_date")
         .order("number")
         .execute()
     )

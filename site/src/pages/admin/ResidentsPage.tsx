@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
@@ -34,6 +34,7 @@ export default function ResidentsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
 
@@ -50,6 +51,12 @@ export default function ResidentsPage() {
   useEffect(() => {
     fetchResidents()
   }, [])
+
+  useEffect(() => {
+    if (showForm) {
+      setTimeout(() => formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 50)
+    }
+  }, [showForm])
 
   const openAdd = () => {
     setEditingId(null)
@@ -186,7 +193,7 @@ export default function ResidentsPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
+        <div ref={formRef} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
               {editingId ? 'Edytuj mieszkańca' : 'Nowy mieszkaniec'}
