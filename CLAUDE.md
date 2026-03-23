@@ -79,6 +79,16 @@ cd api && pytest
 - Używaj `[[wiki linków]]` między notatkami w Obsidian vault
 - `CHANGELOG.md` — aktualizuj przy większych zmianach
 
+### Polecenie "zaktualizuj" (WYMAGANE)
+Gdy użytkownik mówi **"zaktualizuj"** po zakończeniu implementacji, zaktualizuj **wszystkie** powiązane artefakty:
+- **Dokumentacja Obsidian** (`docs/`) — odpowiednie notatki, koncepty, ADR-y
+- **Feature map / Roadmap** (`docs/feature-map.md` lub podobne) — status funkcjonalności
+- **CHANGELOG.md** — opis zmian
+- **CLAUDE.md** — jeśli zmiany wpływają na strukturę, endpointy, stack, zasady
+- **Pamięć Claude** (`memory/`) — jeśli zmiany wpływają na postęp projektu lub kontekst
+- **Testy** — jeśli jeszcze nie zaktualizowane
+- W skrócie: **wszystko co możliwe** — nie czekaj na osobne polecenia dla każdego artefaktu
+
 ## Role użytkowników
 - **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
 - **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
