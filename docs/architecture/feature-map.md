@@ -24,12 +24,12 @@
 | Strona | Route | Operacje |
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
-| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja) |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe, przypisanie właściciela |
+| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Auto-scroll do formularza edycji |
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
-| Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie automatyczne + ręczne) / Stawki (CRUD z wersjonowaniem). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka |
+| Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 

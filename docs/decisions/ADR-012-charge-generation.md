@@ -34,9 +34,22 @@ Woda, gaz, prąd — rozliczane bezpośrednio przez dostawców, poza wspólnotą
 - Zaokrąglanie: `ROUND_HALF_UP` do 2 miejsc dziesiętnych
 - Po wygenerowaniu admin może dodać jednorazowe pozycje ręcznie (typ `inne`)
 
+### Regeneracja naliczeń
+- Parametr `force: true` w `POST /api/charges/generate` umożliwia przeliczenie istniejących naliczeń
+- Usuwa tylko naliczenia z `is_auto_generated=true` — ręczne naliczenia pozostają nietknięte
+- Frontend: jeśli naliczenia za dany miesiąc istnieją, dialog potwierdzenia z opcją „Aktualizuj"
+- Odpowiedź zawiera `regenerated: bool` — UI wyświetla „Zaktualizowano" zamiast „Wygenerowano"
+
+### Ochrona przed podwójnym naliczeniem (data salda)
+- Pole `apartments.initial_balance_date` (migracja 011) — na jaki dzień obowiązuje saldo początkowe
+- Przy generowaniu naliczeń: ostrzeżenie jeśli miesiąc ≤ data salda (np. saldo na 2026-03-01 + naliczenie za 03/2026)
+- Nie blokuje generowania — admin generuje świadomie, system ostrzega
+- Hurtowe ustawianie daty: baner na stronie Lokale dla lokali bez daty + formularz bulk update
+
 ### Zmiany w schemacie
 - Nowa tabela: `charge_rates` (migracja 008)
 - `apartments.declared_occupants` — liczba zadeklarowanych osób
+- `apartments.initial_balance_date` — data salda początkowego (migracja 011)
 - `charges.is_auto_generated` — flaga auto/ręczne
 - Usunięcie typów `woda`/`ogrzewanie` z CHECK constraint (nieużywane)
 
@@ -50,6 +63,9 @@ Woda, gaz, prąd — rozliczane bezpośrednio przez dostawców, poza wspólnotą
 ## Konsekwencje
 - Admin zarządza stawkami i generuje naliczenia jednym kliknięciem
 - Opcjonalnie: auto-generowanie w wybranym dniu miesiąca
+- Regeneracja naliczeń bez ręcznego usuwania — po zmianie danych lokali/stawek
+- Ochrona przed podwójnym naliczeniem dzięki dacie salda początkowego
 - Stawki mają historię — widać kiedy i jakie stawki obowiązywały
 - Ręczne naliczenia nadal możliwe (jednorazowe opłaty)
 - Mieszkaniec widzi w panelu Finanse wszystkie naliczenia (auto + ręczne)
+- Podsumowanie naliczeń: sumy per typ (eksploatacja/fundusz/śmieci) + suma zbiorcza

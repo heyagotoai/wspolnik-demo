@@ -396,6 +396,10 @@ export default function AdminChargesPage() {
   })
 
   const totalForFilter = filtered.reduce((sum, c) => sum + c.amount, 0)
+  const totalByType = filtered.reduce<Record<string, number>>((acc, c) => {
+    acc[c.type] = (acc[c.type] || 0) + c.amount
+    return acc
+  }, {})
 
   const formatMonth = (dateStr: string) => {
     const d = new Date(dateStr)
@@ -685,8 +689,13 @@ export default function AdminChargesPage() {
               </select>
             </div>
             {filtered.length > 0 && (
-              <div className="ml-auto text-sm text-charcoal">
-                Suma: <span className="font-bold">{totalForFilter.toFixed(2)} PLN</span>
+              <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate">
+                {Object.entries(chargeTypes).map(([type, label]) =>
+                  totalByType[type] ? (
+                    <span key={type}>{label}: <span className="font-medium text-charcoal">{totalByType[type].toFixed(2)}</span></span>
+                  ) : null
+                )}
+                <span className="text-charcoal font-bold">Suma: {totalForFilter.toFixed(2)} PLN</span>
               </div>
             )}
           </div>

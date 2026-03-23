@@ -2,6 +2,18 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-23 — Regeneracja naliczeń, data salda, UX
+- Regeneracja naliczeń: opcja „Aktualizuj" zamiast blokady 409 — parametr `force` usuwa istniejące auto-naliczenia i generuje nowe
+- Data salda początkowego: nowe pole `initial_balance_date` w tabeli `apartments` (migracja 011)
+- Ostrzeżenie przy generowaniu naliczeń za miesiąc objęty saldem początkowym (ochrona przed podwójnym naliczeniem)
+- Hurtowe ustawianie daty salda dla wszystkich lokali bez daty (baner + formularz)
+- Sumy per typ w naliczeniach: eksploatacja / fundusz remontowy / śmieci obok sumy zbiorczej
+- Fix: synchronizacja `owner_resident_id` przy tworzeniu i usuwaniu mieszkańca
+- Fix: wyświetlanie salda 0.00 zł (wcześniej pokazywało „—")
+- Fix: precyzja float w udziałach (6.3100000000000005 → 6.31)
+- UX: auto-scroll do formularza edycji przy kliknięciu Edytuj (lokale + mieszkańcy)
+- Testy: 4 nowe backend (regeneracja, ostrzeżenie daty salda)
+
 ### 2026-03-23 — Optymalizacja ładowania stron + fix SPA routing
 - Fix Vercel rewrite: SPA routing (`/admin/lokale`, itp.) zwracało 404 po odświeżeniu — poprawiony destination w `vercel.json`
 - Cache auth headers w `api.ts` — równoległe requesty współdzielą jeden lookup sesji (5s TTL), eliminuje powtórne `getSession()`
