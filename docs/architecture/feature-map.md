@@ -33,6 +33,49 @@
 | Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
+## Roadmapa — przed produkcją
+
+### Faza: Hardening (wymagane przed wdrożeniem)
+| Zadanie | Status | Priorytet | Opis |
+|---------|--------|-----------|------|
+| Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 48 testów: auth, role, izolacja danych, privilege escalation |
+| Pentest RLS na żywej bazie | ⬜ todo | KRYTYCZNY | Zaloguj się jako mieszkaniec, spróbuj odczytać dane innego (DevTools/curl). Sprawdź: charges, payments, apartments, votes, residents, storage |
+| Pentest IDOR frontend | ⬜ todo | KRYTYCZNY | Podmiana ID w URL/API calls, próba dostępu do cudzych zasobów |
+| Audyt XSS/injection | ⬜ todo | KRYTYCZNY | Wstrzyknięcie HTML/JS w formularzach (kontakt, profil, ogłoszenia) |
+| Naprawa: votes DELETE policy | ⬜ todo | WYSOKI | Admin nie może usunąć głosów przez RLS — potrzebna policy DELETE dla admina (patrz audyt migracji) |
+| Naprawa: contact_messages spam | ⬜ todo | WYSOKI | INSERT WITH CHECK (true) = publiczny spam — dodać rate limiting |
+| CI/CD pipeline | ⬜ todo | WYSOKI | GitHub Actions: npm test + pytest na push, gating deploymentu |
+| Testy E2E | ⬜ todo | WYSOKI | Playwright/Cypress: kluczowe ścieżki użytkownika (logowanie, głosowanie, finanse) |
+| Testy obciążeniowe | ⬜ todo | ŚREDNI | Symulacja wielu mieszkańców jednocześnie (głosowanie, naliczenia) |
+| Backup & recovery | ⬜ todo | WYSOKI | Strategia backupów Supabase, procedura przywracania |
+
+### Faza: Dokumentacja operacyjna
+| Zadanie | Status | Priorytet | Opis |
+|---------|--------|-----------|------|
+| Instrukcja wdrożeniowa | ⬜ todo | WYSOKI | Jak zdeployować od zera (Vercel, Supabase, DNS, env vars) |
+| Instrukcja utrzymania | ⬜ todo | WYSOKI | Jak uruchomić migrację, debugować, monitorować, restartować |
+| Instrukcja dla admina | ⬜ todo | ŚREDNI | Jak używać panelu admina (dla zarządcy wspólnoty) |
+| Procedury awaryjne | ⬜ todo | ŚREDNI | Co robić gdy pada Supabase/Vercel, jak przywrócić dane |
+
+### Faza: Brakujące funkcjonalności
+| Zadanie | Status | Priorytet | Opis |
+|---------|--------|-----------|------|
+| SMTP email | ⬜ todo | WYSOKI | Konfiguracja powiadomienia@wmgabi.pl, testy wysyłki |
+| Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
+| Audit log | ⬜ todo | WYSOKI | Logowanie operacji finansowych (RODO wymóg) |
+| Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
+
+### Faza: Komercjalizacja (po wdrożeniu u siebie)
+| Zadanie | Status | Priorytet | Opis |
+|---------|--------|-----------|------|
+| Plan sprzedaży SaaS | ⬜ todo | ŚREDNI | Strategia multi-tenant: izolacja danych, onboarding, pricing, kanały dotarcia |
+| Multi-tenancy | ⬜ todo | ŚREDNI | Architektura wielu wspólnot: osobne schematy / tenant_id / osobne projekty Supabase |
+| Wielu mieszkańców na lokal | ⬜ todo | ŚREDNI | Współwłaściciele: kilku mieszkańców przypisanych do jednego lokalu (wymaga zmiany my_apartment_ids() i RLS) |
+| Rola zarządcy | ⬜ todo | WYSOKI | Nowa rola "zarządca" z ograniczonymi prawami vs admin (np. podgląd finansów bez edycji stawek, brak CRUD mieszkańców/auth). Wymaga rozszerzenia CHECK constraint na residents.role i nowych RLS policies |
+| Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
+| Demo / trial | ⬜ todo | NISKI | Środowisko demo z przykładowymi danymi |
+| Regulamin i umowa SaaS | ⬜ todo | ŚREDNI | Dokumenty prawne: umowa, SLA, przetwarzanie danych (RODO) |
+
 ## Powiązania
 - [[ADR-004-data-access-pattern]] — kiedy frontend vs backend
 - [[ADR-002-rls-bezpieczenstwo]] — kto co widzi

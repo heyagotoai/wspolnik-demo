@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-23 — Testy bezpieczeństwa RLS + roadmapa hardening
+- 48 nowych testów izolacji danych (`test_rls_isolation.py`): auth, role, privilege escalation, data isolation
+- Audyt wszystkich 11 migracji SQL — RLS policies na 14 tabelach zweryfikowane
+- Znalezione uwagi: brak admin DELETE na votes, publiczny INSERT na contact_messages (spam risk)
+- Roadmapa: dodana faza hardening (pentest, CI/CD, E2E, backup) + faza komercjalizacji (SaaS multi-tenant)
+- Nowa zasada: dokumentacja operacyjna (deploy, utrzymanie, procedury awaryjne)
+- Łącznie: 125 testów backend (77 istniejących + 48 nowych), wszystkie przechodzą
+
 ### 2026-03-23 — Regeneracja naliczeń, data salda, UX
 - Regeneracja naliczeń: opcja „Aktualizuj" zamiast blokady 409 — parametr `force` usuwa istniejące auto-naliczenia i generuje nowe
 - Data salda początkowego: nowe pole `initial_balance_date` w tabeli `apartments` (migracja 011)

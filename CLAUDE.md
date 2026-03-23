@@ -89,6 +89,10 @@ Gdy użytkownik mówi **"zaktualizuj"** po zakończeniu implementacji, zaktualiz
 - **Testy** — jeśli jeszcze nie zaktualizowane
 - W skrócie: **wszystko co możliwe** — nie czekaj na osobne polecenia dla każdego artefaktu
 
+### Dokumentacja operacyjna (WYMAGANE)
+- Przy zmianach wpływających na deploy, konfigurację lub utrzymanie systemu — aktualizuj `docs/operations/` (instrukcje wdrożenia, utrzymania, procedury awaryjne)
+- Cel: każda osoba z dostępem do repo powinna móc zdeployować i utrzymywać system bez wiedzy plemiennej
+
 ### Synchronizacja z Cursorem (WYMAGANE)
 Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równocześnie dodać odpowiednik do `.cursorrules` (i odwrotnie — jeśli Cursor doda coś do `.cursorrules`, zaktualizuj `CLAUDE.md`).
 - Oba pliki muszą być zsynchronizowane pod względem zasad i reguł projektu.
@@ -110,4 +114,5 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie (7 endpointów)
 - `/api/profile` — profil mieszkańca
+- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek)
 - `GET /api/health` — health check
