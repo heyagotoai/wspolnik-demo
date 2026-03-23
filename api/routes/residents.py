@@ -67,6 +67,12 @@ def create_resident(body: ResidentCreate, _admin: dict = Depends(require_admin))
             detail=f"Błąd tworzenia rekordu mieszkańca: {e}",
         )
 
+    # Sync apartments.owner_resident_id
+    if body.apartment_number:
+        apt = sb.table("apartments").select("id").eq("number", body.apartment_number).execute()
+        if apt.data:
+            sb.table("apartments").update({"owner_resident_id": user.id}).eq("id", apt.data[0]["id"]).execute()
+
     return result.data[0]
 
 
@@ -119,10 +125,13 @@ def delete_resident(resident_id: str, _admin: dict = Depends(require_admin)):
     if not check.data:
         raise HTTPException(status_code=404, detail="Mieszkaniec nie znaleziony")
 
-    # 1. Delete from residents table
+    # 1. Clear apartment assignment
+    sb.table("apartments").update({"owner_resident_id": None}).eq("owner_resident_id", resident_id).execute()
+
+    # 2. Delete from residents table
     sb.table("residents").delete().eq("id", resident_id).execute()
 
-    # 2. Delete auth user
+    # 3. Delete auth user
     try:
         sb.auth.admin.delete_user(resident_id)
     except Exception:

@@ -203,7 +203,7 @@ export default function ApartmentsPage() {
   }
 
   const aptsWithBalanceNoDate = apartments.filter(
-    (a) => a.initial_balance !== 0 && !a.initial_balance_date,
+    (a) => !a.initial_balance_date,
   )
 
   const handleBulkDate = async () => {
@@ -259,8 +259,8 @@ export default function ApartmentsPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-[var(--radius-card)] p-4 flex items-center justify-between gap-4">
           <p className="text-sm text-amber-800">
             {aptsWithBalanceNoDate.length === 1
-              ? '1 lokal ma saldo początkowe bez ustawionej daty.'
-              : `${aptsWithBalanceNoDate.length} lokali ma saldo początkowe bez ustawionej daty.`}
+              ? '1 lokal nie ma ustawionej daty salda początkowego.'
+              : `${aptsWithBalanceNoDate.length} lokali nie ma ustawionej daty salda początkowego.`}
             {' '}Uzupełnij, aby system mógł ostrzegać przed podwójnym naliczeniem.
           </p>
           <button
@@ -282,8 +282,8 @@ export default function ApartmentsPage() {
           </div>
           <p className="text-sm text-slate mb-4">
             Data zostanie ustawiona dla {aptsWithBalanceNoDate.length === 1
-              ? '1 lokalu z saldem początkowym bez daty'
-              : `${aptsWithBalanceNoDate.length} lokali z saldem początkowym bez daty`}:
+              ? '1 lokalu bez daty salda'
+              : `${aptsWithBalanceNoDate.length} lokali bez daty salda`}:
             {' '}{aptsWithBalanceNoDate.map((a) => a.number).join(', ')}.
           </p>
           <div className="flex items-end gap-4">
