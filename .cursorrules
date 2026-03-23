@@ -23,7 +23,7 @@ site/           — frontend React (Vite)
 api/            — backend FastAPI
   core/         — config, security, supabase_client
   models/       — Pydantic schemas
-  routes/       — residents.py, contact.py, resolutions.py, profile.py
+  routes/       — residents.py, contact.py, resolutions.py, profile.py, charges.py
 supabase/
   migrations/   — SQL migracje (uruchamiane przez Supabase SQL Editor)
 docs/           — Obsidian vault (ADR-y, koncepty, architektura)
@@ -49,7 +49,7 @@ cd api && pytest
 
 ### Podejście do implementacji (WYMAGANE — "Junior Review")
 - **Po zakończeniu implementacji nowej funkcjonalności, przed uznaniem za gotową** — zadaj użytkownikowi co najmniej 3 pytania sprawdzające poprawność działania. Pytaj o edge cases, zachowanie brzegowe, scenariusze które mogły umknąć.
-- **Cel:** zapobieganie zamknięciu zadania z błędnymi założeniami. Użytkownik weryfikuje, nie Claude.
+- **Cel:** zapobieganie zamknięciu zadania z błędnymi założeniami. Użytkownik weryfikuje, nie AI.
 - Korzystaj z notatek w Obsidian (`docs/`) jako źródła kontekstu przy formułowaniu pytań.
 
 ### UI/UX
@@ -61,6 +61,7 @@ cd api && pytest
 - **Audit log** — operacje finansowe muszą być logowane
 - **Retencja danych finansowych** — max 5 lat
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
+- Nie wprowadzaj podatności: XSS, SQL injection, command injection
 
 ### Import bankowy
 - Format importu z banku **NIE jest jeszcze potwierdzony** — nie buduj parsera dopóki format nie będzie znany
@@ -82,17 +83,22 @@ cd api && pytest
 ### Polecenie "zaktualizuj" (WYMAGANE)
 Gdy użytkownik mówi **"zaktualizuj"** po zakończeniu implementacji, zaktualizuj **wszystkie** powiązane artefakty:
 - **Dokumentacja Obsidian** (`docs/`) — odpowiednie notatki, koncepty, ADR-y
-- **Feature map / Roadmap** (`docs/feature-map.md` lub podobne) — status funkcjonalności
+- **Feature map / Roadmap** (`docs/architecture/feature-map.md`) — status funkcjonalności
 - **CHANGELOG.md** — opis zmian
-- **CLAUDE.md** — jeśli zmiany wpływają na strukturę, endpointy, stack, zasady
-- **Pamięć Claude** (`memory/`) — jeśli zmiany wpływają na postęp projektu lub kontekst
+- **Ten plik (.cursorrules)** — jeśli zmiany wpływają na strukturę, endpointy, stack, zasady
 - **Testy** — jeśli jeszcze nie zaktualizowane
 - W skrócie: **wszystko co możliwe** — nie czekaj na osobne polecenia dla każdego artefaktu
 
-### Synchronizacja z Cursorem (WYMAGANE)
-Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równocześnie dodać odpowiednik do `.cursorrules` (i odwrotnie — jeśli Cursor doda coś do `.cursorrules`, zaktualizuj `CLAUDE.md`).
+### Synchronizacja z Claude Code (WYMAGANE)
+Gdy dodajesz nową zasadę, skill lub subagenta do `.cursorrules`, **musisz** równocześnie dodać odpowiednik do `CLAUDE.md` (i odwrotnie — jeśli Claude Code doda coś do `CLAUDE.md`, zaktualizuj `.cursorrules`).
 - Oba pliki muszą być zsynchronizowane pod względem zasad i reguł projektu.
 - Różnice techniczne (np. pamięć Claude, format subagentów) dostosuj do możliwości danego narzędzia.
+
+### Styl kodu
+- Nie dodawaj zbędnych komentarzy, docstringów ani type annotations do kodu, którego nie zmieniasz
+- Nie over-engineeruj — minimalna złożoność potrzebna do zadania
+- Nie dodawaj error handling dla scenariuszy, które nie mogą wystąpić
+- Unikaj przedwczesnych abstrakcji — 3 podobne linie kodu są lepsze niż niepotrzebny helper
 
 ## Role użytkowników
 - **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
@@ -103,11 +109,35 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Auth: email whitelist (publiczna rejestracja wyłączona, admin dodaje mieszkańców)
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
-- Migracje 001-005 uruchomione przez SQL Editor w dashboardzie Supabase
+- Migracje uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie (7 endpointów)
 - `/api/profile` — profil mieszkańca
+- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek)
 - `GET /api/health` — health check
+
+## Architektura
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│   React      │────▶│   Supabase   │◀────│   FastAPI    │
+│   (Vercel)   │     │  (Auth+DB)   │     │  (backend)   │
+└─────────────┘     └──────────────┘     └──────────────┘
+```
+
+- **Frontend → Supabase** bezpośrednio: odczyty publiczne, auth, storage (patrz ADR-004)
+- **Frontend → FastAPI** przez `/api/`: operacje uprzywilejowane (service_role), tworzenie/usuwanie userów
+- **FastAPI** używa service_role key do operacji, których RLS nie pozwala frontendowi
+
+## Kluczowe ADR-y (w `docs/decisions/`)
+- **ADR-001** — Stack technologiczny
+- **ADR-002** — RLS i bezpieczeństwo
+- **ADR-003** — Auth pattern (ProtectedRoute, AdminRoute)
+- **ADR-004** — Data access pattern (kiedy frontend vs backend)
+- **ADR-006** — Struktura FastAPI
+- **ADR-009** — Strategia testowania
+- **ADR-010** — System głosowania
+- **ADR-011** — Edge Function email relay
+- **ADR-012** — Generowanie naliczeń
