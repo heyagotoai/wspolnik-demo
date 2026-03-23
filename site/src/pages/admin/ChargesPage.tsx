@@ -262,7 +262,7 @@ export default function AdminChargesPage() {
         'success',
       )
       if (result.warnings.length > 0) {
-        toast(`Uwagi: ${result.warnings.join('; ')}`, 'warning')
+        toast(`Uwagi: ${result.warnings.join('; ')}`, 'info')
       }
       setShowGenerateModal(false)
       setFilterMonth(generateMonth)
