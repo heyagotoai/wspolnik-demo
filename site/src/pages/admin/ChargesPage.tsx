@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { PlusIcon, TrashIcon, XIcon, ChevronDownIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 
@@ -110,6 +110,7 @@ export default function AdminChargesPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7))
   const [filterApartment, setFilterApartment] = useState<string>('all')
+  const [expandedApts, setExpandedApts] = useState<Set<string>>(new Set())
 
   // --- Generate state ---
   const [showGenerateModal, setShowGenerateModal] = useState(false)
@@ -387,6 +388,35 @@ export default function AdminChargesPage() {
     return typeRates[0].id
   }
 
+  /** Group filtered charges by apartment */
+  const groupedByApartment = (() => {
+    const groups: Record<string, { aptId: string; aptNumber: string; charges: Charge[]; total: number }> = {}
+    for (const c of filtered) {
+      if (!groups[c.apartment_id]) {
+        groups[c.apartment_id] = {
+          aptId: c.apartment_id,
+          aptNumber: getApartmentNumber(c.apartment_id),
+          charges: [],
+          total: 0,
+        }
+      }
+      groups[c.apartment_id].charges.push(c)
+      groups[c.apartment_id].total += Number(c.amount)
+    }
+    return Object.values(groups).sort((a, b) =>
+      a.aptNumber.localeCompare(b.aptNumber, undefined, { numeric: true })
+    )
+  })()
+
+  const toggleApt = (aptId: string) => {
+    setExpandedApts((prev) => {
+      const next = new Set(prev)
+      if (next.has(aptId)) next.delete(aptId)
+      else next.add(aptId)
+      return next
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -639,7 +669,7 @@ export default function AdminChargesPage() {
             )}
           </div>
 
-          {/* Charges table */}
+          {/* Charges table — grouped by apartment */}
           {filtered.length === 0 ? (
             <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
               <p className="text-slate">
@@ -653,42 +683,79 @@ export default function AdminChargesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-cream-medium">
+                      <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide w-8"></th>
                       <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Lokal</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Typ</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Składniki</th>
                       <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Kwota</th>
                       <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Źródło</th>
-                      <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Opis</th>
                       <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((c) => (
-                      <tr key={c.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
-                        <td className="px-5 py-3 font-medium text-charcoal">Lokal {getApartmentNumber(c.apartment_id)}</td>
-                        <td className="px-5 py-3 text-slate">{chargeTypes[c.type] || c.type}</td>
-                        <td className="px-5 py-3 text-right font-medium text-charcoal">{c.amount.toFixed(2)} zł</td>
-                        <td className="px-5 py-3">
-                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
-                            c.is_auto_generated
-                              ? 'bg-sage/10 text-sage'
-                              : 'bg-amber-light/30 text-amber'
-                          }`}>
-                            {c.is_auto_generated ? 'Auto' : 'Ręczne'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-slate">{c.description || '—'}</td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => handleDeleteCharge(c.id)}
-                            disabled={deleting === c.id}
-                            className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
-                            title="Usuń"
+                    {groupedByApartment.map((group) => {
+                      const isExpanded = expandedApts.has(group.aptId)
+                      const hasAuto = group.charges.some((c) => c.is_auto_generated)
+                      const hasManual = group.charges.some((c) => !c.is_auto_generated)
+                      return (
+                        <Fragment key={group.aptId}>
+                          {/* Summary row */}
+                          <tr
+                            className="border-b border-cream hover:bg-cream/50 transition-colors cursor-pointer"
+                            onClick={() => toggleApt(group.aptId)}
                           >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                            <td className="pl-5 py-3">
+                              <ChevronDownIcon
+                                className={`w-4 h-4 text-outline transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+                              />
+                            </td>
+                            <td className="px-5 py-3 font-medium text-charcoal">Lokal {group.aptNumber}</td>
+                            <td className="px-5 py-3 text-slate text-xs">
+                              {group.charges.map((c) => chargeTypes[c.type] || c.type).join(', ')}
+                            </td>
+                            <td className="px-5 py-3 text-right font-bold text-charcoal">{group.total.toFixed(2)} zł</td>
+                            <td className="px-5 py-3">
+                              <div className="flex gap-1">
+                                {hasAuto && (
+                                  <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-sage/10 text-sage">Auto</span>
+                                )}
+                                {hasManual && (
+                                  <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-amber-light/30 text-amber">Ręczne</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 text-right text-xs text-outline">
+                              {group.charges.length} {group.charges.length === 1 ? 'pozycja' : group.charges.length < 5 ? 'pozycje' : 'pozycji'}
+                            </td>
+                          </tr>
+                          {/* Detail rows */}
+                          {isExpanded && group.charges.map((c) => (
+                            <tr key={c.id} className="border-b border-cream/50 last:border-cream bg-cream/20">
+                              <td className="pl-5 py-2"></td>
+                              <td className="px-5 py-2"></td>
+                              <td className="px-5 py-2 text-slate">{chargeTypes[c.type] || c.type}{c.description ? ` — ${c.description}` : ''}</td>
+                              <td className="px-5 py-2 text-right font-medium text-charcoal">{Number(c.amount).toFixed(2)} zł</td>
+                              <td className="px-5 py-2">
+                                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  c.is_auto_generated ? 'bg-sage/10 text-sage' : 'bg-amber-light/30 text-amber'
+                                }`}>
+                                  {c.is_auto_generated ? 'Auto' : 'Ręczne'}
+                                </span>
+                              </td>
+                              <td className="px-5 py-2 text-right">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteCharge(c.id) }}
+                                  disabled={deleting === c.id}
+                                  className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                                  title="Usuń"
+                                >
+                                  <TrashIcon className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
