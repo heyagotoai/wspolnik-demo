@@ -86,7 +86,7 @@ export default function ApartmentsPage() {
     if (showForm) {
       setTimeout(() => formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 50)
     }
-  }, [showForm])
+  }, [showForm, editingId])
 
   const openAdd = () => {
     setEditingId(null)
