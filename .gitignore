@@ -19,6 +19,9 @@ skills-lock.json
 # Obsidian (ustawienia UI - nie wersjonujemy)
 .obsidian/
 
+# Report fetcher — standalone tool (na razie poza repo)
+tools/report-fetcher/
+
 # OS
 .DS_Store
 Thumbs.db

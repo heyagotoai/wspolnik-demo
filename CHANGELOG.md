@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-23 — Optymalizacja ładowania stron + fix SPA routing
+- Fix Vercel rewrite: SPA routing (`/admin/lokale`, itp.) zwracało 404 po odświeżeniu — poprawiony destination w `vercel.json`
+- Cache auth headers w `api.ts` — równoległe requesty współdzielą jeden lookup sesji (5s TTL), eliminuje powtórne `getSession()`
+- `ChargesPage`: `Promise.all` dla fetchChargesData/fetchRates/fetchAutoConfig zamiast osobnych wywołań
+- Rozróżnienie "błąd ładowania stawek" vs "brak stawek" — przycisk "Spróbuj ponownie" zamiast mylącego komunikatu
+- Testy: nowy `api.test.ts` — 6 testów (auth, cache, metody HTTP, obsługa błędów)
+
 ### 2026-03-22 — Saldo początkowe lokalu
 - Nowe pole `initial_balance` w tabeli `apartments` (migracja 010)
 - Admin: edycja salda początkowego w formularzu lokalu (ujemne = zaległość, dodatnie = nadpłata)

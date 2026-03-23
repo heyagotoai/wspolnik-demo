@@ -2,14 +2,25 @@ import { supabase } from './supabase'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+let _headersPromise: Promise<Record<string, string>> | null = null
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
-  if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
-  return {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  }
+  if (_headersPromise) return _headersPromise
+  _headersPromise = (async () => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  })()
+  // On success: cache for 5s then refresh. On error: clear immediately so next call retries.
+  _headersPromise.then(
+    () => setTimeout(() => { _headersPromise = null }, 5000),
+    () => { _headersPromise = null },
+  )
+  return _headersPromise
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {

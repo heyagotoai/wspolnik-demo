@@ -119,6 +119,7 @@ export default function AdminChargesPage() {
 
   // --- Rates state ---
   const [rates, setRates] = useState<ChargeRate[]>([])
+  const [ratesLoadError, setRatesLoadError] = useState(false)
   const [showRateForm, setShowRateForm] = useState(false)
   const [rateForm, setRateForm] = useState<RateForm>(emptyRateForm)
   const [rateSaving, setRateSaving] = useState(false)
@@ -158,10 +159,12 @@ export default function AdminChargesPage() {
   }
 
   const fetchRates = async () => {
+    setRatesLoadError(false)
     try {
       const data = await api.get<ChargeRate[]>('/charges/rates')
       setRates(data)
     } catch {
+      setRatesLoadError(true)
       toast('Nie udało się pobrać stawek.', 'error')
     }
   }
@@ -176,9 +179,7 @@ export default function AdminChargesPage() {
   }
 
   useEffect(() => {
-    fetchChargesData()
-    fetchRates()
-    fetchAutoConfig()
+    Promise.all([fetchChargesData(), fetchRates(), fetchAutoConfig()])
   }, [])
 
   // --- Charges handlers ---
@@ -457,7 +458,7 @@ export default function AdminChargesPage() {
               onClick={() => setShowGenerateModal(true)}
               disabled={apartments.length === 0 || rates.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
-              title={rates.length === 0 ? 'Dodaj stawki w zakładce Stawki' : ''}
+              title={ratesLoadError ? 'Nie udało się pobrać stawek — odśwież stronę' : rates.length === 0 ? 'Dodaj stawki w zakładce Stawki' : ''}
             >
               Generuj naliczenia
             </button>
@@ -857,8 +858,17 @@ export default function AdminChargesPage() {
           {/* Rates table */}
           {rates.length === 0 ? (
             <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
-              <p className="text-slate">Brak zdefiniowanych stawek.</p>
-              <p className="text-sm text-outline mt-1">Dodaj stawki, aby móc generować naliczenia automatycznie.</p>
+              {ratesLoadError ? (
+                <>
+                  <p className="text-slate">Nie udało się pobrać stawek.</p>
+                  <button onClick={fetchRates} className="mt-2 text-sm text-sage hover:underline">Spróbuj ponownie</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-slate">Brak zdefiniowanych stawek.</p>
+                  <p className="text-sm text-outline mt-1">Dodaj stawki, aby móc generować naliczenia automatycznie.</p>
+                </>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-[var(--radius-card)] shadow-ambient overflow-hidden">

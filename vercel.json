@@ -3,7 +3,7 @@
   "outputDirectory": "site/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/((?!api/).*)", "destination": "/site/dist/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "crons": [
     {
