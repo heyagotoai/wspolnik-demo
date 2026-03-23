@@ -52,10 +52,10 @@
 ### Faza: Dokumentacja operacyjna
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
-| Instrukcja wdrożeniowa | ⬜ todo | WYSOKI | Jak zdeployować od zera (Vercel, Supabase, DNS, env vars) |
-| Instrukcja utrzymania | ⬜ todo | WYSOKI | Jak uruchomić migrację, debugować, monitorować, restartować |
-| Instrukcja dla admina | ⬜ todo | ŚREDNI | Jak używać panelu admina (dla zarządcy wspólnoty) |
-| Procedury awaryjne | ⬜ todo | ŚREDNI | Co robić gdy pada Supabase/Vercel, jak przywrócić dane |
+| Instrukcja wdrożeniowa | ✅ done | WYSOKI | `docs/operations/01-wdrozenie.md` — Supabase, Vercel, DNS, env vars, migracje |
+| Instrukcja utrzymania | ✅ done | WYSOKI | `docs/operations/02-utrzymanie.md` — monitoring, debugowanie, backup, cron, limity |
+| Instrukcja dla admina | ⬜ todo | ŚREDNI | Jak używać panelu admina (dla zarządcy wspólnoty, nie-technicznego) |
+| Procedury awaryjne | ✅ done | ŚREDNI | `docs/operations/03-procedury-awaryjne.md` — awarie, rollback, utrata danych |
 
 ### Faza: Brakujące funkcjonalności
 | Zadanie | Status | Priorytet | Opis |
