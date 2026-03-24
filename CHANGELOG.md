@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-24 — Masowa wysyłka powiadomień o saldzie
+- Nowy endpoint `POST /charges/balance-notification-bulk` — wysyłka PDF salda do wielu lokali jednym requestem
+- Refaktor: logika wysyłki wyekstrahowana do helpera `_send_balance_notification_for_apartment()` (reużywana przez oba endpointy)
+- Frontend: tryb bulk w panelu Lokale — checkboxy, "zaznacz wszystkie", sticky pasek akcji
+- Lokale bez adresu email: disabled checkbox + oznaczenie wizualne, ostrzeżenie w pasku
+- Wyniki wysyłki: panel z listą sukcesów/błędów + przycisk "Ponów dla błędów"
+- Nowe modele Pydantic: `BulkNotificationIn`, `BulkNotificationFailedItem`, `BulkNotificationOut`
+- Testy: 9 nowych testów (`test_balance_notification_bulk.py`); łącznie backend: **155** testów pytest
+
 ### 2026-03-24 — Powiadomienie e-mail o saldzie = PDF jako załącznik
 - Saldo wysyłane jako plik PDF (załącznik) zamiast plain text w treści maila
 - `api/core/saldo_pdf.py` — generowanie PDF (ReportLab + DejaVu Sans z pełną obsługą polskich znaków)

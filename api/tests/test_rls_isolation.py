@@ -328,6 +328,10 @@ class TestUnauthenticatedAccess:
         r = client.post("/api/charges/balance-notification/apt-1")
         assert r.status_code == 401
 
+    def test_masowe_powiadomienie_o_saldzie_wymaga_auth(self, client):
+        r = client.post("/api/charges/balance-notification-bulk", json={"apartment_ids": ["apt-1"]})
+        assert r.status_code == 401
+
     def test_aktualizacja_auto_config_wymaga_auth(self, client):
         r = client.patch("/api/charges/auto-config", json={"enabled": True})
         assert r.status_code == 401
@@ -412,6 +416,14 @@ class TestAdminEndpointsRejectResidentTokens:
         r = client.post(
             "/api/charges/balance-notification/apt-1",
             headers=resident_headers,
+        )
+        assert r.status_code == 403
+
+    def test_masowe_powiadomienie_o_saldzie_odrzuca_resident(self, client, resident_headers):
+        r = client.post(
+            "/api/charges/balance-notification-bulk",
+            headers=resident_headers,
+            json={"apartment_ids": ["apt-1"]},
         )
         assert r.status_code == 403
 

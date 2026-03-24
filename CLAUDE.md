@@ -114,5 +114,5 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
 - `/api/profile` — profil mieszkańca
-- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek)
+- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa)
 - `GET /api/health` — health check

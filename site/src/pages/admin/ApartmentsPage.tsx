@@ -772,16 +772,16 @@ export default function ApartmentsPage() {
 
       {/* Bulk send action bar */}
       {bulkMode && (
-        <div className=”sticky bottom-4 z-10”>
-          <div className=”bg-white border border-cream-deep rounded-[var(--radius-card)] shadow-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3”>
-            <div className=”flex-1 text-sm”>
+        <div className="sticky bottom-4 z-10">
+          <div className="bg-white border border-cream-deep rounded-[var(--radius-card)] shadow-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 text-sm">
               {selectedIds.size === 0 ? (
-                <span className=”text-slate”>Zaznacz lokale, do których chcesz wysłać powiadomienie o saldzie.</span>
+                <span className="text-slate">Zaznacz lokale, do których chcesz wysłać powiadomienie o saldzie.</span>
               ) : (
-                <span className=”text-charcoal font-medium”>
+                <span className="text-charcoal font-medium">
                   Zaznaczono: {selectedWithEmail.length} {selectedWithEmail.length === 1 ? 'lokal' : 'lokali'} z emailem
                   {selectedWithoutEmail.length > 0 && (
-                    <span className=”text-amber-600 ml-2”>
+                    <span className="text-amber-600 ml-2">
                       · {selectedWithoutEmail.length} {selectedWithoutEmail.length === 1 ? 'lokal zostanie pominięty' : 'lokale zostaną pominięte'} (brak emaila)
                     </span>
                   )}
@@ -791,9 +791,9 @@ export default function ApartmentsPage() {
             <button
               onClick={handleBulkSend}
               disabled={bulkSending || selectedWithEmail.length === 0}
-              className=”flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50 shrink-0”
+              className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50 shrink-0"
             >
-              <SendIcon className=”w-4 h-4” />
+              <SendIcon className="w-4 h-4" />
               {bulkSending ? 'Wysyłanie...' : `Wyślij (${selectedWithEmail.length})`}
             </button>
           </div>
@@ -802,33 +802,33 @@ export default function ApartmentsPage() {
 
       {/* Bulk send results */}
       {bulkResults && (
-        <div className=”bg-white rounded-[var(--radius-card)] shadow-ambient p-5 space-y-3”>
-          <div className=”flex items-center justify-between”>
-            <h3 className=”font-semibold text-charcoal text-sm”>Wyniki wysyłki</h3>
-            <button onClick={() => setBulkResults(null)} className=”text-outline hover:text-charcoal”>
-              <XIcon className=”w-4 h-4” />
+        <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-charcoal text-sm">Wyniki wysyłki</h3>
+            <button onClick={() => setBulkResults(null)} className="text-outline hover:text-charcoal">
+              <XIcon className="w-4 h-4" />
             </button>
           </div>
           {bulkResults.sent.length > 0 && (
-            <p className=”text-sm text-sage font-medium”>
+            <p className="text-sm text-sage font-medium">
               ✓ Wysłano: {bulkResults.sent.length} {bulkResults.sent.length === 1 ? 'lokal' : 'lokali'}
               {' '}({bulkResults.sent.map((n) => `lok. ${n}`).join(', ')})
             </p>
           )}
           {bulkResults.failed.length > 0 && (
-            <div className=”space-y-1”>
-              <p className=”text-sm text-error font-medium”>✗ Błędy ({bulkResults.failed.length}):</p>
-              <ul className=”text-sm text-slate space-y-0.5 pl-4”>
+            <div className="space-y-1">
+              <p className="text-sm text-error font-medium">✗ Błędy ({bulkResults.failed.length}):</p>
+              <ul className="text-sm text-slate space-y-0.5 pl-4">
                 {bulkResults.failed.map((f) => (
                   <li key={f.number}>
-                    <span className=”text-charcoal font-medium”>Lok. {f.number}</span> — {f.error}
+                    <span className="text-charcoal font-medium">Lok. {f.number}</span> — {f.error}
                   </li>
                 ))}
               </ul>
               <button
                 onClick={handleRetryFailed}
                 disabled={bulkSending}
-                className=”mt-2 px-3 py-1.5 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors disabled:opacity-50”
+                className="mt-2 px-3 py-1.5 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors disabled:opacity-50"
               >
                 {bulkSending ? 'Ponawiam...' : 'Ponów dla błędów'}
               </button>
@@ -837,7 +837,7 @@ export default function ApartmentsPage() {
         </div>
       )}
 
-      {/* Wydruk salda — portal do body + ukrycie #root przy druku (jedna strona, bez „pustych” kartek) */}
+      {/* Wydruk salda — portal do body + ukrycie #root przy druku (jedna strona, bez „pustych" kartek) */}
       {printingApt &&
         saldoPrintSnapshot &&
         createPortal(

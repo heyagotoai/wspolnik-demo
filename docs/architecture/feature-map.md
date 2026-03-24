@@ -25,7 +25,7 @@
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
 | Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). Auto-scroll do formularza edycji |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
