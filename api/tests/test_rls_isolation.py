@@ -131,6 +131,11 @@ class TestResidentCannotDoAdminOps:
         r = client.get("/api/resolutions/res-1/votes", headers=resident_headers)
         assert r.status_code == 403
 
+    def test_resident_nie_moze_resetowac_glosow(self, client, resident_headers):
+        """DELETE /api/resolutions/:id/votes (reset głosów) wymaga admina."""
+        r = client.delete("/api/resolutions/res-1/votes", headers=resident_headers)
+        assert r.status_code == 403
+
     # --- Balance notification (admin only) ---
 
     def test_resident_nie_moze_wyslac_powiadomienia_o_saldzie(self, client, resident_headers):
@@ -315,6 +320,10 @@ class TestUnauthenticatedAccess:
         r = client.delete("/api/resolutions/res-1")
         assert r.status_code == 401
 
+    def test_reset_glosow_wymaga_auth(self, client):
+        r = client.delete("/api/resolutions/res-1/votes")
+        assert r.status_code == 401
+
     def test_powiadomienie_o_saldzie_wymaga_auth(self, client):
         r = client.post("/api/charges/balance-notification/apt-1")
         assert r.status_code == 401
@@ -387,6 +396,10 @@ class TestAdminEndpointsRejectResidentTokens:
 
     def test_lista_glosow_odrzuca_resident(self, client, resident_headers):
         r = client.get("/api/resolutions/res-1/votes", headers=resident_headers)
+        assert r.status_code == 403
+
+    def test_reset_glosow_odrzuca_resident(self, client, resident_headers):
+        r = client.delete("/api/resolutions/res-1/votes", headers=resident_headers)
         assert r.status_code == 403
 
     def test_aktualizacja_auto_config_odrzuca_resident(self, client, resident_headers):

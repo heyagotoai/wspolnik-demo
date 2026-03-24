@@ -107,12 +107,12 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Auth: email whitelist (publiczna rejestracja wyłączona, admin dodaje mieszkańców)
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
-- Migracje 001-005 uruchomione przez SQL Editor w dashboardzie Supabase
+- Migracje 001-012 uruchomione przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
-- `/api/resolutions` — CRUD uchwał + głosowanie (7 endpointów)
+- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
 - `/api/profile` — profil mieszkańca
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek)
 - `GET /api/health` — health check

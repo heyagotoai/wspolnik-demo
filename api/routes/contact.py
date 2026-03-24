@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -52,9 +53,27 @@ def _try_send_email(msg: ContactMessageCreate) -> None:
         logger.warning("Failed to send email via edge function: %s", e)
 
 
+CONTACT_RATE_LIMIT = 5  # max messages per hour per email
+
+
 @router.post("/contact", response_model=MessageOut)
 def send_contact_message(payload: ContactMessageCreate):
     sb = get_supabase()
+
+    # Rate limiting: max 3 wiadomości na godzinę z tego samego emaila
+    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    recent = (
+        sb.table("contact_messages")
+        .select("id", count="exact")
+        .eq("email", payload.email)
+        .gte("created_at", one_hour_ago)
+        .execute()
+    )
+    if (recent.count or 0) >= CONTACT_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Zbyt wiele wiadomości. Spróbuj ponownie za godzinę.",
+        )
 
     result = sb.table("contact_messages").insert({
         "name": payload.name,

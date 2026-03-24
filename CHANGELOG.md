@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-24 — Votes DELETE policy + contact rate limiting
+- RLS policy `votes_delete_admin` — admin może usuwać głosy (migracja 012)
+- Nowy endpoint `DELETE /api/resolutions/:id/votes` — reset głosów uchwały (admin only)
+- UI: przycisk „Resetuj głosy" z podwójnym potwierdzeniem + wymóg wpisania "USUŃ"
+- ConfirmDialog: nowa opcja `requireText` — input blokujący przycisk potwierdzenia
+- Rate limiting contact_messages: max 5/godz per email (RLS policy + FastAPI, HTTP 429)
+- 12 nowych testów: reset głosów (4), kontakt + rate limit (5), izolacja RLS (3)
+- Łącznie: 137 testów backend + 71 frontend, wszystkie przechodzą
+
 ### 2026-03-23 — Testy bezpieczeństwa RLS + roadmapa hardening
 - 48 nowych testów izolacji danych (`test_rls_isolation.py`): auth, role, privilege escalation, data isolation
 - Audyt wszystkich 11 migracji SQL — RLS policies na 14 tabelach zweryfikowane

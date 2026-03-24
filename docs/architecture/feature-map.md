@@ -38,12 +38,12 @@
 ### Faza: Hardening (wymagane przed wdrożeniem)
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
-| Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 48 testów: auth, role, izolacja danych, privilege escalation |
+| Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 55 testów: auth, role, izolacja danych, privilege escalation, reset głosów |
 | Pentest RLS na żywej bazie | ⬜ todo | KRYTYCZNY | Zaloguj się jako mieszkaniec, spróbuj odczytać dane innego (DevTools/curl). Sprawdź: charges, payments, apartments, votes, residents, storage |
 | Pentest IDOR frontend | ⬜ todo | KRYTYCZNY | Podmiana ID w URL/API calls, próba dostępu do cudzych zasobów |
 | Audyt XSS/injection | ⬜ todo | KRYTYCZNY | Wstrzyknięcie HTML/JS w formularzach (kontakt, profil, ogłoszenia) |
-| Naprawa: votes DELETE policy | ⬜ todo | WYSOKI | Admin nie może usunąć głosów przez RLS — potrzebna policy DELETE dla admina (patrz audyt migracji) |
-| Naprawa: contact_messages spam | ⬜ todo | WYSOKI | INSERT WITH CHECK (true) = publiczny spam — dodać rate limiting |
+| Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
+| Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
 | CI/CD pipeline | ⬜ todo | WYSOKI | GitHub Actions: npm test + pytest na push, gating deploymentu |
 | Testy E2E | ⬜ todo | WYSOKI | Playwright/Cypress: kluczowe ścieżki użytkownika (logowanie, głosowanie, finanse) |
 | Testy obciążeniowe | ⬜ todo | ŚREDNI | Symulacja wielu mieszkańców jednocześnie (głosowanie, naliczenia) |

@@ -123,6 +123,25 @@ def delete_resolution(resolution_id: str, _admin: dict = Depends(require_admin))
     return {"detail": "Uchwała została usunięta"}
 
 
+@router.delete("/{resolution_id}/votes", response_model=MessageOut)
+def reset_votes(resolution_id: str, _admin: dict = Depends(require_admin)):
+    """Delete all votes for a resolution (admin only). Resolution status stays unchanged."""
+    sb = get_supabase()
+
+    check = sb.table("resolutions").select("id, title, status").eq("id", resolution_id).execute()
+    if not check.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+
+    votes = sb.table("votes").select("id").eq("resolution_id", resolution_id).execute()
+    count = len(votes.data) if votes.data else 0
+
+    if count == 0:
+        raise HTTPException(status_code=400, detail="Brak głosów do usunięcia")
+
+    sb.table("votes").delete().eq("resolution_id", resolution_id).execute()
+    return {"detail": f"Usunięto {count} głosów"}
+
+
 # ── Voting ──────────────────────────────────────────────────
 
 

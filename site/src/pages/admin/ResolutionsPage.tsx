@@ -186,6 +186,40 @@ export default function AdminResolutionsPage() {
     }
   }
 
+  const handleResetVotes = async (r: Resolution) => {
+    const voteCount = results[r.id]?.total ?? 0
+    if (voteCount === 0) return
+
+    // Pierwsze ostrzeżenie — wyjaśnienie co się stanie
+    const step1 = await confirm({
+      title: '⚠️ Resetowanie głosów',
+      message: `Zamierzasz usunąć WSZYSTKIE głosy (${voteCount}) oddane w uchwale „${r.title}". Mieszkańcy będą musieli zagłosować ponownie. Tej operacji NIE MOŻNA cofnąć.`,
+      confirmLabel: 'Rozumiem, kontynuuj',
+      cancelLabel: 'Anuluj',
+      danger: true,
+    })
+    if (!step1) return
+
+    // Drugie ostrzeżenie — wymóg wpisania "USUŃ"
+    const step2 = await confirm({
+      title: '🛑 Ostateczne potwierdzenie',
+      message: `Zamierzasz nieodwracalnie usunąć ${voteCount} głosów z uchwały „${r.title}".`,
+      confirmLabel: `Usuń ${voteCount} głosów`,
+      cancelLabel: 'Nie, zachowaj głosy',
+      danger: true,
+      requireText: 'USUŃ',
+    })
+    if (!step2) return
+
+    try {
+      await api.delete(`/resolutions/${r.id}/votes`)
+      toast(`Usunięto ${voteCount} głosów`, 'success')
+      await fetchResolutions()
+    } catch {
+      toast('Błąd resetowania głosów', 'error')
+    }
+  }
+
   const handleDelete = async (id: string) => {
     const ok = await confirm({
       title: 'Usuń uchwałę',
@@ -523,6 +557,15 @@ export default function AdminResolutionsPage() {
                         title="Eksportuj wyniki głosowania (PDF)"
                       >
                         <DownloadIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    {voteData && voteData.total > 0 && (
+                      <button
+                        onClick={() => handleResetVotes(r)}
+                        className="p-2 text-outline hover:text-error transition-colors"
+                        title="Resetuj głosy (usuń wszystkie oddane głosy)"
+                      >
+                        <XIcon className="w-4 h-4" />
                       </button>
                     )}
                     <button

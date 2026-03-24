@@ -20,8 +20,11 @@ class FakeSupabaseBuilder:
         self._data = data if data is not None else []
         self._error = error
         self._is_single = False
+        self._count = None
 
-    def select(self, *_a, **_kw):
+    def select(self, *_a, **kw):
+        if kw.get("count") == "exact":
+            self._count = len(self._data)
         return self
 
     def insert(self, data):
@@ -51,13 +54,18 @@ class FakeSupabaseBuilder:
         self._is_single = True
         return self
 
+    def gte(self, *_a, **_kw):
+        return self
+
     def execute(self):
         data = self._data
         if self._is_single and isinstance(data, list):
             data = data[0] if data else None
-        # Reset _is_single for next call chain on same builder
+        count = self._count
+        # Reset per-query flags
         self._is_single = False
-        return SimpleNamespace(data=data, error=self._error)
+        self._count = None
+        return SimpleNamespace(data=data, error=self._error, count=count)
 
 
 class FakeSupabase:
@@ -87,7 +95,8 @@ def fake_sb():
          patch("api.routes.resolutions.get_supabase", return_value=sb), \
          patch("api.routes.profile.get_supabase", return_value=sb), \
          patch("api.routes.announcements.get_supabase", return_value=sb), \
-         patch("api.routes.charges.get_supabase", return_value=sb):
+         patch("api.routes.charges.get_supabase", return_value=sb), \
+         patch("api.routes.contact.get_supabase", return_value=sb):
         yield sb
 
 

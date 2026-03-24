@@ -7,6 +7,7 @@ Pokryte scenariusze:
 - DELETE /api/resolutions/:id          — usuwanie (admin)
 - GET    /api/resolutions/:id/results  — wyniki głosowania
 - GET    /api/resolutions/:id/votes    — lista głosów z danymi mieszkańców (admin)
+- DELETE /api/resolutions/:id/votes    — reset głosów (admin)
 - GET    /api/resolutions/:id/my-vote  — mój głos
 - POST   /api/resolutions/:id/vote     — oddanie głosu
 """
@@ -268,6 +269,41 @@ class TestVoteDetails:
 
         response = admin_client.get("/api/resolutions/nonexistent/votes")
         assert response.status_code == 404
+
+
+# --- DELETE /api/resolutions/:id/votes ------------------------------------
+
+class TestResetVotes:
+    def test_reset_glosow_usuwa_wszystkie(self, admin_client, fake_sb):
+        """Admin can reset all votes for a resolution."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [VOTE_DATA, {**VOTE_DATA, "id": "vote-2", "vote": "przeciw"}])
+
+        response = admin_client.delete("/api/resolutions/res-1/votes")
+        assert response.status_code == 200
+        assert "2" in response.json()["detail"]
+
+    def test_reset_brak_glosow_zwraca_400(self, admin_client, fake_sb):
+        """Reset when no votes exist returns 400."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [])
+
+        response = admin_client.delete("/api/resolutions/res-1/votes")
+        assert response.status_code == 400
+
+    def test_reset_nieistniejaca_uchwala(self, admin_client, fake_sb):
+        """Reset votes for non-existent resolution returns 404."""
+        fake_sb.set_table_data("resolutions", [])
+
+        response = admin_client.delete("/api/resolutions/nonexistent/votes")
+        assert response.status_code == 404
+
+    def test_reset_niedostepny_dla_mieszkanca(self, resident_client, fake_sb):
+        """Resident cannot reset votes."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+
+        response = resident_client.delete("/api/resolutions/res-1/votes")
+        assert response.status_code == 403
 
 
 # --- GET /api/resolutions/:id/my-vote --------------------------------------
