@@ -44,7 +44,7 @@
 | Audyt XSS/injection | ⬜ todo | KRYTYCZNY | Wstrzyknięcie HTML/JS w formularzach (kontakt, profil, ogłoszenia) |
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
-| CI/CD pipeline | ⬜ todo | WYSOKI | GitHub Actions: npm test + pytest na push, gating deploymentu |
+| CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
 | Testy E2E | ⬜ todo | WYSOKI | Playwright/Cypress: kluczowe ścieżki użytkownika (logowanie, głosowanie, finanse) |
 | Testy obciążeniowe | ⬜ todo | ŚREDNI | Symulacja wielu mieszkańców jednocześnie (głosowanie, naliczenia) |
 | Backup & recovery | ⬜ todo | WYSOKI | Strategia backupów Supabase, procedura przywracania |
@@ -62,7 +62,7 @@
 |---------|--------|-----------|------|
 | SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
 | Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
-| Audit log | ⬜ todo | WYSOKI | Logowanie operacji finansowych (RODO wymóg) |
+| Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
 
 ### Faza: Komercjalizacja (po wdrożeniu u siebie)

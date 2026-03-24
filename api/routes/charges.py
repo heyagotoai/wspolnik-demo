@@ -16,6 +16,8 @@ from api.core.supabase_client import get_supabase
 from api.models.schemas import (
     AutoChargesConfig,
     AutoChargesConfigUpdate,
+    BulkNotificationIn,
+    BulkNotificationOut,
     ChargeGenerateRequest,
     ChargeGenerateSummary,
     ChargeRateCreate,
@@ -425,11 +427,8 @@ CHARGE_TYPE_LABELS = {
 }
 
 
-@router.post("/balance-notification/{apartment_id}", response_model=MessageOut)
-def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_admin)):
-    """Send balance notification email to apartment owner (admin only)."""
-    sb = get_supabase()
-
+def _send_balance_notification_for_apartment(sb, apartment_id: str) -> tuple[str, str | None]:
+    """Send balance notification for one apartment. Returns (apt_number, error_or_None)."""
     # Fetch apartment
     apt_res = (
         sb.table("apartments")
@@ -438,11 +437,13 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
         .execute()
     )
     if not apt_res.data:
-        raise HTTPException(status_code=404, detail="Lokal nie znaleziony")
+        return apartment_id, "Lokal nie znaleziony"
 
     apt = apt_res.data[0]
+    apt_number = str(apt["number"])
+
     if not apt.get("owner_resident_id"):
-        raise HTTPException(status_code=400, detail="Lokal nie ma przypisanego właściciela")
+        return apt_number, "Lokal nie ma przypisanego właściciela"
 
     # Fetch owner email
     resident_res = (
@@ -452,20 +453,21 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
         .execute()
     )
     if not resident_res.data:
-        raise HTTPException(status_code=400, detail="Nie znaleziono danych właściciela")
+        return apt_number, "Nie znaleziono danych właściciela"
 
     resident = resident_res.data[0]
+    if not resident.get("email"):
+        return apt_number, "Właściciel nie ma adresu email"
 
-    # Fetch charges
+    # Fetch charges and payments
     charges_res = (
         sb.table("charges")
-        .select("type, amount")
+        .select("amount")
         .eq("apartment_id", apartment_id)
         .execute()
     )
     total_charges = sum(Decimal(str(c["amount"])) for c in (charges_res.data or []))
 
-    # Fetch confirmed payments
     payments_res = (
         sb.table("payments")
         .select("amount")
@@ -478,10 +480,10 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
     initial_balance = Decimal(str(apt.get("initial_balance") or 0))
     balance = initial_balance + total_payments - total_charges
 
-    # Generuj PDF (ten sam układ co wydruk w panelu)
-    pdf_bytes = build_saldo_pdf(str(apt["number"]), balance)
+    # Build PDF
+    pdf_bytes = build_saldo_pdf(apt_number, balance)
     pdf_b64 = base64.b64encode(pdf_bytes).decode("ascii")
-    pdf_filename = f"saldo_lokal_{apt['number']}_{date.today().strftime('%d-%m-%Y')}.pdf"
+    pdf_filename = f"saldo_lokal_{apt_number}_{date.today().strftime('%d-%m-%Y')}.pdf"
 
     cover_body = (
         f"Dzień dobry.\n\n"
@@ -489,19 +491,18 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
         f"Z poważaniem,\n{COMMUNITY_NAME}"
     )
 
-    # Send via Edge Function
     supabase_url = os.environ.get("SUPABASE_URL", "")
     anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
 
     if not supabase_url or not anon_key:
-        raise HTTPException(status_code=500, detail="Brak konfiguracji SMTP (Supabase URL/klucz)")
+        return apt_number, "Brak konfiguracji SMTP"
 
     try:
         resp = httpx.post(
             f"{supabase_url}/functions/v1/send-email",
             json={
                 "to": resident["email"],
-                "subject": f"[WM GABI] Informacja o saldzie — lokal {apt['number']}",
+                "subject": f"[WM GABI] Informacja o saldzie — lokal {apt_number}",
                 "body": cover_body,
                 "attachment_base64": pdf_b64,
                 "attachment_filename": pdf_filename,
@@ -514,16 +515,38 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
         )
         if resp.status_code != 200:
             logger.warning("Edge function returned %s: %s", resp.status_code, resp.text)
-            raise HTTPException(
-                status_code=502,
-                detail="Nie udało się wysłać emaila (błąd serwera pocztowego)",
-            )
+            return apt_number, "Błąd serwera pocztowego"
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Timeout przy wysyłaniu emaila")
-    except HTTPException:
-        raise
+        return apt_number, "Timeout przy wysyłaniu emaila"
     except Exception as e:
-        logger.warning("Failed to send balance notification: %s", e)
-        raise HTTPException(status_code=500, detail="Błąd przy wysyłaniu emaila")
+        logger.warning("Failed to send balance notification for %s: %s", apt_number, e)
+        return apt_number, "Błąd przy wysyłaniu emaila"
 
-    return {"detail": f"Powiadomienie wysłane na {resident['email']}"}
+    return apt_number, None
+
+
+@router.post("/balance-notification/{apartment_id}", response_model=MessageOut)
+def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_admin)):
+    """Send balance notification email to apartment owner (admin only)."""
+    sb = get_supabase()
+    apt_number, error = _send_balance_notification_for_apartment(sb, apartment_id)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return {"detail": f"Powiadomienie wysłane (lokal {apt_number})"}
+
+
+@router.post("/balance-notification-bulk", response_model=BulkNotificationOut)
+def send_balance_notification_bulk(body: BulkNotificationIn, _admin: dict = Depends(require_admin)):
+    """Send balance notifications to multiple apartments (admin only)."""
+    sb = get_supabase()
+    sent: list[str] = []
+    failed: list[dict] = []
+
+    for apt_id in body.apartment_ids:
+        apt_number, error = _send_balance_notification_for_apartment(sb, apt_id)
+        if error:
+            failed.append({"number": apt_number, "error": error})
+        else:
+            sent.append(apt_number)
+
+    return {"sent": sent, "failed": failed}

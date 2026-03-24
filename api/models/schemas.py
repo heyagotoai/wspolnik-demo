@@ -230,3 +230,17 @@ class AutoChargesConfig(BaseModel):
 class AutoChargesConfigUpdate(BaseModel):
     enabled: bool | None = None
     day: int | None = Field(default=None, ge=1, le=28)
+
+
+class BulkNotificationIn(BaseModel):
+    apartment_ids: list[str]
+
+
+class BulkNotificationFailedItem(BaseModel):
+    number: str
+    error: str
+
+
+class BulkNotificationOut(BaseModel):
+    sent: list[str]
+    failed: list[BulkNotificationFailedItem]

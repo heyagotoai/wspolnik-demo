@@ -25,6 +25,11 @@ interface Apartment {
   owner_name: string | null
 }
 
+interface BulkResults {
+  sent: string[]
+  failed: { number: string; error: string }[]
+}
+
 interface ApartmentForm {
   number: string
   area_m2: string
@@ -50,6 +55,10 @@ export default function ApartmentsPage() {
   const [balances, setBalances] = useState<Record<string, { charges: number; payments: number; balance: number }>>({})
   const [printingApt, setPrintingApt] = useState<Apartment | null>(null)
   const [sendingEmail, setSendingEmail] = useState<string | null>(null)
+  const [bulkMode, setBulkMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkSending, setBulkSending] = useState(false)
+  const [bulkResults, setBulkResults] = useState<BulkResults | null>(null)
   const [showBulkDateForm, setShowBulkDateForm] = useState(false)
   const [bulkDate, setBulkDate] = useState('')
   const [bulkDateSaving, setBulkDateSaving] = useState(false)
@@ -307,6 +316,118 @@ export default function ApartmentsPage() {
     }
   }
 
+  const aptHasEmail = (apt: Apartment): boolean => {
+    if (!apt.owner_resident_id) return false
+    const owner = residents.find((r) => r.id === apt.owner_resident_id)
+    return !!(owner?.email)
+  }
+
+  const aptsWithEmail = apartments.filter(aptHasEmail)
+  const selectedWithEmail = [...selectedIds].filter((id) => {
+    const apt = apartments.find((a) => a.id === id)
+    return apt ? aptHasEmail(apt) : false
+  })
+  const selectedWithoutEmail = [...selectedIds].filter((id) => {
+    const apt = apartments.find((a) => a.id === id)
+    return apt ? !aptHasEmail(apt) : false
+  })
+
+  const toggleBulkMode = () => {
+    setBulkMode((prev) => !prev)
+    setSelectedIds(new Set())
+    setBulkResults(null)
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === aptsWithEmail.length && aptsWithEmail.every((a) => selectedIds.has(a.id))) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(aptsWithEmail.map((a) => a.id)))
+    }
+  }
+
+  const handleBulkSend = async () => {
+    if (selectedWithEmail.length === 0) {
+      toast('Zaznacz co najmniej jeden lokal z adresem email.', 'error')
+      return
+    }
+
+    const skippedNums = selectedWithoutEmail
+      .map((id) => apartments.find((a) => a.id === id)?.number)
+      .filter(Boolean)
+
+    const confirmMsg = skippedNums.length > 0
+      ? `Wyślesz powiadomienia do ${selectedWithEmail.length} lokali.\nPominięte (brak emaila): lok. ${skippedNums.join(', ')}.`
+      : `Wyślesz powiadomienia o saldzie do ${selectedWithEmail.length} lokali.`
+
+    const ok = await confirm({
+      title: 'Wyślij powiadomienia',
+      message: confirmMsg,
+      confirmLabel: 'Wyślij',
+    })
+    if (!ok) return
+
+    setBulkSending(true)
+    setBulkResults(null)
+    try {
+      const result = await api.post<BulkResults>('/charges/balance-notification-bulk', {
+        apartment_ids: selectedWithEmail,
+      })
+      setBulkResults(result)
+      if (result.failed.length === 0) {
+        toast(`Wysłano powiadomienia do ${result.sent.length} lokali.`, 'success')
+      } else {
+        toast(`Wysłano: ${result.sent.length}, błędy: ${result.failed.length}.`, 'error')
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Błąd wysyłki masowej', 'error')
+    } finally {
+      setBulkSending(false)
+    }
+  }
+
+  const handleRetryFailed = async () => {
+    if (!bulkResults || bulkResults.failed.length === 0) return
+    const failedNumbers = new Set(bulkResults.failed.map((f) => f.number))
+    const failedIds = apartments
+      .filter((a) => failedNumbers.has(a.number) && aptHasEmail(a))
+      .map((a) => a.id)
+
+    if (failedIds.length === 0) {
+      toast('Brak lokali do ponowienia (brak emaila lub lokal nie istnieje).', 'error')
+      return
+    }
+
+    setBulkSending(true)
+    try {
+      const result = await api.post<BulkResults>('/charges/balance-notification-bulk', {
+        apartment_ids: failedIds,
+      })
+      setBulkResults((prev) => ({
+        sent: [...(prev?.sent || []), ...result.sent],
+        failed: result.failed,
+      }))
+      if (result.failed.length === 0) {
+        toast(`Ponowienie: wysłano do ${result.sent.length} lokali.`, 'success')
+      } else {
+        toast(`Ponowienie: wysłano ${result.sent.length}, błędy: ${result.failed.length}.`, 'error')
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Błąd ponowienia wysyłki', 'error')
+    } finally {
+      setBulkSending(false)
+    }
+  }
+
   const formatCurrency = (n: number) => `${n.toFixed(2)} zł`
 
   const formatAmountPl = (n: number) =>
@@ -337,13 +458,28 @@ export default function ApartmentsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Lokale</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Dodaj lokal
-        </button>
+        <div className="flex items-center gap-2">
+          {apartments.length > 0 && (
+            <button
+              onClick={toggleBulkMode}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
+                bulkMode
+                  ? 'bg-outline text-white hover:bg-slate'
+                  : 'border border-outline text-slate hover:text-charcoal hover:border-charcoal'
+              }`}
+            >
+              <SendIcon className="w-4 h-4" />
+              {bulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
+            </button>
+          )}
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Dodaj lokal
+          </button>
+        </div>
       </div>
 
       {/* Bulk balance date banner */}
@@ -534,6 +670,17 @@ export default function ApartmentsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-cream-medium">
+                  {bulkMode && (
+                    <th className="px-3 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={aptsWithEmail.length > 0 && aptsWithEmail.every((a) => selectedIds.has(a.id))}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 accent-sage cursor-pointer"
+                        title="Zaznacz wszystkie z emailem"
+                      />
+                    </th>
+                  )}
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Nr</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Powierzchnia</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Udział</th>
@@ -545,9 +692,28 @@ export default function ApartmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {apartments.map((apt) => (
-                  <tr key={apt.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-charcoal">{apt.number}</td>
+                {apartments.map((apt) => {
+                  const hasEmail = aptHasEmail(apt)
+                  return (
+                  <tr key={apt.id} className={`border-b border-cream last:border-0 transition-colors ${bulkMode && !hasEmail ? 'opacity-50' : 'hover:bg-cream/50'}`}>
+                    {bulkMode && (
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(apt.id)}
+                          onChange={() => toggleSelect(apt.id)}
+                          disabled={!hasEmail}
+                          className="w-4 h-4 accent-sage cursor-pointer disabled:cursor-not-allowed"
+                          title={!hasEmail ? 'Brak adresu email — lokal zostanie pominięty' : undefined}
+                        />
+                      </td>
+                    )}
+                    <td className="px-5 py-3 font-medium text-charcoal">
+                      <span>{apt.number}</span>
+                      {bulkMode && !hasEmail && (
+                        <span className="ml-1.5 text-amber-500 text-xs" title="Brak adresu email">✕</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-slate">{apt.area_m2 ? `${apt.area_m2} m²` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.share ? `${(apt.share * 100).toFixed(2)}%` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.declared_occupants || 0}</td>
@@ -596,10 +762,78 @@ export default function ApartmentsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Bulk send action bar */}
+      {bulkMode && (
+        <div className=”sticky bottom-4 z-10”>
+          <div className=”bg-white border border-cream-deep rounded-[var(--radius-card)] shadow-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3”>
+            <div className=”flex-1 text-sm”>
+              {selectedIds.size === 0 ? (
+                <span className=”text-slate”>Zaznacz lokale, do których chcesz wysłać powiadomienie o saldzie.</span>
+              ) : (
+                <span className=”text-charcoal font-medium”>
+                  Zaznaczono: {selectedWithEmail.length} {selectedWithEmail.length === 1 ? 'lokal' : 'lokali'} z emailem
+                  {selectedWithoutEmail.length > 0 && (
+                    <span className=”text-amber-600 ml-2”>
+                      · {selectedWithoutEmail.length} {selectedWithoutEmail.length === 1 ? 'lokal zostanie pominięty' : 'lokale zostaną pominięte'} (brak emaila)
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleBulkSend}
+              disabled={bulkSending || selectedWithEmail.length === 0}
+              className=”flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50 shrink-0”
+            >
+              <SendIcon className=”w-4 h-4” />
+              {bulkSending ? 'Wysyłanie...' : `Wyślij (${selectedWithEmail.length})`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk send results */}
+      {bulkResults && (
+        <div className=”bg-white rounded-[var(--radius-card)] shadow-ambient p-5 space-y-3”>
+          <div className=”flex items-center justify-between”>
+            <h3 className=”font-semibold text-charcoal text-sm”>Wyniki wysyłki</h3>
+            <button onClick={() => setBulkResults(null)} className=”text-outline hover:text-charcoal”>
+              <XIcon className=”w-4 h-4” />
+            </button>
+          </div>
+          {bulkResults.sent.length > 0 && (
+            <p className=”text-sm text-sage font-medium”>
+              ✓ Wysłano: {bulkResults.sent.length} {bulkResults.sent.length === 1 ? 'lokal' : 'lokali'}
+              {' '}({bulkResults.sent.map((n) => `lok. ${n}`).join(', ')})
+            </p>
+          )}
+          {bulkResults.failed.length > 0 && (
+            <div className=”space-y-1”>
+              <p className=”text-sm text-error font-medium”>✗ Błędy ({bulkResults.failed.length}):</p>
+              <ul className=”text-sm text-slate space-y-0.5 pl-4”>
+                {bulkResults.failed.map((f) => (
+                  <li key={f.number}>
+                    <span className=”text-charcoal font-medium”>Lok. {f.number}</span> — {f.error}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={handleRetryFailed}
+                disabled={bulkSending}
+                className=”mt-2 px-3 py-1.5 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors disabled:opacity-50”
+              >
+                {bulkSending ? 'Ponawiam...' : 'Ponów dla błędów'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
