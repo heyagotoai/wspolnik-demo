@@ -60,7 +60,7 @@
 ### Faza: Brakujące funkcjonalności
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
-| SMTP email | 🔧 częściowo | WYSOKI | Kod gotowy (PDF załącznik), czeka na konfigurację powiadomienia@wmgabi.pl i deploy Edge Function |
+| SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
 | Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
 | Audit log | ⬜ todo | WYSOKI | Logowanie operacji finansowych (RODO wymóg) |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
