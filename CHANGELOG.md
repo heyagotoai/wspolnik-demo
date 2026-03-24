@@ -2,6 +2,16 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-24 — Powiadomienie e-mail o saldzie = treść pisma SALDO
+- `POST /charges/balance-notification/:id` wysyła ten sam tekst co wydruk (nagłówek, SALDO, kwota, termin +14 / nadpłata, konto) — moduł `api/core/saldo_letter.py`
+- Zależność `tzdata` w `api/requirements.txt` — na Windowsie (i bez systemowej bazy IANA) `ZoneInfo("Europe/Warsaw")` wymaga tego pakietu
+- Testy: `api/tests/test_saldo_letter.py`; łącznie backend: **142** testy pytest
+
+### 2026-03-24 — Wydruk salda (admin / Lokale)
+- Pismo „SALDO”: nagłówek z logo i adresem, kwota salda, przy długu termin +14 dni, przy nadpłacie tekst o odliczeniu, dane konta bankowego (`mockData.saldoPrintCopy` + `communityInfo.bankAccountFormatted`)
+- Jedna strona w druku: treść w `createPortal(..., document.body)` + `body.saldo-printing` ukrywa `#root` przy druku (uniknięcie pustych stron z ukrytej tabeli lokali)
+- Usunięto z wydruku: tabela szczegółów, właściciel, „Wygenerowano”, dopisek o liczeniu terminu od daty wystawienia
+
 ### 2026-03-24 — Votes DELETE policy + contact rate limiting
 - RLS policy `votes_delete_admin` — admin może usuwać głosy (migracja 012)
 - Nowy endpoint `DELETE /api/resolutions/:id/votes` — reset głosów uchwały (admin only)

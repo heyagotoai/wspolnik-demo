@@ -4,7 +4,20 @@ export const communityInfo = {
   city: '89-604 Chojnice',
   email: 'wmgabi@wp.pl',
   fullAddress: 'ul. Gdańska 58, 89-604 Chojnice',
+  /** Rachunek wspólnoty (wydruki, pisma) — PKO BP */
+  bankAccountFormatted: '44 1020 1491 0000 4002 0062 4007',
 }
+
+/** Teksty stałe na wydruk „Saldo” (PDF/druk) — treść zsynchronizowana z api/core/saldo_letter.py (e-mail) */
+export const saldoPrintCopy = {
+  paymentDueIntro: 'Prosimy o uregulowanie należności do dnia:',
+  paymentRule:
+    'Opłatę eksploatacyjną prosimy wpłacać „z góry” do 15 dnia każdego miesiąca, na rachunek wspólnoty w banku PKO BP nr:',
+  transferNote: 'Przy wpłacie należy podać nr lokalu i okres, za który dokonana jest wpłata.',
+  /** Nadpłata — zamiast terminu spłaty zadłużenia */
+  overpaymentSettlement:
+    'Prosimy o odliczenie nadpłaconej kwoty od opłaty eksploatacyjnej za kolejny miesiąc rozliczeniowy.',
+} as const
 
 export const navLinks = [
   { label: 'Strona Główna', path: '/' },

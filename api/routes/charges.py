@@ -8,6 +8,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.core.config import CRON_SECRET
+from api.core.saldo_letter import build_saldo_letter_plain_text
 from api.core.security import get_current_user, require_admin
 from api.core.supabase_client import get_supabase
 from api.models.schemas import (
@@ -475,24 +476,8 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
     initial_balance = Decimal(str(apt.get("initial_balance") or 0))
     balance = initial_balance + total_payments - total_charges
 
-    # Build email body
-    body = (
-        f"Szanowny/a {resident['full_name']},\n\n"
-        f"Informacja o saldzie lokalu nr {apt['number']}:\n\n"
-        f"  Saldo początkowe: {initial_balance:.2f} zł\n"
-        f"  Suma naliczeń:    {total_charges:.2f} zł\n"
-        f"  Suma wpłat:       {total_payments:.2f} zł\n"
-        f"  ─────────────────────────\n"
-        f"  Saldo aktualne:   {balance:.2f} zł\n\n"
-    )
-    if balance < 0:
-        body += "Prosimy o uregulowanie zaległości.\n\n"
-    elif balance > 0:
-        body += "Lokal posiada nadpłatę.\n\n"
-    else:
-        body += "Lokal jest rozliczony.\n\n"
-
-    body += "Z poważaniem,\nZarząd Wspólnoty Mieszkaniowej"
+    # Treść jak wydruk SALDO (panel admin → Drukuj saldo)
+    body = build_saldo_letter_plain_text(str(apt["number"]), balance)
 
     # Send via Edge Function
     supabase_url = os.environ.get("SUPABASE_URL", "")

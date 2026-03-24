@@ -70,7 +70,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
   - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
   - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec)
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
-- **Wydruk salda** — generowanie wydruku z saldem lokalu (naliczenia, wpłaty, saldo bieżące)
+- **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona
 - **Powiadomienie email o saldzie** — wysyłka informacji o saldzie na email mieszkańca jednym kliknięciem
 - **Import wyciągów bankowych** — import pliku z banku (format do ustalenia), automatyczne dopasowanie wpłat do lokali, panel weryfikacji przez admina
 

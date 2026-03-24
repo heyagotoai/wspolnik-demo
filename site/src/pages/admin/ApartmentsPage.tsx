@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 
 interface Resident {
   id: string
@@ -264,8 +266,23 @@ export default function ApartmentsPage() {
 
   const handlePrint = (apt: Apartment) => {
     setPrintingApt(apt)
-    setTimeout(() => window.print(), 100)
+    setTimeout(() => {
+      document.body.classList.add('saldo-printing')
+      window.print()
+    }, 100)
   }
+
+  useEffect(() => {
+    if (!printingApt) return
+    const onAfterPrint = () => {
+      document.body.classList.remove('saldo-printing')
+    }
+    window.addEventListener('afterprint', onAfterPrint)
+    return () => {
+      window.removeEventListener('afterprint', onAfterPrint)
+      document.body.classList.remove('saldo-printing')
+    }
+  }, [printingApt])
 
   const handleSendEmail = async (apt: Apartment) => {
     if (!apt.owner_resident_id) {
@@ -291,6 +308,22 @@ export default function ApartmentsPage() {
   }
 
   const formatCurrency = (n: number) => `${n.toFixed(2)} zł`
+
+  const formatAmountPl = (n: number) =>
+    `${n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`
+
+  const saldoPrintSnapshot = useMemo(() => {
+    if (!printingApt) return null
+    const issueDate = new Date()
+    const due = new Date(issueDate)
+    due.setDate(due.getDate() + 14)
+    return {
+      dateLabel: issueDate.toLocaleDateString('pl-PL'),
+      dueIn14Label: due.toLocaleDateString('pl-PL'),
+    }
+  }, [printingApt])
+
+  const printBalance = printingApt ? (balances[printingApt.id]?.balance ?? 0) : 0
 
   if (loading) {
     return (
@@ -570,41 +603,54 @@ export default function ApartmentsPage() {
         </div>
       )}
 
-      {/* Print area — hidden on screen, visible on print */}
-      {printingApt && (
-        <div className="print-area hidden print:block">
-          <div className="p-8 max-w-xl mx-auto font-sans text-sm">
-            <h1 className="text-lg font-bold mb-1">Wspólnota Mieszkaniowa GABI</h1>
-            <h2 className="text-base font-semibold mb-4">Informacja o saldzie — lokal nr {printingApt.number}</h2>
-            {printingApt.owner_name && (
-              <p className="mb-4">Właściciel: {printingApt.owner_name}</p>
-            )}
-            <table className="w-full border-collapse mb-4">
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-1.5">Saldo początkowe</td>
-                  <td className="py-1.5 text-right">{formatCurrency(printingApt.initial_balance || 0)}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-1.5">Suma naliczeń</td>
-                  <td className="py-1.5 text-right">{formatCurrency(balances[printingApt.id]?.charges ?? 0)}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-1.5">Suma wpłat (potwierdzonych)</td>
-                  <td className="py-1.5 text-right">{formatCurrency(balances[printingApt.id]?.payments ?? 0)}</td>
-                </tr>
-                <tr className="border-t-2 font-bold">
-                  <td className="py-2">Saldo aktualne</td>
-                  <td className="py-2 text-right">{formatCurrency(balances[printingApt.id]?.balance ?? 0)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="text-xs text-gray-500">
-              Wygenerowano: {new Date().toLocaleDateString('pl-PL')}
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Wydruk salda — portal do body + ukrycie #root przy druku (jedna strona, bez „pustych” kartek) */}
+      {printingApt &&
+        saldoPrintSnapshot &&
+        createPortal(
+          <div className="print-area hidden print:block">
+            <div className="p-8 max-w-2xl mx-auto font-sans text-sm text-charcoal print:text-black leading-relaxed">
+              <header className="flex flex-row justify-between items-start gap-4 mb-8">
+                <div className="flex items-start gap-4">
+                  <img
+                    src="/logo.png"
+                    alt=""
+                    className="h-16 w-16 shrink-0 object-contain print:block"
+                  />
+                  <div>
+                    <p className="font-bold text-base">{communityInfo.name}</p>
+                    <p>{communityInfo.city}</p>
+                    <p>{communityInfo.address.replace(/^ul\./i, 'Ul.')}</p>
+                  </div>
+                </div>
+                <p className="text-right whitespace-nowrap shrink-0">Chojnice, {saldoPrintSnapshot.dateLabel}</p>
+              </header>
+
+              <h1 className="text-center text-xl font-bold tracking-wide mb-8">SALDO</h1>
+
+              <p className="text-center mb-6 max-w-lg mx-auto">
+                {communityInfo.name} informuje, iż dla lokalu nr <strong>{printingApt.number}</strong> stan konta na dzień{' '}
+                <strong>{saldoPrintSnapshot.dateLabel}</strong> wynosi: <strong>{formatAmountPl(printBalance)}</strong>.
+              </p>
+
+              <div className="text-center space-y-4 text-sm border-t border-charcoal/20 pt-6">
+                {printBalance < 0 && (
+                  <p>
+                    {saldoPrintCopy.paymentDueIntro} <strong>{saldoPrintSnapshot.dueIn14Label}</strong>
+                  </p>
+                )}
+                {printBalance > 0 && (
+                  <div className="border border-charcoal/40 rounded px-4 py-3 max-w-lg mx-auto text-center text-sm">
+                    {saldoPrintCopy.overpaymentSettlement}
+                  </div>
+                )}
+                <p>{saldoPrintCopy.paymentRule}</p>
+                <p className="text-base font-bold tracking-wide">{communityInfo.bankAccountFormatted}</p>
+                <p className="text-xs max-w-md mx-auto">{saldoPrintCopy.transferNote}</p>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

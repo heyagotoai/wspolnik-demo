@@ -12,6 +12,7 @@ Dokument opisuje jak wdrożyć system od zera na nowym środowisku.
 - Domena z dostępem do DNS (np. az.pl, OVH, Cloudflare)
 - Konto pocztowe SMTP do powiadomień (np. hosting az.pl)
 - Node.js 18+ i Python 3.12+ (do developmentu)
+- Backend: `api/requirements.txt` (m.in. **`tzdata`** — na Windowsie bez systemowej bazy IANA wymagany do `Europe/Warsaw` w treści maila o saldzie)
 
 ---
 
