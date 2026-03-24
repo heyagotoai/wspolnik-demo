@@ -11,3 +11,6 @@ httpx==0.28.1
 
 # Strefy czasowe (Windows: zoneinfo wymaga pakietu tzdata)
 tzdata>=2025.1
+
+# Generowanie PDF (powiadomienia email o saldzie)
+reportlab>=4.2.0

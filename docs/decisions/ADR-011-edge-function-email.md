@@ -29,7 +29,17 @@ Projekt używa zasady "Edge Functions NIE używane — cały backend logic w Fas
 - **Railway dla backendu** — przeniesienie FastAPI na platformę bez blokady SMTP, zbyt duża zmiana
 - **pg_net** — HTTP z PostgreSQL, wymaga i tak HTTP email API
 
+## Rozszerzenie (2026-03-24) — Załącznik PDF
+
+Powiadomienie o saldzie wysyła PDF jako załącznik zamiast plain text.
+
+- `api/core/saldo_pdf.py` generuje PDF (ReportLab + DejaVu Sans) z logo, nagłówkiem, kwotą i danymi konta
+- Czcionki DejaVu bundled w `api/assets/fonts/` — pełna obsługa polskich znaków na Vercel/Linux
+- Edge Function rozszerzona o opcjonalne pola `attachment_base64` + `attachment_filename` — backward compatible (brak pola = wysyłka bez załącznika)
+- Treść maila: krótki cover text, szczegóły w PDF
+
 ## Konsekwencje
 - Sekrety SMTP w Supabase Edge Function Secrets (nie w Vercel env vars)
 - `SUPABASE_ANON_KEY` potrzebny w Vercel do wywołania Edge Function
 - Wysyłka emaili jest asynchroniczna i nie blokuje odpowiedzi API
+- Zmiana Edge Function wymaga re-deploy: `supabase functions deploy send-email`

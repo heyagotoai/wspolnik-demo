@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-24 — Powiadomienie e-mail o saldzie = PDF jako załącznik
+- Saldo wysyłane jako plik PDF (załącznik) zamiast plain text w treści maila
+- `api/core/saldo_pdf.py` — generowanie PDF (ReportLab + DejaVu Sans z pełną obsługą polskich znaków)
+- `api/assets/fonts/` — czcionki DejaVu w repozytorium (działają na Vercel/Linux)
+- `api/assets/logo.png` — logo wspólnoty dołączone do nagłówka PDF
+- Treść maila: „Dzień dobry. Aktualne saldo w załączonym pliku."
+- Edge Function `send-email` rozszerzona o opcjonalne `attachment_base64` + `attachment_filename` (backward compatible)
+- Testy: `api/tests/test_saldo_pdf.py` (4 testy); łącznie backend: **146** testów pytest
+
 ### 2026-03-24 — Powiadomienie e-mail o saldzie = treść pisma SALDO
 - `POST /charges/balance-notification/:id` wysyła ten sam tekst co wydruk (nagłówek, SALDO, kwota, termin +14 / nadpłata, konto) — moduł `api/core/saldo_letter.py`
 - Zależność `tzdata` w `api/requirements.txt` — na Windowsie (i bez systemowej bazy IANA) `ZoneInfo("Europe/Warsaw")` wymaga tego pakietu

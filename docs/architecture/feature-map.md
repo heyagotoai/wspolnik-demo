@@ -25,7 +25,7 @@
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
 | Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Wydruk salda (portal + `saldo-printing`, jedna strona). Auto-scroll do formularza edycji |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). Auto-scroll do formularza edycji |
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
@@ -60,7 +60,7 @@
 ### Faza: Brakujące funkcjonalności
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
-| SMTP email | ⬜ todo | WYSOKI | Konfiguracja powiadomienia@wmgabi.pl, testy wysyłki |
+| SMTP email | 🔧 częściowo | WYSOKI | Kod gotowy (PDF załącznik), czeka na konfigurację powiadomienia@wmgabi.pl i deploy Edge Function |
 | Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
 | Audit log | ⬜ todo | WYSOKI | Logowanie operacji finansowych (RODO wymóg) |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |

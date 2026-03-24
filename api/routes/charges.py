@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 import re
@@ -8,7 +9,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.core.config import CRON_SECRET
-from api.core.saldo_letter import build_saldo_letter_plain_text
+from api.core.saldo_letter import COMMUNITY_NAME
+from api.core.saldo_pdf import build_saldo_pdf
 from api.core.security import get_current_user, require_admin
 from api.core.supabase_client import get_supabase
 from api.models.schemas import (
@@ -476,8 +478,16 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
     initial_balance = Decimal(str(apt.get("initial_balance") or 0))
     balance = initial_balance + total_payments - total_charges
 
-    # Treść jak wydruk SALDO (panel admin → Drukuj saldo)
-    body = build_saldo_letter_plain_text(str(apt["number"]), balance)
+    # Generuj PDF (ten sam układ co wydruk w panelu)
+    pdf_bytes = build_saldo_pdf(str(apt["number"]), balance)
+    pdf_b64 = base64.b64encode(pdf_bytes).decode("ascii")
+    pdf_filename = f"saldo_lokal_{apt['number']}_{date.today().strftime('%d-%m-%Y')}.pdf"
+
+    cover_body = (
+        f"Dzień dobry.\n\n"
+        f"Aktualne saldo w załączonym pliku.\n\n"
+        f"Z poważaniem,\n{COMMUNITY_NAME}"
+    )
 
     # Send via Edge Function
     supabase_url = os.environ.get("SUPABASE_URL", "")
@@ -492,7 +502,9 @@ def send_balance_notification(apartment_id: str, _admin: dict = Depends(require_
             json={
                 "to": resident["email"],
                 "subject": f"[WM GABI] Informacja o saldzie — lokal {apt['number']}",
-                "body": body,
+                "body": cover_body,
+                "attachment_base64": pdf_b64,
+                "attachment_filename": pdf_filename,
             },
             headers={
                 "Authorization": f"Bearer {anon_key}",

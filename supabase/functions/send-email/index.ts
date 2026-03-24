@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, subject, body, replyTo } = await req.json()
+    const { to, subject, body, replyTo, attachment_base64, attachment_filename } = await req.json()
 
     if (!to || !subject || !body) {
       return new Response(
@@ -43,14 +43,27 @@ Deno.serve(async (req) => {
       },
     })
 
-    await client.send({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sendOptions: Record<string, any> = {
       from: smtpUser,
       to,
       subject,
       content: body,
       replyTo,
-    })
+    }
 
+    if (attachment_base64 && attachment_filename) {
+      sendOptions.attachments = [
+        {
+          filename: attachment_filename,
+          content: attachment_base64,
+          encoding: "base64",
+          contentType: "application/pdf",
+        },
+      ]
+    }
+
+    await client.send(sendOptions)
     await client.close()
 
     return new Response(
