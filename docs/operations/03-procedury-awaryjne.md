@@ -99,8 +99,28 @@ GROUP BY a.id;
 **Kroki:**
 1. **NIE PANIKUJ.** Supabase ma automatyczne backupy (7 dni wstecz na free tier)
 2. Dashboard → Project Settings → Backups → wybierz datę → Restore
-3. Jeśli potrzebujesz selektywnego przywracania → skontaktuj się z supportem Supabase
-4. **Zapobieganie:** Przed destrukcyjnymi operacjami (DROP, DELETE, ALTER) — zrób manualny export (patrz: 02-utrzymanie.md § Backup)
+3. Jeśli potrzebujesz selektywnego przywracania (np. tylko tabela `charges`) → skontaktuj się z supportem Supabase
+4. **Zapobieganie:** Przed destrukcyjnymi operacjami (DROP, DELETE, ALTER) — zrób manualny eksport danych finansowych (patrz: [02-utrzymanie.md § Backup](02-utrzymanie.md))
+
+**Co obejmuje automatyczny backup Supabase:**
+- Całą bazę danych łącznie z `auth.users` (konta mieszkańców)
+- Storage bucket z plikami PDF
+- Wszystkie tabele aplikacji
+
+**Czego NIE zastąpi backup Supabase:**
+- Utracone sekrety SMTP/API (przechowywane tylko w Supabase Secrets / Vercel Env) — patrz niżej
+
+---
+
+## 8. Kompromitacja sekretów
+
+**Scenariusz:** wyciek `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_PASSWORD` lub `CRON_SECRET`
+
+**Kroki:**
+1. **`SUPABASE_SERVICE_ROLE_KEY`** — Supabase Dashboard → Project Settings → API → Reveal → Reset → zaktualizuj w Vercel Env Vars → zrób nowy deploy
+2. **`SMTP_PASSWORD`** — panel az.pl → zmień hasło skrzynki → Supabase → Edge Functions → Secrets → zaktualizuj `SMTP_PASSWORD`
+3. **`CRON_SECRET`** — wygeneruj nową wartość (`openssl rand -hex 32`) → zaktualizuj w Supabase Secrets i Vercel Env Vars
+4. Po rotacji sprawdź logi (czy nie było nieautoryzowanych wywołań): Supabase → Logs, Vercel → Functions Logs
 
 ---
 

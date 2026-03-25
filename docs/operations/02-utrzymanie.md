@@ -103,23 +103,33 @@ Supabase Dashboard → Authentication → Users → znajdź usera → Send passw
 
 ## 5. Backup i przywracanie
 
-### Automatyczne backupy (Supabase)
-- Darmowy plan: codzienne backupy, przechowywanie 7 dni
+### Automatyczne backupy (Supabase) — podstawa ochrony
+- Darmowy plan: codzienne backupy, przechowywanie **7 dni** (łącznie z `auth.users`, Storage, całą bazą)
 - Pro plan: Point-in-Time Recovery (do dowolnej sekundy)
-
-### Manualny export
-```sql
--- SQL Editor: eksport krytycznych danych
-COPY (SELECT * FROM residents) TO STDOUT WITH CSV HEADER;
-COPY (SELECT * FROM apartments) TO STDOUT WITH CSV HEADER;
-COPY (SELECT * FROM charges) TO STDOUT WITH CSV HEADER;
-COPY (SELECT * FROM payments) TO STDOUT WITH CSV HEADER;
-```
+- Automatyczny backup obejmuje **wszystko** — jest lepszy niż ręczny eksport SQL
 
 ### Przywracanie z backupu
 1. Supabase Dashboard → Project Settings → Backups
 2. Wybierz punkt przywracania → Restore
 3. **UWAGA:** przywrócenie nadpisze WSZYSTKIE obecne dane
+4. Selektywne przywracanie (np. tylko jedna tabela) → kontakt z supportem Supabase
+
+### Manualny eksport danych finansowych (przed destrukcyjnymi operacjami)
+
+Przed wykonaniem `DROP`, `DELETE`, `TRUNCATE` lub ryzykowną migracją — ręcznie zabezpiecz dane finansowe przez Supabase SQL Editor:
+
+```sql
+-- Eksport danych finansowych (CSV)
+COPY (SELECT * FROM charges ORDER BY month) TO STDOUT WITH CSV HEADER;
+COPY (SELECT * FROM payments ORDER BY payment_date) TO STDOUT WITH CSV HEADER;
+COPY (SELECT * FROM apartments) TO STDOUT WITH CSV HEADER;
+COPY (SELECT * FROM charge_rates ORDER BY effective_from) TO STDOUT WITH CSV HEADER;
+```
+
+**Ważne ograniczenia ręcznego eksportu:**
+- **Nie zawiera `auth.users`** — konta mieszkańców są zarządzane przez Supabase Auth i nie są dostępne przez SQL. Bez nich odtworzenie logowania wymaga re-invite wszystkich użytkowników.
+- **Nie zawiera plików PDF** — `documents.file_path` to tylko referencja; pliki są w Storage bucket i wymagają osobnego pobrania.
+- Ręczny eksport służy jako **dodatkowe zabezpieczenie danych finansowych**, nie jako pełny backup systemu.
 
 ---
 

@@ -47,7 +47,7 @@
 | CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
 | Testy E2E | ⬜ todo | WYSOKI | Playwright/Cypress: kluczowe ścieżki użytkownika (logowanie, głosowanie, finanse) |
 | Testy obciążeniowe | ⬜ todo | ŚREDNI | Symulacja wielu mieszkańców jednocześnie (głosowanie, naliczenia) |
-| Backup & recovery | ⬜ todo | WYSOKI | Strategia backupów Supabase, procedura przywracania |
+| Backup & recovery | ✅ done | WYSOKI | Strategia backupów Supabase (auto 7 dni), procedura przywracania, ograniczenia ręcznego eksportu SQL, rotacja sekretów — `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
 
 ### Faza: Dokumentacja operacyjna
 | Zadanie | Status | Priorytet | Opis |
