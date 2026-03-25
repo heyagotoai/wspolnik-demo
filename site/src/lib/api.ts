@@ -66,4 +66,14 @@ export const api = {
     })
     return handleResponse<T>(res)
   },
+
+  async getBlob(path: string): Promise<Blob> {
+    const headers = await getAuthHeaders()
+    const res = await fetch(`${API_BASE}${path}`, { headers })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.detail || `Błąd serwera (${res.status})`)
+    }
+    return res.blob()
+  },
 }

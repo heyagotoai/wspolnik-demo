@@ -244,3 +244,16 @@ class BulkNotificationFailedItem(BaseModel):
 class BulkNotificationOut(BaseModel):
     sent: list[str]
     failed: list[BulkNotificationFailedItem]
+
+
+class ChargeNotificationBulkIn(BaseModel):
+    apartment_ids: list[str]
+    valid_from: str | None = None  # MM.YYYY
+
+
+class ZawiadomienieConfig(BaseModel):
+    legal_basis: str
+
+
+class ZawiadomienieConfigUpdate(BaseModel):
+    legal_basis: str | None = None

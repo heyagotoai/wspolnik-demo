@@ -2,6 +2,22 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-25 — Zawiadomienie o opłatach (wydruk + wysyłka)
+- Nowa funkcjonalność: formalne "Zawiadomienie o opłatach" — PDF z tabelą stawek per lokal, podstawą prawną, danymi do przelewu
+- `api/core/zawiadomienie_pdf.py` — generator PDF (ReportLab, układ wzorowany na oficjalnym piśmie wspólnoty)
+- Nowe endpointy w `/api/charges`:
+  - `GET /charges/charge-notification-preview/{id}` — pobranie PDF do wydruku
+  - `POST /charges/charge-notification/{id}` — wysyłka email z PDF jako załącznik
+  - `POST /charges/charge-notification-bulk` — masowa wysyłka do wielu lokali
+  - `GET/PATCH /charges/zawiadomienie-config` — edycja tekstu podstawy prawnej (admin)
+- Admin wybiera "Od miesiąca" (MM.YYYY) — system szuka aktywnych stawek na ten miesiąc
+- Tekst podstawy prawnej edytowalny w panelu admina (przechowywany w `system_settings`)
+- Frontend: trzecia zakładka "Zawiadomienia" w panelu Naliczenia (ChargesPage) — tabela lokali z obliczoną opłatą, przyciski Pobierz PDF / Wyślij email, tryb masowej wysyłki
+- `api.ts` — nowa metoda `getBlob()` do pobierania plików binarnych
+- Nowy model: `ChargeNotificationBulkIn` (z `valid_from`)
+- Migracja 014: klucz `zawiadomienie_legal_basis` w `system_settings`
+- Testy: 23 nowe (5 PDF + 18 endpointów); łącznie backend: **180** testów pytest
+
 ### 2026-03-25 — Audyt XSS/injection
 - `escapeHtml()` w eksporcie PDF uchwał — escape `& < > " '` w tytule, opisie, imieniu i numerze lokalu
 - Security headers w `vercel.json`: CSP (`script-src 'self'`, `frame-ancestors 'none'`), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`

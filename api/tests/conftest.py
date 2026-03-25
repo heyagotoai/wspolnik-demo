@@ -34,7 +34,15 @@ class FakeSupabaseBuilder:
             self._data = [data]
         return self
 
+    def upsert(self, data):
+        if isinstance(data, dict) and not self._data:
+            self._data = [data]
+        return self
+
     def update(self, data):
+        return self
+
+    def limit(self, _n):
         return self
 
     def delete(self):

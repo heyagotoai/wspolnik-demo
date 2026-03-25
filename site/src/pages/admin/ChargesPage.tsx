@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, TrashIcon, XIcon, ChevronDownIcon } from '../../components/ui/Icons'
+import { PlusIcon, TrashIcon, XIcon, ChevronDownIcon, DownloadIcon, SendIcon, EditIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 
@@ -9,6 +9,8 @@ interface Apartment {
   id: string
   number: string
   area_m2: number | null
+  declared_occupants: number
+  owner_resident_id: string | null
   owner_name: string | null
 }
 
@@ -91,7 +93,16 @@ const emptyRateForm: RateForm = {
   valid_from: new Date().toISOString().slice(0, 10),
 }
 
-type Tab = 'charges' | 'rates'
+interface BulkResults {
+  sent: string[]
+  failed: { number: string; error: string }[]
+}
+
+interface ZawiadomienieConfig {
+  legal_basis: string
+}
+
+type Tab = 'charges' | 'rates' | 'zawiadomienia'
 
 export default function AdminChargesPage() {
   const [tab, setTab] = useState<Tab>('charges')
@@ -131,13 +142,30 @@ export default function AdminChargesPage() {
   const [autoConfig, setAutoConfig] = useState<AutoChargesConfig>({ enabled: false, day: 1 })
   const [autoSaving, setAutoSaving] = useState(false)
 
+  // --- Zawiadomienia state ---
+  const [legalBasis, setLegalBasis] = useState('')
+  const [legalBasisDraft, setLegalBasisDraft] = useState('')
+  const [editingLegalBasis, setEditingLegalBasis] = useState(false)
+  const [savingLegalBasis, setSavingLegalBasis] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null)
+  const [sendingNotification, setSendingNotification] = useState<string | null>(null)
+  const [zawBulkMode, setZawBulkMode] = useState(false)
+  const [zawSelectedIds, setZawSelectedIds] = useState<Set<string>>(new Set())
+  const [zawBulkSending, setZawBulkSending] = useState(false)
+  const [zawBulkResults, setZawBulkResults] = useState<BulkResults | null>(null)
+  // MM.YYYY format — admin decides when rates take effect
+  const [zawValidFrom, setZawValidFrom] = useState(() => {
+    const now = new Date()
+    return `${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`
+  })
+
   // --- Data fetching ---
 
   const fetchChargesData = async () => {
     const [aptsRes, chargesRes] = await Promise.all([
       supabase
         .from('apartments')
-        .select('id, number, area_m2, owner_resident_id')
+        .select('id, number, area_m2, declared_occupants, owner_resident_id')
         .order('number', { ascending: true }),
       supabase
         .from('charges')
@@ -150,6 +178,8 @@ export default function AdminChargesPage() {
         id: a.id,
         number: a.number,
         area_m2: a.area_m2,
+        declared_occupants: a.declared_occupants ?? 0,
+        owner_resident_id: a.owner_resident_id ?? null,
         owner_name: null,
       }))
       mapped.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
@@ -179,8 +209,17 @@ export default function AdminChargesPage() {
     }
   }
 
+  const fetchZawiadomienieConfig = async () => {
+    try {
+      const data = await api.get<ZawiadomienieConfig>('/charges/zawiadomienie-config')
+      setLegalBasis(data.legal_basis)
+    } catch {
+      // ignore — non-critical
+    }
+  }
+
   useEffect(() => {
-    Promise.all([fetchChargesData(), fetchRates(), fetchAutoConfig()])
+    Promise.all([fetchChargesData(), fetchRates(), fetchAutoConfig(), fetchZawiadomienieConfig()])
   }, [])
 
   // --- Charges handlers ---
@@ -315,6 +354,117 @@ export default function AdminChargesPage() {
     } finally {
       setAutoSaving(false)
     }
+  }
+
+  // --- Zawiadomienia handlers ---
+
+  const handleSaveLegalBasis = async () => {
+    setSavingLegalBasis(true)
+    try {
+      const result = await api.patch<ZawiadomienieConfig>('/charges/zawiadomienie-config', {
+        legal_basis: legalBasisDraft,
+      })
+      setLegalBasis(result.legal_basis)
+      setEditingLegalBasis(false)
+      toast('Podstawa prawna zaktualizowana.', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Błąd zapisu.', 'error')
+    } finally {
+      setSavingLegalBasis(false)
+    }
+  }
+
+  const handleDownloadPdf = async (aptId: string) => {
+    setDownloadingPdf(aptId)
+    try {
+      const blob = await api.getBlob(`/charges/charge-notification-preview/${aptId}?valid_from=${zawValidFrom}`)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const apt = apartments.find((x) => x.id === aptId)
+      a.download = `zawiadomienie_lokal_${apt?.number || aptId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Błąd pobierania PDF.', 'error')
+    } finally {
+      setDownloadingPdf(null)
+    }
+  }
+
+  const handleSendNotification = async (aptId: string) => {
+    const apt = apartments.find((x) => x.id === aptId)
+    const ok = await confirm({
+      title: 'Wyślij zawiadomienie',
+      message: `Wysłać zawiadomienie o opłatach na email właściciela lokalu ${apt?.number || aptId}?`,
+      confirmLabel: 'Wyślij',
+    })
+    if (!ok) return
+
+    setSendingNotification(aptId)
+    try {
+      const result = await api.post<{ detail: string }>(`/charges/charge-notification/${aptId}?valid_from=${zawValidFrom}`, {})
+      toast(result.detail, 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Błąd wysyłki.', 'error')
+    } finally {
+      setSendingNotification(null)
+    }
+  }
+
+  const handleZawBulkSend = async () => {
+    const ids = [...zawSelectedIds]
+    if (ids.length === 0) return
+
+    const ok = await confirm({
+      title: 'Wyślij zawiadomienia',
+      message: `Wyślesz zawiadomienia o opłatach do ${ids.length} lokali.`,
+      confirmLabel: 'Wyślij',
+    })
+    if (!ok) return
+
+    setZawBulkSending(true)
+    setZawBulkResults(null)
+    try {
+      const result = await api.post<BulkResults>('/charges/charge-notification-bulk', {
+        apartment_ids: ids,
+        valid_from: zawValidFrom,
+      })
+      setZawBulkResults(result)
+      if (result.sent.length > 0 && result.failed.length === 0) {
+        toast(`Wysłano zawiadomienia do ${result.sent.length} lokali.`, 'success')
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Błąd wysyłki.', 'error')
+    } finally {
+      setZawBulkSending(false)
+    }
+  }
+
+  /** Calculate monthly charge for an apartment based on active rates for zawValidFrom */
+  const calcMonthlyCharge = (apt: Apartment): number => {
+    if (rates.length === 0) return 0
+    // Convert MM.YYYY to YYYY-MM-01 for comparison with valid_from
+    const [mm, yyyy] = zawValidFrom.split('.')
+    const cutoff = `${yyyy}-${mm}-01`
+
+    let total = 0
+    // For each rate type, find the most recent rate where valid_from <= cutoff
+    for (const rtype of ['eksploatacja', 'fundusz_remontowy', 'smieci'] as const) {
+      const typeRates = rates
+        .filter((r) => r.type === rtype && r.valid_from <= cutoff)
+        .sort((a, b) => b.valid_from.localeCompare(a.valid_from))
+      if (typeRates.length === 0) continue
+      const rateVal = parseFloat(typeRates[0].rate_per_unit)
+      if (rtype === 'eksploatacja' || rtype === 'fundusz_remontowy') {
+        if (apt.area_m2 && apt.area_m2 > 0) total += apt.area_m2 * rateVal
+      } else if (rtype === 'smieci') {
+        if (apt.declared_occupants > 0) total += apt.declared_occupants * rateVal
+      }
+    }
+    return Math.round(total * 100) / 100
   }
 
   // --- Rates handlers ---
@@ -469,6 +619,9 @@ export default function AdminChargesPage() {
         </button>
         <button className={tabClass('rates')} onClick={() => setTab('rates')}>
           Stawki
+        </button>
+        <button className={tabClass('zawiadomienia')} onClick={() => setTab('zawiadomienia')}>
+          Zawiadomienia
         </button>
       </div>
 
@@ -946,6 +1099,250 @@ export default function AdminChargesPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          TAB: ZAWIADOMIENIA
+          ═══════════════════════════════════════════════════════════════ */}
+      {tab === 'zawiadomienia' && (
+        <>
+          {/* Podstawa prawna */}
+          <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-charcoal">Podstawa prawna</h2>
+              {!editingLegalBasis && (
+                <button
+                  onClick={() => { setLegalBasisDraft(legalBasis); setEditingLegalBasis(true) }}
+                  className="flex items-center gap-1.5 text-sm text-sage hover:text-sage-light transition-colors"
+                >
+                  <EditIcon className="w-4 h-4" />
+                  Edytuj
+                </button>
+              )}
+            </div>
+            {editingLegalBasis ? (
+              <div className="space-y-3">
+                <textarea
+                  value={legalBasisDraft}
+                  onChange={(e) => setLegalBasisDraft(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage resize-y"
+                />
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setEditingLegalBasis(false)}
+                    className="px-4 py-2 text-sm font-medium text-slate hover:text-charcoal transition-colors"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                    onClick={handleSaveLegalBasis}
+                    disabled={savingLegalBasis}
+                    className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
+                  >
+                    {savingLegalBasis ? 'Zapisywanie...' : 'Zapisz'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate leading-relaxed">{legalBasis || '—'}</p>
+            )}
+          </div>
+
+          {/* Aktywne stawki — podsumowanie */}
+          {rates.length > 0 && (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4">
+              <p className="text-sm text-slate">
+                <span className="font-medium text-charcoal">Aktywne stawki: </span>
+                {Object.keys(rateTypes).map((type) => {
+                  const activeId = getActiveRateId(type)
+                  const rate = rates.find((r) => r.id === activeId)
+                  if (!rate) return null
+                  return (
+                    <Fragment key={type}>
+                      {rateTypes[type]} {parseFloat(rate.rate_per_unit).toFixed(2)} {rateUnits[type]}
+                      {type !== 'smieci' ? ', ' : ''}
+                    </Fragment>
+                  )
+                })}
+              </p>
+            </div>
+          )}
+
+          {/* Od miesiąca + toolbar */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-charcoal whitespace-nowrap">Od miesiąca:</label>
+              <input
+                type="month"
+                value={(() => {
+                  const [mm, yyyy] = zawValidFrom.split('.')
+                  return `${yyyy}-${mm}`
+                })()}
+                onChange={(e) => {
+                  const [yyyy, mm] = e.target.value.split('-')
+                  if (yyyy && mm) setZawValidFrom(`${mm}.${yyyy}`)
+                }}
+                className="px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+            </div>
+            <button
+              onClick={() => { setZawBulkMode(!zawBulkMode); setZawSelectedIds(new Set()); setZawBulkResults(null) }}
+              className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
+                zawBulkMode
+                  ? 'bg-slate/10 text-charcoal'
+                  : 'border border-sage text-sage hover:bg-sage/5'
+              }`}
+            >
+              {zawBulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
+            </button>
+          </div>
+
+          {/* Tabela lokali */}
+          {apartments.length === 0 ? (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
+              <p className="text-slate">Brak lokali w systemie.</p>
+            </div>
+          ) : rates.length === 0 ? (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
+              <p className="text-slate">Brak zdefiniowanych stawek.</p>
+              <p className="text-sm text-outline mt-1">Dodaj stawki w zakładce Stawki, aby generować zawiadomienia.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-cream-medium">
+                      {zawBulkMode && (
+                        <th className="px-3 py-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={zawSelectedIds.size === apartments.filter((a) => a.owner_resident_id).length && zawSelectedIds.size > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setZawSelectedIds(new Set(apartments.filter((a) => a.owner_resident_id).map((a) => a.id)))
+                              } else {
+                                setZawSelectedIds(new Set())
+                              }
+                            }}
+                            className="rounded border-cream-deep text-sage focus:ring-sage/30"
+                          />
+                        </th>
+                      )}
+                      <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Nr</th>
+                      <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Powierzchnia</th>
+                      <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Osoby</th>
+                      <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Opłata mies.</th>
+                      <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apartments.map((apt) => {
+                      const monthlyCharge = calcMonthlyCharge(apt)
+                      const hasOwner = !!apt.owner_resident_id
+                      return (
+                        <tr
+                          key={apt.id}
+                          className={`border-b border-cream last:border-0 transition-colors ${zawBulkMode && !hasOwner ? 'opacity-50' : 'hover:bg-cream/50'}`}
+                        >
+                          {zawBulkMode && (
+                            <td className="px-3 py-3">
+                              <input
+                                type="checkbox"
+                                checked={zawSelectedIds.has(apt.id)}
+                                disabled={!hasOwner}
+                                onChange={(e) => {
+                                  const next = new Set(zawSelectedIds)
+                                  if (e.target.checked) next.add(apt.id)
+                                  else next.delete(apt.id)
+                                  setZawSelectedIds(next)
+                                }}
+                                className="rounded border-cream-deep text-sage focus:ring-sage/30"
+                              />
+                            </td>
+                          )}
+                          <td className="px-5 py-3 font-medium text-charcoal">{apt.number}</td>
+                          <td className="px-5 py-3 text-right text-slate">
+                            {apt.area_m2 ? `${apt.area_m2} m²` : '—'}
+                          </td>
+                          <td className="px-5 py-3 text-right text-slate">{apt.declared_occupants || '—'}</td>
+                          <td className="px-5 py-3 text-right font-medium text-charcoal">
+                            {monthlyCharge > 0 ? `${monthlyCharge.toFixed(2)} zł` : '—'}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleDownloadPdf(apt.id)}
+                                disabled={downloadingPdf === apt.id || monthlyCharge === 0}
+                                className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                                title="Pobierz PDF"
+                              >
+                                <DownloadIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleSendNotification(apt.id)}
+                                disabled={sendingNotification === apt.id || !hasOwner || monthlyCharge === 0}
+                                className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                                title={!hasOwner ? 'Brak właściciela' : 'Wyślij email'}
+                              >
+                                <SendIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Bulk send bar */}
+          {zawBulkMode && (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4 flex items-center justify-between">
+              <span className="text-sm text-slate">
+                Zaznaczono: {zawSelectedIds.size} {zawSelectedIds.size === 1 ? 'lokal' : 'lokali'}
+              </span>
+              <button
+                onClick={handleZawBulkSend}
+                disabled={zawBulkSending || zawSelectedIds.size === 0}
+                className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
+              >
+                {zawBulkSending ? 'Wysyłanie...' : `Wyślij (${zawSelectedIds.size})`}
+              </button>
+            </div>
+          )}
+
+          {/* Bulk results */}
+          {zawBulkResults && (
+            <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-charcoal">Wyniki wysyłki</h3>
+                <button onClick={() => setZawBulkResults(null)} className="text-outline hover:text-charcoal">
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+              {zawBulkResults.sent.length > 0 && (
+                <p className="text-sm text-sage">
+                  Wysłano: {zawBulkResults.sent.length} {zawBulkResults.sent.length === 1 ? 'lokal' : 'lokali'}
+                  {' '}({zawBulkResults.sent.map((n) => `lok. ${n}`).join(', ')})
+                </p>
+              )}
+              {zawBulkResults.failed.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm text-error font-medium">Błędy ({zawBulkResults.failed.length}):</p>
+                  <ul className="text-sm text-slate space-y-0.5">
+                    {zawBulkResults.failed.map((f) => (
+                      <li key={f.number}>Lokal {f.number}: {f.error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </>

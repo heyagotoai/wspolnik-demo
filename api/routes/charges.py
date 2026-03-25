@@ -7,12 +7,17 @@ from decimal import Decimal, ROUND_HALF_UP
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
 
 from api.core.config import CRON_SECRET
 from api.core.saldo_letter import COMMUNITY_NAME
 from api.core.saldo_pdf import build_saldo_pdf
 from api.core.security import get_current_user, require_admin
 from api.core.supabase_client import get_supabase
+from api.core.zawiadomienie_pdf import (
+    ZAWIADOMIENIE_TYPE_LABELS,
+    build_zawiadomienie_pdf,
+)
 from api.models.schemas import (
     AutoChargesConfig,
     AutoChargesConfigUpdate,
@@ -20,9 +25,12 @@ from api.models.schemas import (
     BulkNotificationOut,
     ChargeGenerateRequest,
     ChargeGenerateSummary,
+    ChargeNotificationBulkIn,
     ChargeRateCreate,
     ChargeRateOut,
     MessageOut,
+    ZawiadomienieConfig,
+    ZawiadomienieConfigUpdate,
 )
 
 router = APIRouter(prefix="/charges", tags=["charges"])
@@ -544,6 +552,291 @@ def send_balance_notification_bulk(body: BulkNotificationIn, _admin: dict = Depe
 
     for apt_id in body.apartment_ids:
         apt_number, error = _send_balance_notification_for_apartment(sb, apt_id)
+        if error:
+            failed.append({"number": apt_number, "error": error})
+        else:
+            sent.append(apt_number)
+
+    return {"sent": sent, "failed": failed}
+
+
+# ── Zawiadomienie o opłatach ──────────────────────────
+
+
+DEFAULT_LEGAL_BASIS = (
+    "Zarząd Wspólnoty Mieszkaniowej GABI, na podstawie uchwały nr 5/2023 "
+    "z dnia 25.03.2023 oraz UCHWAŁY NR VI/74/24 RADY MIEJSKIEJ W CHOJNICACH "
+    "z dnia 18.11.2024 ustanawia opłatę miesięczną:"
+)
+
+
+def _get_legal_basis(sb) -> str:
+    """Read legal basis text from system_settings, fallback to default."""
+    result = (
+        sb.table("system_settings")
+        .select("value")
+        .eq("key", "zawiadomienie_legal_basis")
+        .execute()
+    )
+    if result.data and result.data[0].get("value"):
+        return result.data[0]["value"]
+    return DEFAULT_LEGAL_BASIS
+
+
+def _calculate_charges_for_apartment(
+    sb, apartment_id: str, month: str | None = None,
+) -> tuple[str, list[dict], Decimal, str | None]:
+    """Oblicza opłatę miesięczną dla lokalu na podstawie aktywnych stawek.
+
+    Returns: (apt_number, charges_breakdown, total, error_or_None)
+    """
+    # Fetch apartment
+    apt_res = (
+        sb.table("apartments")
+        .select("id, number, area_m2, declared_occupants")
+        .eq("id", apartment_id)
+        .execute()
+    )
+    if not apt_res.data:
+        return apartment_id, [], Decimal("0"), "Lokal nie znaleziony"
+
+    apt = apt_res.data[0]
+    apt_number = str(apt["number"])
+
+    if month is None:
+        month = date.today().strftime("%Y-%m-01")
+
+    rates = _get_active_rates(sb, month)
+    if not rates:
+        return apt_number, [], Decimal("0"), "Brak zdefiniowanych stawek"
+
+    area = Decimal(str(apt["area_m2"])) if apt.get("area_m2") else None
+    occupants = apt.get("declared_occupants") or 0
+
+    breakdown: list[dict] = []
+    total = Decimal("0")
+
+    for rtype in AREA_BASED:
+        if rtype not in rates:
+            continue
+        if not area or area <= 0:
+            continue
+        amount = (area * rates[rtype]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        label = ZAWIADOMIENIE_TYPE_LABELS.get(rtype, rtype)
+        breakdown.append({"label": label, "amount": amount})
+        total += amount
+
+    for rtype in OCCUPANT_BASED:
+        if rtype not in rates:
+            continue
+        if occupants <= 0:
+            continue
+        amount = (Decimal(str(occupants)) * rates[rtype]).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        label = ZAWIADOMIENIE_TYPE_LABELS.get(rtype, rtype)
+        breakdown.append({"label": label, "amount": amount})
+        total += amount
+
+    if not breakdown:
+        return apt_number, [], Decimal("0"), "Brak naliczalnych opłat (sprawdź dane lokalu i stawki)"
+
+    return apt_number, breakdown, total, None
+
+
+def _parse_valid_from(valid_from: str | None) -> str:
+    """Parse valid_from param (MM.YYYY) to label. Defaults to current month."""
+    if valid_from and re.match(r"^\d{2}\.\d{4}$", valid_from):
+        return valid_from
+    now = date.today()
+    return f"{now.month:02d}.{now.year}"
+
+
+def _valid_from_to_month(valid_from_label: str) -> str:
+    """Convert MM.YYYY label to YYYY-MM-01 for rate lookup."""
+    mm, yyyy = valid_from_label.split(".")
+    return f"{yyyy}-{mm}-01"
+
+
+@router.get("/zawiadomienie-config", response_model=ZawiadomienieConfig)
+def get_zawiadomienie_config(_user: dict = Depends(get_current_user)):
+    """Get charge notification config (legal basis text)."""
+    sb = get_supabase()
+    return ZawiadomienieConfig(legal_basis=_get_legal_basis(sb))
+
+
+@router.patch("/zawiadomienie-config", response_model=ZawiadomienieConfig)
+def update_zawiadomienie_config(
+    body: ZawiadomienieConfigUpdate, _admin: dict = Depends(require_admin),
+):
+    """Update charge notification config (admin only)."""
+    sb = get_supabase()
+
+    if body.legal_basis is not None:
+        sb.table("system_settings").upsert({
+            "key": "zawiadomienie_legal_basis",
+            "value": body.legal_basis,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+    return ZawiadomienieConfig(legal_basis=_get_legal_basis(sb))
+
+
+@router.get("/charge-notification-preview/{apartment_id}")
+def preview_charge_notification(
+    apartment_id: str,
+    valid_from: str | None = None,
+    _admin: dict = Depends(require_admin),
+):
+    """Download charge notification PDF for one apartment (admin only).
+
+    Query params:
+        valid_from: MM.YYYY — od kiedy obowiązują stawki (domyślnie: bieżący miesiąc)
+    """
+    sb = get_supabase()
+    vf_label = _parse_valid_from(valid_from)
+    month = _valid_from_to_month(vf_label)
+
+    apt_number, breakdown, total, error = _calculate_charges_for_apartment(sb, apartment_id, month)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    legal_basis = _get_legal_basis(sb)
+
+    pdf_bytes = build_zawiadomienie_pdf(
+        apt_number, breakdown, total, vf_label, legal_basis,
+    )
+
+    filename = f"zawiadomienie_lokal_{apt_number}_{date.today().strftime('%d-%m-%Y')}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _send_charge_notification_for_apartment(
+    sb, apartment_id: str, legal_basis: str, valid_from_label: str, month: str,
+) -> tuple[str, str | None]:
+    """Send charge notification for one apartment. Returns (apt_number, error_or_None)."""
+    apt_number, breakdown, total, error = _calculate_charges_for_apartment(sb, apartment_id, month)
+    if error:
+        return apt_number, error
+
+    # Fetch owner
+    apt_res = (
+        sb.table("apartments")
+        .select("owner_resident_id")
+        .eq("id", apartment_id)
+        .execute()
+    )
+    if not apt_res.data or not apt_res.data[0].get("owner_resident_id"):
+        return apt_number, "Lokal nie ma przypisanego właściciela"
+
+    resident_res = (
+        sb.table("residents")
+        .select("email, full_name")
+        .eq("id", apt_res.data[0]["owner_resident_id"])
+        .execute()
+    )
+    if not resident_res.data:
+        return apt_number, "Nie znaleziono danych właściciela"
+
+    resident = resident_res.data[0]
+    if not resident.get("email"):
+        return apt_number, "Właściciel nie ma adresu email"
+
+    # Build PDF
+    pdf_bytes = build_zawiadomienie_pdf(
+        apt_number, breakdown, total, valid_from_label, legal_basis,
+    )
+    pdf_b64 = base64.b64encode(pdf_bytes).decode("ascii")
+    pdf_filename = f"zawiadomienie_lokal_{apt_number}_{date.today().strftime('%d-%m-%Y')}.pdf"
+
+    cover_body = (
+        f"Dzień dobry.\n\n"
+        f"Zawiadomienie o opłatach w załączonym pliku.\n\n"
+        f"Z poważaniem,\n{COMMUNITY_NAME}"
+    )
+
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY", "")
+
+    if not supabase_url or not anon_key:
+        return apt_number, "Brak konfiguracji SMTP"
+
+    try:
+        resp = httpx.post(
+            f"{supabase_url}/functions/v1/send-email",
+            json={
+                "to": resident["email"],
+                "subject": f"[WM GABI] Zawiadomienie o opłatach — lokal {apt_number}",
+                "body": cover_body,
+                "attachment_base64": pdf_b64,
+                "attachment_filename": pdf_filename,
+            },
+            headers={
+                "Authorization": f"Bearer {anon_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            logger.warning("Edge function returned %s: %s", resp.status_code, resp.text)
+            return apt_number, "Błąd serwera pocztowego"
+    except httpx.TimeoutException:
+        return apt_number, "Timeout przy wysyłaniu emaila"
+    except Exception as e:
+        logger.warning("Failed to send charge notification for %s: %s", apt_number, e)
+        return apt_number, "Błąd przy wysyłaniu emaila"
+
+    return apt_number, None
+
+
+@router.post("/charge-notification/{apartment_id}", response_model=MessageOut)
+def send_charge_notification(
+    apartment_id: str,
+    valid_from: str | None = None,
+    _admin: dict = Depends(require_admin),
+):
+    """Send charge notification email to apartment owner (admin only).
+
+    Query params:
+        valid_from: MM.YYYY — od kiedy obowiązują stawki (domyślnie: bieżący miesiąc)
+    """
+    sb = get_supabase()
+    vf_label = _parse_valid_from(valid_from)
+    month = _valid_from_to_month(vf_label)
+    legal_basis = _get_legal_basis(sb)
+
+    apt_number, error = _send_charge_notification_for_apartment(
+        sb, apartment_id, legal_basis, vf_label, month,
+    )
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return {"detail": f"Zawiadomienie wysłane (lokal {apt_number})"}
+
+
+@router.post("/charge-notification-bulk", response_model=BulkNotificationOut)
+def send_charge_notification_bulk(body: ChargeNotificationBulkIn, _admin: dict = Depends(require_admin)):
+    """Send charge notifications to multiple apartments (admin only).
+
+    Body:
+        apartment_ids: list of apartment UUIDs
+        valid_from: MM.YYYY — od kiedy obowiązują stawki (domyślnie: bieżący miesiąc)
+    """
+    sb = get_supabase()
+    vf_label = _parse_valid_from(body.valid_from)
+    month = _valid_from_to_month(vf_label)
+    legal_basis = _get_legal_basis(sb)
+
+    sent: list[str] = []
+    failed: list[dict] = []
+
+    for apt_id in body.apartment_ids:
+        apt_number, error = _send_charge_notification_for_apartment(
+            sb, apt_id, legal_basis, vf_label, month,
+        )
         if error:
             failed.append({"number": apt_number, "error": error})
         else:

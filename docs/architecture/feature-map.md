@@ -29,7 +29,7 @@
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD z opisami |
-| Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
+| Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
