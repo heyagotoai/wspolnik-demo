@@ -41,7 +41,7 @@
 | Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 55 testów: auth, role, izolacja danych, privilege escalation, reset głosów |
 | Pentest RLS na żywej bazie | ⬜ todo | KRYTYCZNY | Zaloguj się jako mieszkaniec, spróbuj odczytać dane innego (DevTools/curl). Sprawdź: charges, payments, apartments, votes, residents, storage |
 | Pentest IDOR frontend | ⬜ todo | KRYTYCZNY | Podmiana ID w URL/API calls, próba dostępu do cudzych zasobów |
-| Audyt XSS/injection | ⬜ todo | KRYTYCZNY | Wstrzyknięcie HTML/JS w formularzach (kontakt, profil, ogłoszenia) |
+| Audyt XSS/injection | ✅ done | KRYTYCZNY | escapeHtml() w PDF uchwał, CSP + security headers w vercel.json (2026-03-25) |
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
 | CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |

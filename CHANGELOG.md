@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-25 — Audyt XSS/injection
+- `escapeHtml()` w eksporcie PDF uchwał — escape `& < > " '` w tytule, opisie, imieniu i numerze lokalu
+- Security headers w `vercel.json`: CSP (`script-src 'self'`, `frame-ancestors 'none'`), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`
+- Test XSS: weryfikacja escape'owania `<script>`, `<img onerror>`, `<a>` w danych PDF
+- Wynik audytu: brak `dangerouslySetInnerHTML`, React auto-escape, Supabase parametryzowane zapytania (brak SQL injection), Pydantic walidacja
+
 ### 2026-03-24 — Masowa wysyłka powiadomień o saldzie
 - Nowy endpoint `POST /charges/balance-notification-bulk` — wysyłka PDF salda do wielu lokali jednym requestem
 - Refaktor: logika wysyłki wyekstrahowana do helpera `_send_balance_notification_for_apartment()` (reużywana przez oba endpointy)

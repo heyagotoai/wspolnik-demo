@@ -4,6 +4,16 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../compon
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 
+/** Escape HTML special characters to prevent XSS in generated HTML strings */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 interface Resolution {
   id: string
   title: string
@@ -268,7 +278,7 @@ export default function AdminResolutionsPage() {
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Wyniki głosowania — ${r.title}</title>
+  <title>Wyniki głosowania — ${escapeHtml(r.title)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 40px; font-size: 13px; }
@@ -296,12 +306,12 @@ export default function AdminResolutionsPage() {
 </head>
 <body>
   <span class="badge badge-${r.status}">${status.label}</span>
-  <h1>${r.title}</h1>
+  <h1>${escapeHtml(r.title)}</h1>
   <p class="subtitle">Wygenerowano: ${generated}</p>
 
   ${r.description ? `<section>
     <h2>Opis uchwały</h2>
-    <p>${r.description.replace(/\n/g, '<br>')}</p>
+    <p>${escapeHtml(r.description).replace(/\n/g, '<br>')}</p>
   </section>` : ''}
 
   ${r.voting_start || r.voting_end ? `<section>
@@ -371,8 +381,8 @@ export default function AdminResolutionsPage() {
               : '<span class="vote-wstrzymuje">Wstrzymuje się</span>'
             const votedAt = new Date(v.voted_at).toLocaleString('pl-PL')
             return `<tr>
-              <td>${v.apartment_number ?? '—'}</td>
-              <td>${v.full_name}</td>
+              <td>${escapeHtml(v.apartment_number ?? '—')}</td>
+              <td>${escapeHtml(v.full_name)}</td>
               <td>${voteLabel}</td>
               <td>${votedAt}</td>
             </tr>`

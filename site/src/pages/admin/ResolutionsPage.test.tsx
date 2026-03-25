@@ -205,4 +205,61 @@ describe('AdminResolutionsPage', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('escapeuje HTML w danych przy eksporcie PDF (ochrona XSS)', async () => {
+    const xssTitle = '<script>alert("xss")</script>'
+    const xssName = '<img src=x onerror="alert(1)">'
+    mockGet.mockImplementation((path: string) => {
+      if (path === '/resolutions') return Promise.resolve([{
+        ...mockResolutions[0],
+        title: xssTitle,
+        description: 'Test <b>bold</b> injection',
+      }])
+      if (path.includes('/results')) return Promise.resolve({ za: 1, przeciw: 0, wstrzymuje: 0, total: 1 })
+      if (path.includes('/votes')) return Promise.resolve([
+        { resident_id: 'r1', full_name: xssName, apartment_number: '<a>', vote: 'za', voted_at: '2026-03-21T12:00:00' },
+      ])
+      return Promise.resolve(null)
+    })
+
+    const mockWin = {
+      document: { write: vi.fn(), close: vi.fn() },
+      focus: vi.fn(),
+      print: vi.fn(),
+    }
+    vi.stubGlobal('open', vi.fn().mockReturnValue(mockWin))
+
+    renderPage()
+    const user = userEvent.setup()
+
+    await waitFor(() => {
+      expect(screen.getByText(xssTitle)).toBeInTheDocument()
+    })
+
+    const exportBtn = screen.getByTitle('Eksportuj wyniki głosowania (PDF)')
+    await user.click(exportBtn)
+
+    await waitFor(() => {
+      expect(mockWin.document.write).toHaveBeenCalled()
+    })
+
+    const html: string = mockWin.document.write.mock.calls[0][0]
+
+    // Tytuł musi być escape'owany — nie może zawierać surowego <script>
+    expect(html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;')
+    expect(html).not.toContain('<script>alert')
+
+    // Opis — <b> musi być escape'owany
+    expect(html).toContain('Test &lt;b&gt;bold&lt;/b&gt; injection')
+
+    // Imię mieszkańca — musi być escape'owane
+    expect(html).toContain('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;')
+    expect(html).not.toContain('<img src=x')
+
+    // Numer lokalu — escape'owany
+    expect(html).toContain('&lt;a&gt;')
+    expect(html).not.toMatch(/<a>/)
+
+    vi.unstubAllGlobals()
+  })
 })
