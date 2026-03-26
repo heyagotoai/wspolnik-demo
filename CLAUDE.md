@@ -58,7 +58,7 @@ cd api && pytest
 ### Bezpieczeństwo (KRYTYCZNE)
 - **RODO/GDPR** — minimalizacja danych, prawo do usunięcia, pseudonimizacja w logach
 - **Row Level Security** — mieszkaniec widzi TYLKO swoje dane (RLS w Supabase)
-- **Audit log** — operacje finansowe muszą być logowane
+- **Audit log** — operacje finansowe i głosowania muszą być logowane (triggery na charges, payments, charge_rates, bank_statements, apartments, votes)
 - **Retencja danych finansowych** — max 5 lat
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
 
@@ -107,7 +107,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Auth: email whitelist (publiczna rejestracja wyłączona, admin dodaje mieszkańców)
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
-- Migracje 001-014 uruchomione przez SQL Editor w dashboardzie Supabase
+- Migracje 001-015 uruchomione przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
@@ -115,4 +115,5 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
 - `/api/profile` — profil mieszkańca
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej)
+- `GET /api/audit` — dziennik operacji (admin only, filtry: tabela/akcja/daty, paginacja)
 - `GET /api/health` — health check

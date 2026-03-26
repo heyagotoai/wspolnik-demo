@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-26 — Dziennik operacji (audit log) + bezpieczeństwo głosowań
+- Nowa strona w panelu admina: **Dziennik operacji** (`/admin/dziennik`) — podgląd audit logu z filtrami i paginacją
+- Nowy endpoint `GET /api/audit` — lista wpisów audit log (admin only), filtry: tabela, akcja, zakres dat, paginacja
+- Migracja 015: trigger `audit_votes` na tabeli `votes` (INSERT/DELETE) — każde oddanie i usunięcie głosu jest logowane
+- Nowa akcja `votes_reset` — snapshot wszystkich głosów przed resetem (ręcznym lub cofnięciem do szkicu)
+- Frontend: czytelne polskie opisy akcji, rozwijane szczegóły JSON, badge'e akcji
+- Poprawka bezpieczeństwa: przed usunięciem głosów (reset/cofnięcie do draft) zapisywany jest pełny snapshot do `audit_log`
+- Testy: 10 nowych backend (pytest) + 7 nowych frontend (vitest); łącznie: **190** pytest, **94** vitest
+
 ### 2026-03-25 — Zawiadomienie o opłatach (wydruk + wysyłka)
 - Nowa funkcjonalność: formalne "Zawiadomienie o opłatach" — PDF z tabelą stawek per lokal, podstawą prawną, danymi do przelewu
 - `api/core/zawiadomienie_pdf.py` — generator PDF (ReportLab, układ wzorowany na oficjalnym piśmie wspólnoty)

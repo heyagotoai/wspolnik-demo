@@ -46,10 +46,18 @@ Dokument opisuje codzienne operacje, monitoring i debugowanie systemu.
 ## 3. Typowe operacje
 
 ### Dodanie nowej migracji SQL
-1. Utwórz plik `supabase/migrations/012_nazwa.sql`
+1. Utwórz plik `supabase/migrations/NNN_nazwa.sql` (kolejny numer)
 2. Przetestuj lokalnie (SQL Editor → dev project)
 3. Uruchom na produkcji: SQL Editor → New Query → wklej → Run
 4. Scommituj plik migracji do repo
+
+### Przeglądanie dziennika operacji (audit log)
+Panel admina → Dziennik operacji (`/admin/dziennik`). Logowane operacje:
+- Naliczenia, wpłaty, stawki, wyciągi bankowe, lokale (zmiany finansowe)
+- Głosy: oddanie i usunięcie (trigger na tabeli `votes`)
+- Reset głosów: pełny snapshot głosów przed usunięciem (akcja `votes_reset`)
+
+Filtry: tabela, typ akcji, zakres dat. Rozwijalne szczegóły z danymi JSON.
 
 ### Aktualizacja stawek naliczeń
 Panel admina → Naliczenia → zakładka Stawki → Dodaj nową stawkę z datą "obowiązuje od". Stare stawki zostają (wersjonowanie). Naliczenia za przyszłe miesiące użyją nowej stawki.

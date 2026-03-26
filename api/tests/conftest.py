@@ -65,6 +65,12 @@ class FakeSupabaseBuilder:
     def gte(self, *_a, **_kw):
         return self
 
+    def lte(self, *_a, **_kw):
+        return self
+
+    def range(self, *_a, **_kw):
+        return self
+
     def execute(self):
         data = self._data
         if self._is_single and isinstance(data, list):
@@ -104,7 +110,8 @@ def fake_sb():
          patch("api.routes.profile.get_supabase", return_value=sb), \
          patch("api.routes.announcements.get_supabase", return_value=sb), \
          patch("api.routes.charges.get_supabase", return_value=sb), \
-         patch("api.routes.contact.get_supabase", return_value=sb):
+         patch("api.routes.contact.get_supabase", return_value=sb), \
+         patch("api.routes.audit.get_supabase", return_value=sb):
         yield sb
 
 

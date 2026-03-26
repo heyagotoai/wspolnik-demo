@@ -88,8 +88,17 @@ def update_resolution(
     if not result.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
-    # When resetting to draft — delete all votes (fresh start)
+    # When resetting to draft — snapshot votes then delete (fresh start)
     if body.status == "draft" and old_status in ("voting", "closed"):
+        snapshot = sb.table("votes").select("*").eq("resolution_id", resolution_id).execute()
+        if snapshot.data:
+            sb.table("audit_log").insert({
+                "user_id": _admin["sub"],
+                "action": "votes_reset",
+                "table_name": "votes",
+                "record_id": resolution_id,
+                "old_data": {"votes": snapshot.data, "reason": "status_reset_to_draft"},
+            }).execute()
         sb.table("votes").delete().eq("resolution_id", resolution_id).execute()
 
     # Auto-create announcement when status changes to "voting"
@@ -132,11 +141,20 @@ def reset_votes(resolution_id: str, _admin: dict = Depends(require_admin)):
     if not check.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
-    votes = sb.table("votes").select("id").eq("resolution_id", resolution_id).execute()
-    count = len(votes.data) if votes.data else 0
+    snapshot = sb.table("votes").select("*").eq("resolution_id", resolution_id).execute()
+    count = len(snapshot.data) if snapshot.data else 0
 
     if count == 0:
         raise HTTPException(status_code=400, detail="Brak głosów do usunięcia")
+
+    # Snapshot before delete — preserves vote history in audit_log
+    sb.table("audit_log").insert({
+        "user_id": _admin["sub"],
+        "action": "votes_reset",
+        "table_name": "votes",
+        "record_id": resolution_id,
+        "old_data": {"votes": snapshot.data, "reason": "manual_reset"},
+    }).execute()
 
     sb.table("votes").delete().eq("resolution_id", resolution_id).execute()
     return {"detail": f"Usunięto {count} głosów"}

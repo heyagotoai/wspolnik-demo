@@ -11,6 +11,7 @@ import {
   WalletIcon,
   MailIcon,
   VoteIcon,
+  ShieldIcon,
   LogOutIcon,
   UserIcon,
 } from '../ui/Icons'
@@ -25,6 +26,7 @@ const sidebarLinks = [
   { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon },
   { label: 'Wiadomości', path: '/admin/wiadomosci', icon: MailIcon },
   { label: 'Uchwały', path: '/admin/uchwaly', icon: VoteIcon },
+  { label: 'Dziennik operacji', path: '/admin/dziennik', icon: ShieldIcon },
 ]
 
 export default function AdminLayout() {

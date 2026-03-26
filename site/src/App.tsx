@@ -23,6 +23,7 @@ import AdminChargesPage from './pages/admin/ChargesPage'
 import AdminApartmentsPage from './pages/admin/ApartmentsPage'
 import AdminMessagesPage from './pages/admin/MessagesPage'
 import AdminResolutionsPage from './pages/admin/ResolutionsPage'
+import AdminAuditLogPage from './pages/admin/AuditLogPage'
 import ResidentResolutionsPage from './pages/resident/ResolutionsPage'
 import ProfilePage from './pages/resident/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -69,6 +70,7 @@ function AppRoutes() {
           <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
           <Route path="/admin/wiadomosci" element={<AdminMessagesPage />} />
           <Route path="/admin/uchwaly" element={<AdminResolutionsPage />} />
+          <Route path="/admin/dziennik" element={<AdminAuditLogPage />} />
         </Route>
       </Route>
 
