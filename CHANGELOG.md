@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-26 — Vercel: naprawa `npm run build` (tsc / zależności)
+- `site/package.json`: `build` = `tsc -b && vite build` (bez `npx tsc` — uniknięcie błędnego pakietu `tsc` z npm gdy brak lokalnego TypeScript).
+- `typescript`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite` w **dependencies** — instalacja na Vercel przy `NODE_ENV=production` i tak obejmuje narzędzia builda.
+- `vercel.json`: `installCommand`: `cd site && npm ci`.
+- `demoSupabase.ts`: dopasowanie sygnatury `.then()` do `execute()` (TS2345 przy `tsc -b`).
+
 ### 2026-03-26 — Repo **wspolnik-demo**: tryb demo (mocki) + branding + dane fikcyjne
 - **Tryb demo:** `site/src/demo/` — `DemoStore`, `demoApiRouter`, `demoSupabase`, `DemoGate` / `DemoRoleContext` / `DemoBanner`, trasy `/demo/*`; `isDemoApp()` włącza mocki przy `VITE_DEMO_ONLY`, `VITE_PUBLIC_DEMO_ROUTES`, braku `VITE_SUPABASE_*` lub ścieżce `/demo`.
 - **API / Supabase:** `api.ts` i `getSupabase()` kierują do mocków w trybie demo; kontakt nie wywołuje backendu w demo (`ContactPage`).

@@ -141,12 +141,11 @@ class TableQuery {
     return this
   }
 
-  then<TResult1 = { data: unknown; error: Error | null }, TResult2 = never>(
-    onfulfilled?: ((value: { data: unknown; error: Error | null }) => TResult1 | PromiseLike<TResult1>) | null,
+  then<TResult1 = { data: unknown; error: unknown; count?: number }, TResult2 = never>(
+    onfulfilled?: ((value: { data: unknown; error: unknown; count?: number }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
-    return this.execute()
-      .then(onfulfilled ?? undefined, onrejected ?? undefined) as Promise<TResult1 | TResult2>
+    return this.execute().then(onfulfilled ?? undefined, onrejected ?? undefined) as Promise<TResult1 | TResult2>
   }
 
   private getRows(): Record<string, unknown>[] {
