@@ -39,6 +39,11 @@ export function parseApiError(body: unknown, status?: number): string {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
+    if (response.status === 401) {
+      _headersPromise = null
+      sessionStorage.setItem('session_expired', '1')
+      supabase.auth.signOut()
+    }
     const body = await response.json().catch(() => ({}))
     throw new Error(parseApiError(body, response.status))
   }
@@ -85,6 +90,11 @@ export const api = {
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, { headers })
     if (!res.ok) {
+      if (res.status === 401) {
+        _headersPromise = null
+        sessionStorage.setItem('session_expired', '1')
+        supabase.auth.signOut()
+      }
       const body = await res.json().catch(() => ({}))
       throw new Error(parseApiError(body, res.status))
     }

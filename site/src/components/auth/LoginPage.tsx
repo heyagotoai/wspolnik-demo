@@ -1,16 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { Navigate } from 'react-router-dom'
 import { MailIcon } from '../ui/Icons'
+import { useToast } from '../ui/Toast'
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth()
+  const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('session_expired')) {
+      sessionStorage.removeItem('session_expired')
+      toast('Sesja wygasła — zaloguj się ponownie', 'error')
+    }
+  }, [toast])
 
   if (loading) {
     return (

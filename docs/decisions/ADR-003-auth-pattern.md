@@ -21,3 +21,11 @@ Potrzebujemy globalnego stanu logowania dostępnego w całej aplikacji React —
 - Loading state — bez niego komponent mógłby przekierować zanim sesja się załaduje
 - User bez rekordu w `residents` — `useRole` zwraca null (nie crashuje)
 - [[ADR-002-rls-bezpieczenstwo|RLS]] chroni dane nawet jeśli ktoś obejdzie frontend routing
+
+## Obsługa wygasłych sesji (2026-03-26)
+- Wygasły refresh token / 401 z API → automatyczny signOut + redirect na `/logowanie` + toast
+- Mechanizm: flaga `session_expired` w `sessionStorage`, odczytywana przez `LoginPage`
+- `useAuth` wykrywa: (1) error z `getSession()`, (2) nieoczekiwany event `SIGNED_OUT`
+- `api.ts` wykrywa: status 401 → czyści cache headerów, signOut, ustawia flagę
+- Celowe wylogowanie (`signOut`) ustawia ref `signingOut` — nie triggeruje toasta
+- `sessionStorage` (per-tab) — wygaśnięcie w jednej zakładce nie wpływa na inne

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, createContext, useContext } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
@@ -16,18 +16,25 @@ export function useAuthProvider(): AuthState {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const signingOut = useRef(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      if (error) {
+        sessionStorage.setItem('session_expired', '1')
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
+        if (event === 'SIGNED_OUT' && !signingOut.current) {
+          sessionStorage.setItem('session_expired', '1')
+        }
       }
     )
 
@@ -40,6 +47,7 @@ export function useAuthProvider(): AuthState {
   }, [])
 
   const signOut = useCallback(async () => {
+    signingOut.current = true
     await supabase.auth.signOut()
     window.location.href = '/'
   }, [])

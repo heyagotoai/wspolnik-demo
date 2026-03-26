@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-26 — Obsługa wygasłych sesji (session expiry)
+- Fix: wygasły refresh token powodował kaskadę błędów (401, CSS MIME error) zamiast przekierowania na logowanie
+- `useAuth` — wykrywanie wygasłej sesji (`getSession` error + nieoczekiwany `SIGNED_OUT`) z flagą `session_expired`
+- `api.ts` — na odpowiedź 401: czyszczenie cache headerów, signOut, flaga session_expired (dotyczy też `getBlob`)
+- `LoginPage` — toast "Sesja wygasła — zaloguj się ponownie" gdy redirect z wygasłej sesji
+- Celowe wylogowanie (`signOut`) nie pokazuje toasta (ref `signingOut`)
+
 ### 2026-03-26 — Dziennik operacji (audit log) + bezpieczeństwo głosowań
 - Nowa strona w panelu admina: **Dziennik operacji** (`/admin/dziennik`) — podgląd audit logu z filtrami i paginacją
 - Nowy endpoint `GET /api/audit` — lista wpisów audit log (admin only), filtry: tabela, akcja, zakres dat, paginacja
@@ -9,7 +16,7 @@
 - Nowa akcja `votes_reset` — snapshot wszystkich głosów przed resetem (ręcznym lub cofnięciem do szkicu)
 - Frontend: czytelne polskie opisy akcji, rozwijane szczegóły JSON, badge'e akcji
 - Poprawka bezpieczeństwa: przed usunięciem głosów (reset/cofnięcie do draft) zapisywany jest pełny snapshot do `audit_log`
-- Testy: 10 nowych backend (pytest) + 7 nowych frontend (vitest); łącznie: **190** pytest, **94** vitest
+- Testy: 10 nowych backend (pytest) + 7 nowych frontend (vitest); łącznie: **190** pytest, **100** vitest
 
 ### 2026-03-25 — Zawiadomienie o opłatach (wydruk + wysyłka)
 - Nowa funkcjonalność: formalne "Zawiadomienie o opłatach" — PDF z tabelą stawek per lokal, podstawą prawną, danymi do przelewu
