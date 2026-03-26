@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, createContext, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
@@ -16,6 +17,7 @@ export function useAuthProvider(): AuthState {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,7 +43,8 @@ export function useAuthProvider(): AuthState {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
-  }, [])
+    navigate('/')
+  }, [navigate])
 
   return { user, session, loading, signIn, signOut }
 }

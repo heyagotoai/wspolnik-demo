@@ -1,9 +1,53 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { parseApiError } from './api'
 import { supabase } from './supabase'
 
 // Global fetch mock
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
+
+describe('parseApiError', () => {
+  it('zwraca string detail gdy detail jest stringiem', () => {
+    expect(parseApiError({ detail: 'Zbyt wiele wiadomości' })).toBe('Zbyt wiele wiadomości')
+  })
+
+  it('zwraca komunikat o emailu gdy loc zawiera "email"', () => {
+    const pydanticError = {
+      detail: [
+        {
+          type: 'value_error',
+          loc: ['body', 'email'],
+          msg: 'value is not a valid email address',
+          input: 'heya@wp',
+        },
+      ],
+    }
+    expect(parseApiError(pydanticError)).toBe('Podaj prawidłowy adres e-mail.')
+  })
+
+  it('zwraca ogólny komunikat gdy błąd Pydantic dotyczy innego pola', () => {
+    const pydanticError = {
+      detail: [
+        {
+          type: 'value_error',
+          loc: ['body', 'message'],
+          msg: 'String should have at least 10 characters',
+          input: 'Hi',
+        },
+      ],
+    }
+    expect(parseApiError(pydanticError)).toBe('Sprawdź poprawność wypełnionych pól.')
+  })
+
+  it('zwraca fallback z kodem HTTP gdy brak detail', () => {
+    expect(parseApiError({}, 500)).toBe('Błąd serwera (500)')
+    expect(parseApiError(null, 422)).toBe('Błąd serwera (422)')
+  })
+
+  it('zwraca fallback bez kodu gdy brak statusu', () => {
+    expect(parseApiError({})).toBe('Błąd serwera')
+  })
+})
 
 describe('api client', () => {
   beforeEach(async () => {
@@ -67,6 +111,20 @@ describe('api client', () => {
 
     const { api } = await import('./api')
     await expect(api.post('/test', {})).rejects.toThrow('Nieprawidłowe dane')
+  })
+
+  it('throws czytelny komunikat przy błędzie walidacji Pydantic (detail jako tablica)', async () => {
+    mockSession('tok')
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: () => Promise.resolve({
+        detail: [{ type: 'value_error', loc: ['body', 'email'], msg: 'not valid', input: 'x' }],
+      }),
+    })
+
+    const { api } = await import('./api')
+    await expect(api.post('/test', {})).rejects.toThrow('Podaj prawidłowy adres e-mail.')
   })
 
   it('caches getSession across parallel requests', async () => {

@@ -23,10 +23,24 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return _headersPromise
 }
 
+export function parseApiError(body: unknown, status?: number): string {
+  if (typeof body === 'object' && body !== null) {
+    const { detail } = body as Record<string, unknown>
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0] as Record<string, unknown>
+      const loc = Array.isArray(first.loc) ? first.loc : []
+      if (loc.includes('email')) return 'Podaj prawidłowy adres e-mail.'
+      return 'Sprawdź poprawność wypełnionych pól.'
+    }
+  }
+  return `Błąd serwera${status ? ` (${status})` : ''}`
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
-    throw new Error(body.detail || `Błąd serwera (${response.status})`)
+    throw new Error(parseApiError(body, response.status))
   }
   return response.json()
 }
@@ -72,7 +86,7 @@ export const api = {
     const res = await fetch(`${API_BASE}${path}`, { headers })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.detail || `Błąd serwera (${res.status})`)
+      throw new Error(parseApiError(body, res.status))
     }
     return res.blob()
   },

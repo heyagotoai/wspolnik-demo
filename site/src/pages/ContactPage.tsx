@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { communityInfo, emergencyContacts, contactSubjects } from '../data/mockData'
 import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
 import { useToast } from '../components/ui/Toast'
+import { parseApiError } from '../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -29,7 +30,7 @@ export default function ContactPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.detail || 'Błąd wysyłania')
+        throw new Error(parseApiError(body, res.status))
       }
 
       toast('Wiadomość została wysłana. Dziękujemy!', 'success')
@@ -66,10 +67,11 @@ export default function ContactPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label htmlFor="contact-name" className="block text-sm font-medium text-charcoal mb-1.5">
                     Imię i nazwisko
                   </label>
                   <input
+                    id="contact-name"
                     type="text"
                     required
                     maxLength={255}
@@ -81,10 +83,11 @@ export default function ContactPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    <label htmlFor="contact-email" className="block text-sm font-medium text-charcoal mb-1.5">
                       Adres e-mail
                     </label>
                     <input
+                      id="contact-email"
                       type="email"
                       required
                       value={formData.email}
@@ -93,10 +96,11 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal mb-1.5">
-                      Numer mieszkania
+                    <label htmlFor="contact-apartment" className="block text-sm font-medium text-charcoal mb-1.5">
+                      Numer mieszkania <span className="text-slate font-normal">(opcjonalne)</span>
                     </label>
                     <input
+                      id="contact-apartment"
                       type="text"
                       maxLength={20}
                       value={formData.apartment_number}
@@ -107,10 +111,11 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label htmlFor="contact-subject" className="block text-sm font-medium text-charcoal mb-1.5">
                     Temat
                   </label>
                   <select
+                    id="contact-subject"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors appearance-none"
@@ -124,10 +129,11 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label htmlFor="contact-message" className="block text-sm font-medium text-charcoal mb-1.5">
                     Wiadomość
                   </label>
                   <textarea
+                    id="contact-message"
                     required
                     rows={5}
                     maxLength={5000}
