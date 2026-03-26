@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { logoAlt, logoSrc } from '../../demo/demoAssets'
+import { useDemoBasePath } from '../../demo/useDemoBasePath'
+import { DemoBanner } from '../../demo/DemoBanner'
+import { communityInfo } from '../../data/mockData'
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -32,12 +36,16 @@ const sidebarLinks = [
 export default function AdminLayout() {
   const { user, signOut } = useAuth()
   const location = useLocation()
+  const prefix = useDemoBasePath()
+  const to = (path: string) => (prefix ? `${prefix}${path}` : path)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const isActive = (path: string) =>
-    path === '/admin'
-      ? location.pathname === '/admin'
-      : location.pathname.startsWith(path)
+  const isActive = (path: string) => {
+    const full = to(path)
+    return path === '/admin'
+      ? location.pathname === full
+      : location.pathname.startsWith(full)
+  }
 
   return (
     <div className="min-h-screen bg-cream-dark flex">
@@ -45,8 +53,8 @@ export default function AdminLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-cream-medium">
         <div className="px-6 h-[72px] flex items-center border-b border-cream-medium">
           <Link to="/" className="flex items-center gap-2 text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
-            <img src="/logo.png" alt="WM GABI" className="h-8 w-8 object-contain" />
-            WM GABI
+            <img src={logoSrc()} alt={logoAlt()} className="h-12 w-12 object-contain" />
+            {communityInfo.shortName}
           </Link>
           <span className="ml-2 px-2 py-0.5 bg-amber-light text-amber text-[10px] font-bold rounded-full uppercase tracking-wider">
             Admin
@@ -57,7 +65,7 @@ export default function AdminLayout() {
           {sidebarLinks.map(({ label, path, icon: Icon }) => (
             <Link
               key={path}
-              to={path}
+              to={to(path)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-sage-pale/40 text-sage'
@@ -72,7 +80,7 @@ export default function AdminLayout() {
 
         <div className="px-3 py-4 border-t border-cream-medium space-y-1">
           <Link
-            to="/panel"
+            to={to('/panel')}
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-slate hover:bg-cream hover:text-charcoal transition-colors"
           >
             <UserIcon className="w-5 h-5" />
@@ -120,7 +128,7 @@ export default function AdminLayout() {
             {sidebarLinks.map(({ label, path, icon: Icon }) => (
               <Link
                 key={path}
-                to={path}
+                to={to(path)}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium ${
                   isActive(path) ? 'bg-sage-pale/40 text-sage' : 'text-slate'
@@ -132,7 +140,7 @@ export default function AdminLayout() {
             ))}
             <hr className="border-cream-medium my-2" />
             <Link
-              to="/panel"
+              to={to('/panel')}
               onClick={() => setMobileOpen(false)}
               className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate"
             >
@@ -151,6 +159,7 @@ export default function AdminLayout() {
 
         {/* Page content */}
         <main className="flex-1 p-6">
+          <DemoBanner />
           <Outlet />
         </main>
       </div>

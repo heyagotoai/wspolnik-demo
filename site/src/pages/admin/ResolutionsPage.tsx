@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
+import { communityInfo } from '../../data/mockData'
 
 /** Escape HTML special characters to prevent XSS in generated HTML strings */
 function escapeHtml(str: string): string {
@@ -391,7 +392,7 @@ export default function AdminResolutionsPage() {
     </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
   </section>
 
-  <div class="footer">WM Gabi &bull; wmgabi.pl &bull; Dokument wygenerowany automatycznie</div>
+  <div class="footer">${escapeHtml(communityInfo.shortName)} &bull; ${escapeHtml(communityInfo.footerWebsite)} &bull; Dokument wygenerowany automatycznie</div>
 </body>
 </html>`
 

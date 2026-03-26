@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { heroBuildingAlt, heroBuildingSrc } from '../demo/demoAssets'
 import { announcements } from '../data/mockData'
 import { MegaphoneIcon, FolderIcon, MailIcon, ArrowRightIcon } from '../components/ui/Icons'
 
@@ -64,6 +65,17 @@ export default function HomePage() {
                 Zaloguj się
               </Link>
               <Link
+                to={
+                  import.meta.env.VITE_DEMO_ONLY === 'true' ||
+                  import.meta.env.VITE_PUBLIC_DEMO_ROUTES === 'true'
+                    ? '/panel'
+                    : '/demo'
+                }
+                className="px-8 py-4 bg-charcoal/90 text-white rounded-full font-semibold text-sm hover:bg-charcoal transition-all active:scale-95"
+              >
+                Tryb demonstracyjny
+              </Link>
+              <Link
                 to="/kontakt"
                 className="px-8 py-4 border-2 border-sage text-sage rounded-full font-semibold text-sm hover:bg-sage/5 transition-all active:scale-95"
               >
@@ -78,8 +90,8 @@ export default function HomePage() {
           {/* Gradient blend — miękkie przejście z lewej sekcji */}
           <div className="absolute top-0 -left-px h-full w-40 bg-gradient-to-r from-cream-dark via-cream-dark/20 to-transparent z-30 hidden md:block" />
           <img
-            src="/gabi-budynek.png"
-            alt="Budynek Wspólnoty Mieszkaniowej GABI"
+            src={heroBuildingSrc()}
+            alt={heroBuildingAlt()}
             className="w-full h-full object-cover"
           />
           {/* Gradient blend na desktop */}

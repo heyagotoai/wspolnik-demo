@@ -8,20 +8,23 @@ afterEach(() => {
 })
 
 // Mock Supabase — żadne testy nie łączą się z prawdziwą instancją
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-      signInWithPassword: vi.fn(),
-      signOut: vi.fn(),
-    },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+const mockSupabaseClient = {
+  auth: {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    onAuthStateChange: vi.fn().mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
     }),
+    signInWithPassword: vi.fn(),
+    signOut: vi.fn(),
   },
+  from: vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  }),
+}
+
+vi.mock('../lib/supabase', () => ({
+  getSupabase: () => mockSupabaseClient,
+  supabase: mockSupabaseClient,
 }))

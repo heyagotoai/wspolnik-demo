@@ -1,4 +1,6 @@
-import { supabase } from './supabase'
+import { getSupabase } from './supabase'
+import { isDemoApp } from '../demo/isDemoApp'
+import { routeDemoApi, routeDemoBlob } from '../demo/demoApiRouter'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -7,7 +9,7 @@ let _headersPromise: Promise<Record<string, string>> | null = null
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (_headersPromise) return _headersPromise
   _headersPromise = (async () => {
-    const { data } = await supabase.auth.getSession()
+    const { data } = await getSupabase().auth.getSession()
     const token = data.session?.access_token
     if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
     return {
@@ -15,7 +17,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
       'Content-Type': 'application/json',
     }
   })()
-  // On success: cache for 5s then refresh. On error: clear immediately so next call retries.
   _headersPromise.then(
     () => setTimeout(() => { _headersPromise = null }, 5000),
     () => { _headersPromise = null },
@@ -42,7 +43,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
       _headersPromise = null
       sessionStorage.setItem('session_expired', '1')
-      supabase.auth.signOut()
+      getSupabase().auth.signOut()
     }
     const body = await response.json().catch(() => ({}))
     throw new Error(parseApiError(body, response.status))
@@ -52,12 +53,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
   async get<T>(path: string): Promise<T> {
+    if (isDemoApp()) {
+      return routeDemoApi('GET', path) as Promise<T>
+    }
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, { headers })
     return handleResponse<T>(res)
   },
 
   async post<T>(path: string, body: unknown): Promise<T> {
+    if (isDemoApp()) {
+      return routeDemoApi('POST', path, body) as Promise<T>
+    }
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
@@ -68,6 +75,9 @@ export const api = {
   },
 
   async patch<T>(path: string, body: unknown): Promise<T> {
+    if (isDemoApp()) {
+      return routeDemoApi('PATCH', path, body) as Promise<T>
+    }
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'PATCH',
@@ -78,6 +88,9 @@ export const api = {
   },
 
   async delete<T>(path: string): Promise<T> {
+    if (isDemoApp()) {
+      return routeDemoApi('DELETE', path) as Promise<T>
+    }
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'DELETE',
@@ -87,13 +100,16 @@ export const api = {
   },
 
   async getBlob(path: string): Promise<Blob> {
+    if (isDemoApp()) {
+      return routeDemoBlob(path)
+    }
     const headers = await getAuthHeaders()
     const res = await fetch(`${API_BASE}${path}`, { headers })
     if (!res.ok) {
       if (res.status === 401) {
         _headersPromise = null
         sessionStorage.setItem('session_expired', '1')
-        supabase.auth.signOut()
+        getSupabase().auth.signOut()
       }
       const body = await res.json().catch(() => ({}))
       throw new Error(parseApiError(body, res.status))

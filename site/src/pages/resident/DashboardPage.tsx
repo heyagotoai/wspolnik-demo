@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds } from '../../lib/readAnnouncements'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
+import { communityInfo } from '../../data/mockData'
 
 interface Announcement {
   id: string
@@ -160,7 +161,7 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-charcoal">Witaj{user?.email ? `, ${user.email.split('@')[0]}` : ''}!</h1>
-        <p className="text-slate mt-1">Panel mieszkańca — Wspólnota Mieszkaniowa GABI</p>
+        <p className="text-slate mt-1">Panel mieszkańca — {communityInfo.name}</p>
       </div>
 
       {/* Quick stats / cards */}

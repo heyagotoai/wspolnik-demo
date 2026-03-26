@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { logoSrc } from '../../demo/demoAssets'
 import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 
 interface Resident {
@@ -846,9 +847,9 @@ export default function ApartmentsPage() {
               <header className="flex flex-row justify-between items-start gap-4 mb-8">
                 <div className="flex items-start gap-4">
                   <img
-                    src="/logo.png"
+                    src={logoSrc()}
                     alt=""
-                    className="h-16 w-16 shrink-0 object-contain print:block"
+                    className="h-24 w-24 shrink-0 object-contain print:block"
                   />
                   <div>
                     <p className="font-bold text-base">{communityInfo.name}</p>
@@ -856,7 +857,9 @@ export default function ApartmentsPage() {
                     <p>{communityInfo.address.replace(/^ul\./i, 'Ul.')}</p>
                   </div>
                 </div>
-                <p className="text-right whitespace-nowrap shrink-0">Chojnice, {saldoPrintSnapshot.dateLabel}</p>
+                <p className="text-right whitespace-nowrap shrink-0">
+                  {communityInfo.saldoPrintCity}, {saldoPrintSnapshot.dateLabel}
+                </p>
               </header>
 
               <h1 className="text-center text-xl font-bold tracking-wide mb-8">SALDO</h1>

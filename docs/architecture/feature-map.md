@@ -73,7 +73,7 @@
 | Wielu mieszkańców na lokal | ⬜ todo | ŚREDNI | Współwłaściciele: kilku mieszkańców przypisanych do jednego lokalu (wymaga zmiany my_apartment_ids() i RLS) |
 | Rola zarządcy | ⬜ todo | WYSOKI | Nowa rola "zarządca" z ograniczonymi prawami vs admin (np. podgląd finansów bez edycji stawek, brak CRUD mieszkańców/auth). Wymaga rozszerzenia CHECK constraint na residents.role i nowych RLS policies |
 | Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
-| Demo / trial | ⬜ todo | NISKI | Środowisko demo z przykładowymi danymi |
+| Demo / trial | ✅ done (wspolnik-demo) | NISKI | Osobne repo **wspolnik-demo**: mocki w `site/src/demo/`, `VITE_PUBLIC_DEMO_ROUTES`, fikcyjna wspólnota w `mockData` — patrz `docs/roadmap-demo.md` |
 | Regulamin i umowa SaaS | ⬜ todo | ŚREDNI | Dokumenty prawne: umowa, SLA, przetwarzanie danych (RODO) |
 
 ## Powiązania

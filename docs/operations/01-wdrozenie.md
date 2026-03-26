@@ -148,3 +148,9 @@ api/.env             — SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FRONTEND_URL
 supabase/migrations/ — migracje SQL (uruchamiane ręcznie w SQL Editor)
 supabase/functions/  — Edge Functions (deploy przez supabase CLI)
 ```
+
+---
+
+## 7. Wariant: tylko demo (repo wspolnik-demo)
+
+Pełny stack z Supabase nie jest wymagany — frontend z mockami. Patrz: **`demo-wdrozenie-wspolnik.md`**.

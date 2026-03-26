@@ -16,6 +16,7 @@ Komunikuj się po polsku.
 ```
 site/           — frontend React (Vite)
   src/
+    demo/       — tylko w repo wspolnik-demo: mocki (DemoStore, demoApiRouter, demoSupabase, isDemoApp, DemoGate…)
     components/ — komponenty UI (auth/, layout/, ui/)
     hooks/      — useAuth, useRole
     lib/        — supabase.ts (klient), api.ts (FastAPI klient)

@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
+import { logoAlt, logoSrc } from '../../demo/demoAssets'
+import { communityInfo } from '../../data/mockData'
+import { useDemoBasePath } from '../../demo/useDemoBasePath'
+import { DemoBanner } from '../../demo/DemoBanner'
 import {
   LayoutDashboardIcon,
   MegaphoneIcon,
@@ -15,7 +19,7 @@ import {
   UserIcon,
 } from '../ui/Icons'
 
-const sidebarLinks = [
+const sidebarPaths = [
   { label: 'Pulpit', path: '/panel', icon: LayoutDashboardIcon },
   { label: 'Ogłoszenia', path: '/panel/ogloszenia', icon: MegaphoneIcon },
   { label: 'Dokumenty', path: '/panel/dokumenty', icon: FolderIcon },
@@ -28,12 +32,16 @@ export default function ResidentLayout() {
   const { user, signOut } = useAuth()
   const { isAdmin } = useRole()
   const location = useLocation()
+  const prefix = useDemoBasePath()
+  const to = (path: string) => (prefix ? `${prefix}${path}` : path)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const isActive = (path: string) =>
-    path === '/panel'
-      ? location.pathname === '/panel'
-      : location.pathname.startsWith(path)
+  const isActive = (path: string) => {
+    const full = to(path)
+    return path === '/panel'
+      ? location.pathname === full
+      : location.pathname.startsWith(full)
+  }
 
   return (
     <div className="min-h-screen bg-cream-dark flex">
@@ -41,16 +49,16 @@ export default function ResidentLayout() {
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-cream-medium">
         <div className="px-6 h-[72px] flex items-center border-b border-cream-medium">
           <Link to="/" className="flex items-center gap-2 text-sage font-semibold text-lg tracking-tight hover:text-sage-light">
-            <img src="/logo.png" alt="WM GABI" className="h-8 w-8 object-contain" />
-            WM GABI
+            <img src={logoSrc()} alt={logoAlt()} className="h-12 w-12 object-contain" />
+            {communityInfo.shortName}
           </Link>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {sidebarLinks.map(({ label, path, icon: Icon }) => (
+          {sidebarPaths.map(({ label, path, icon: Icon }) => (
             <Link
               key={path}
-              to={path}
+              to={to(path)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium transition-colors ${
                 isActive(path)
                   ? 'bg-sage-pale/40 text-sage'
@@ -65,7 +73,7 @@ export default function ResidentLayout() {
 
         <div className="px-3 py-4 border-t border-cream-medium space-y-1">
           <Link
-            to="/panel/profil"
+            to={to('/panel/profil')}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium transition-colors ${
               isActive('/panel/profil')
                 ? 'bg-sage-pale/40 text-sage'
@@ -77,7 +85,7 @@ export default function ResidentLayout() {
           </Link>
           {isAdmin && (
             <Link
-              to="/admin"
+              to={to('/admin')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-amber hover:bg-amber-light/30 transition-colors"
             >
               <SettingsIcon className="w-5 h-5" />
@@ -130,10 +138,10 @@ export default function ResidentLayout() {
         {/* Mobile nav */}
         {mobileOpen && (
           <nav className="md:hidden bg-white border-b border-cream-medium px-4 py-3 space-y-1">
-            {sidebarLinks.map(({ label, path, icon: Icon }) => (
+            {sidebarPaths.map(({ label, path, icon: Icon }) => (
               <Link
                 key={path}
-                to={path}
+                to={to(path)}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium ${
                   isActive(path) ? 'bg-sage-pale/40 text-sage' : 'text-slate'
@@ -145,7 +153,7 @@ export default function ResidentLayout() {
             ))}
             <hr className="border-cream-medium my-2" />
             <Link
-              to="/panel/profil"
+              to={to('/panel/profil')}
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium ${
                 isActive('/panel/profil') ? 'bg-sage-pale/40 text-sage' : 'text-slate'
@@ -156,7 +164,7 @@ export default function ResidentLayout() {
             </Link>
             {isAdmin && (
               <Link
-                to="/admin"
+                to={to('/admin')}
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-amber"
               >
@@ -184,6 +192,7 @@ export default function ResidentLayout() {
 
         {/* Page content */}
         <main className="flex-1 p-6">
+          <DemoBanner />
           <Outlet />
         </main>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { useDemoRole } from '../demo/DemoRoleContext'
 
 type Role = 'admin' | 'resident' | null
 
@@ -13,6 +14,7 @@ interface RoleState {
 
 export function useRole(): RoleState {
   const { user } = useAuth()
+  const demoRole = useDemoRole()
   const [role, setRole] = useState<Role>(null)
   const [loading, setLoading] = useState(true)
 
@@ -23,9 +25,15 @@ export function useRole(): RoleState {
       return
     }
 
+    if (demoRole) {
+      setRole(demoRole.role)
+      setLoading(false)
+      return
+    }
+
     const fetchRole = async () => {
       setLoading(true)
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('residents')
         .select('role')
         .eq('id', user.id)
@@ -39,8 +47,8 @@ export function useRole(): RoleState {
       setLoading(false)
     }
 
-    fetchRole()
-  }, [user])
+    void fetchRole()
+  }, [user, demoRole?.role])
 
   return {
     role,

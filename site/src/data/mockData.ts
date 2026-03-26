@@ -1,18 +1,25 @@
+/** Dane demonstracyjne (fikcyjne) — repozytorium wspolnik-demo */
 export const communityInfo = {
-  name: 'Wspólnota Mieszkaniowa GABI',
-  address: 'ul. Gdańska 58',
-  city: '89-604 Chojnice',
-  email: 'wmgabi@wp.pl',
-  fullAddress: 'ul. Gdańska 58, 89-604 Chojnice',
-  /** Rachunek wspólnoty (wydruki, pisma) — PKO BP */
-  bankAccountFormatted: '44 1020 1491 0000 4002 0062 4007',
-}
+  name: 'Wspólnota Mieszkaniowa „Zielone Tarasy”',
+  /** Sidebar, stopki druku, logo alt */
+  shortName: 'Wspólnik',
+  address: 'ul. Lipowa 24',
+  city: '00-001 Warszawa',
+  email: 'zarzad@demo.wspolnik.example',
+  fullAddress: 'ul. Lipowa 24, 00-001 Warszawa',
+  /** Rachunek fikcyjny (wydruki salda — nie używać do realnych wpłat) */
+  bankAccountFormatted: '12 3456 7890 0000 1234 5678 9012',
+  /** Pierwsza część linii „miejscowość, data” na wydruku salda */
+  saldoPrintCity: 'Warszawa',
+  /** Stopka w podglądzie druku głosów (uchwały) */
+  footerWebsite: 'demo.wspolnik.example',
+} as const
 
 /** Teksty stałe na wydruk „Saldo” (PDF/druk) — treść zsynchronizowana z api/core/saldo_letter.py (e-mail) */
 export const saldoPrintCopy = {
   paymentDueIntro: 'Prosimy o uregulowanie należności do dnia:',
   paymentRule:
-    'Opłatę eksploatacyjną prosimy wpłacać „z góry” do 15 dnia każdego miesiąca, na rachunek wspólnoty w banku PKO BP nr:',
+    'Opłatę eksploatacyjną prosimy wpłacać „z góry” do 15 dnia każdego miesiąca, na rachunek wspólnoty nr:',
   transferNote: 'Przy wpłacie należy podać nr lokalu i okres, za który dokonana jest wpłata.',
   /** Nadpłata — zamiast terminu spłaty zadłużenia */
   overpaymentSettlement:

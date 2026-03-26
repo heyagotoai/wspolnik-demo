@@ -2,11 +2,16 @@ import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { Navigate } from 'react-router-dom'
+import { communityInfo } from '../../data/mockData'
+import { logoAlt, logoSrc } from '../../demo/demoAssets'
+import { useDemoBasePath } from '../../demo/useDemoBasePath'
 import { MailIcon } from '../ui/Icons'
 import { useToast } from '../ui/Toast'
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth()
+  const prefix = useDemoBasePath()
+  const panelHome = prefix ? `${prefix}/panel` : '/panel'
   const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +35,7 @@ export default function LoginPage() {
   }
 
   if (user) {
-    return <Navigate to="/panel" replace />
+    return <Navigate to={panelHome} replace />
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -53,9 +58,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8">
           <div className="text-center mb-8">
-            <img src="/logo.png" alt="WM GABI" className="h-20 w-20 object-contain mx-auto mb-4" />
+            <img src={logoSrc()} alt={logoAlt()} className="h-[120px] w-[120px] object-contain mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-charcoal mb-2">
-              Wspólnota Mieszkaniowa GABI
+              {communityInfo.name}
             </h1>
             <p className="text-slate text-sm">
               Panel mieszkańca — zaloguj się

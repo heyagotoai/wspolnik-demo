@@ -9,9 +9,10 @@ __pycache__/
 .venv/
 venv/
 
-# Tool configs (Claude Code, Stitch, MCP)
+# Tool configs (Claude Code, Cursor, Stitch, MCP)
 .agents/
 .claude/
+.cursor/
 .mcp.json
 .stitch/
 skills-lock.json

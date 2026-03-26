@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { logoAlt, logoSrc } from '../../demo/demoAssets'
 import { navLinks, communityInfo } from '../../data/mockData'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
@@ -14,7 +15,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-cream/80 backdrop-blur-xl">
       <div className="mx-auto max-w-[1280px] px-6 flex items-center justify-between h-[72px]">
         <Link to="/" className="flex items-center gap-3 text-sage font-semibold text-xl tracking-tight hover:text-sage-light">
-          <img src="/logo.png" alt="WM GABI" className="h-10 w-10 object-contain" />
+          <img src={logoSrc()} alt={logoAlt()} className="h-[60px] w-[60px] object-contain" />
           {communityInfo.name}
         </Link>
 

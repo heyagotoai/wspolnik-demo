@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-26 — Repo **wspolnik-demo**: tryb demo (mocki) + branding + dane fikcyjne
+- **Tryb demo:** `site/src/demo/` — `DemoStore`, `demoApiRouter`, `demoSupabase`, `DemoGate` / `DemoRoleContext` / `DemoBanner`, trasy `/demo/*`; `isDemoApp()` włącza mocki przy `VITE_DEMO_ONLY`, `VITE_PUBLIC_DEMO_ROUTES`, braku `VITE_SUPABASE_*` lub ścieżce `/demo`.
+- **API / Supabase:** `api.ts` i `getSupabase()` kierują do mocków w trybie demo; kontakt nie wywołuje backendu w demo (`ContactPage`).
+- **Assety demo:** `public/demo-logo.png`, `public/demo-hero.png`; `demoAssets.ts` (`logoSrc`, `heroBuildingSrc`, `logoAlt`); favicon podmieniany w demo (`DemoFaviconEffect`).
+- **Dane wspólnoty (fikcyjne):** `mockData.communityInfo` — m.in. „Zielone Tarasy”, `shortName: Wspólnik`, adres w Warszawie, e-mail `demo.wspolnik.example`; wydruki i stopki PDF z `communityInfo`.
+- **Konfiguracja:** `site/.env.example` — `VITE_PUBLIC_DEMO_ROUTES`; `vite.config.ts` — `test.env` z sztucznym Supabase dla Vitest; `@testing-library/dom` w devDependencies; `site/.npmrc` (`legacy-peer-deps`).
+- **Dokumentacja:** `docs/roadmap-demo.md`, `docs/operations/demo-wdrozenie-wspolnik.md` (deploy Vercel — tylko frontend demo).
+
 ### 2026-03-26 — Obsługa wygasłych sesji (session expiry)
 - Fix: wygasły refresh token powodował kaskadę błędów (401, CSS MIME error) zamiast przekierowania na logowanie
 - `useAuth` — wykrywanie wygasłej sesji (`getSession` error + nieoczekiwany `SIGNED_OUT`) z flagą `session_expired`
