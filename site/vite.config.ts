@@ -18,10 +18,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: false,
-    /** Żeby isDemoApp() było false — testy api/ContactPage zakładają prawdziwy fetch, nie mock demo. */
+    /** Testy api/ContactPage: mock demo wyłączony, sztuczne Supabase — patrz isDemoApp(). */
     env: {
       VITE_SUPABASE_URL: 'https://test.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+      VITE_DEMO_ALLOW_REAL_BACKEND: 'true',
     },
   },
 })

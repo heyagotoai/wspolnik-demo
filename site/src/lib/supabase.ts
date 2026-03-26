@@ -17,8 +17,7 @@ function createRealClient(): SupabaseClient {
 
 /**
  * Klient Supabase (produkcja) lub mock (tryb demo). W demo nie wymaga sekretów.
- * Bez VITE_SUPABASE_* w dev / VITE_DEMO_ONLY / VITE_PUBLIC_DEMO_ROUTES / isDemoApp() zwracany jest mock;
- * sesja na trasach poza /demo bez .env jest obsługiwana w useAuth (brak zalogowania).
+ * Gdy `isDemoApp()` — zawsze mock (w tym domyślna izolacja wspolnik-demo bez `VITE_DEMO_ALLOW_REAL_BACKEND`).
  */
 export function getSupabase(): SupabaseClient {
   if (isDemoApp()) {
@@ -26,14 +25,6 @@ export function getSupabase(): SupabaseClient {
     return demoClient as unknown as SupabaseClient
   }
   if (!supabaseUrl || !supabaseAnonKey) {
-    const allowMockWithoutEnv =
-      import.meta.env.DEV === true ||
-      import.meta.env.MODE === 'development' ||
-      import.meta.env.VITE_DEMO_ONLY === 'true'
-    if (allowMockWithoutEnv) {
-      if (!demoClient) demoClient = createDemoSupabaseClient()
-      return demoClient as unknown as SupabaseClient
-    }
     throw new Error('Brak zmiennych środowiskowych VITE_SUPABASE_URL lub VITE_SUPABASE_ANON_KEY')
   }
   if (!realClient) realClient = createRealClient()

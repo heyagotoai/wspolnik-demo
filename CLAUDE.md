@@ -12,6 +12,10 @@ Komunikuj się po polsku.
 - **Domena:** wmgabi.pl (DNS: az.pl, hosting: Vercel)
 - **Poczta:** az.pl (powiadomienia@wmgabi.pl → SMTP relay przez Edge Function)
 
+## Repo wspolnik-demo (wersja demonstracyjna)
+- Domyślnie **brak zapisu do prawdziwej bazy** — dopóki `VITE_DEMO_ALLOW_REAL_BACKEND` nie jest `'true'` (`isDemoApp()` zawsze mocki). Vitest ustawia `true` + sztuczne Supabase, żeby testować ścieżki `fetch`.
+- Szczegóły: `docs/operations/demo-wdrozenie-wspolnik.md`.
+
 ## Struktura projektu
 ```
 site/           — frontend React (Vite)

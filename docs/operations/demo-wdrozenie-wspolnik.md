@@ -6,9 +6,11 @@ Frontend (Vite/React) z **pełnymi mockami** w pamięci — bez obowiązkowego S
 
 1. Import repozytorium z GitHuba → **Root Directory:** katalog główny repo (używany jest rootowy `vercel.json`: `installCommand` `cd site && npm ci`, build `cd site && npm run build`, output `site/dist`). Build używa lokalnego `tsc` i `vite` z `dependencies` w `site/package.json` (bez `npx tsc`, żeby nie pobierać błędnego pakietu `tsc` z rejestru npm).
 2. **Environment Variables (Production):**
-   - `VITE_PUBLIC_DEMO_ROUTES` = `true` — cała aplikacja w mockach (API, Supabase, kontakt).
-   - Opcjonalnie: **nie ustawiaj** `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` albo zostaw puste — `isDemoApp()` i tak wymusi mocki.
-3. Deploy: `npx vercel` / `npx vercel --prod` (wymaga zalogowania: `npx vercel login`) albo push na podpiętą gałąź z GitHuba.
+   - **Nie ustawiaj** `VITE_DEMO_ALLOW_REAL_BACKEND` (albo ustaw wyłącznie na `false`). Domyślnie w buildzie wspolnik-demo **nic nie trafia do prawdziwej bazy** — nawet jeśli ktoś przypadkiem wklei klucze Supabase.
+   - `VITE_PUBLIC_DEMO_ROUTES` = `true` — spójne zachowanie mocków (nagłówki, kontakt); opcjonalnie przy izolacji.
+   - Opcjonalnie: **nie ustawiaj** `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — przy izolacji i tak obowiązują wyłącznie mocki.
+3. **Integracja lokalna z prawdziwym backendem** (tylko dev): `VITE_DEMO_ALLOW_REAL_BACKEND=true` + pełne `VITE_SUPABASE_*` — wtedy możliwe prawdziwe połączenie (nie używać na publicznym deployu demo).
+4. Deploy: `npx vercel` / `npx vercel --prod` (wymaga zalogowania: `npx vercel login`) albo push na podpiętą gałąź z GitHuba.
 
 ## Uwagi
 

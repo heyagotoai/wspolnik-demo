@@ -1,10 +1,14 @@
 /**
  * Tryb demo: mocki w pamięci, bez zapisu do Supabase/API.
- * Włączenie:
+ *
+ * **Repozytorium wspolnik-demo:** domyślnie **żadne** dane nie trafiają do prawdziwej bazy ani API — dopóki
+ * nie ustawisz jawnej zmiennej `VITE_DEMO_ALLOW_REAL_BACKEND=true` (np. lokalny test integracji z gabi-site).
+ *
+ * Włączenie mocków (dalsze warunki, gdy `VITE_DEMO_ALLOW_REAL_BACKEND=true`):
  * - VITE_DEMO_ONLY=true (cała aplikacja),
- * - VITE_PUBLIC_DEMO_ROUTES=true (repo wspolnik-demo: panel + API + kontakt — bez prawdziwej sieci),
+ * - VITE_PUBLIC_DEMO_ROUTES=true,
  * - ścieżka /demo/*,
- * - brak VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (repo demo bez .env — wyłącznie mocki).
+ * - brak VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
  */
 export function hasSupabaseCredentials(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL
@@ -19,6 +23,8 @@ export function isDemoAppFromPath(pathname: string): boolean {
 }
 
 export function isDemoApp(): boolean {
+  /** Domyślnie w wspolnik-demo: izolacja od produkcji (nadpisuje przypadkowe klucze w .env na Vercelu). */
+  if (import.meta.env.VITE_DEMO_ALLOW_REAL_BACKEND !== 'true') return true
   if (import.meta.env.VITE_DEMO_ONLY === 'true') return true
   if (import.meta.env.VITE_PUBLIC_DEMO_ROUTES === 'true') return true
   if (!hasSupabaseCredentials()) return true

@@ -8,6 +8,11 @@ interface ImportMetaEnv {
   readonly VITE_DEMO_ONLY?: string
   /** Pełny mock (API + Supabase + kontakt) — np. deploy wspolnik-demo bez sieci do produkcji */
   readonly VITE_PUBLIC_DEMO_ROUTES?: string
+  /**
+   * Tylko gdy `'true'`: możliwe połączenie z prawdziwym Supabase/API (testy Vitest, lokalna integracja).
+   * Domyślnie (brak / inna wartość): **wyłącznie mocki** — nic nie trafia do bazy.
+   */
+  readonly VITE_DEMO_ALLOW_REAL_BACKEND?: string
 }
 
 interface ImportMeta {

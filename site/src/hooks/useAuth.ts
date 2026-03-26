@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
-import { useLocation } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { getSupabase } from '../lib/supabase'
-import { hasSupabaseCredentials } from '../demo/isDemoApp'
+import { hasSupabaseCredentials, isDemoApp } from '../demo/isDemoApp'
 
 interface AuthState {
   user: User | null
@@ -14,18 +13,9 @@ interface AuthState {
 
 export const AuthContext = createContext<AuthState | null>(null)
 
-function useDemoPathFlag(): boolean {
-  const { pathname } = useLocation()
-  return (
-    import.meta.env.VITE_DEMO_ONLY === 'true' ||
-    import.meta.env.VITE_PUBLIC_DEMO_ROUTES === 'true' ||
-    !hasSupabaseCredentials() ||
-    pathname.startsWith('/demo')
-  )
-}
-
 export function useAuthProvider(): AuthState {
-  const isDemoPath = useDemoPathFlag()
+  /** Spójne z getSupabase() / api — w tym domyślna izolacja wspolnik-demo (VITE_DEMO_ALLOW_REAL_BACKEND). */
+  const isDemoPath = isDemoApp()
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)

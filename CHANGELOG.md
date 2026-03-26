@@ -2,6 +2,11 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-26 — Izolacja demo: domyślnie brak zapisu do prawdziwej bazy
+- **`VITE_DEMO_ALLOW_REAL_BACKEND`:** dopóki nie jest ustawione na `'true'`, `isDemoApp()` zwraca zawsze `true` — wyłącznie mocki (`getSupabase`, `api`, kontakt). Ochrona przed przypadkowymi kluczami Supabase na Vercelu.
+- Vitest: `VITE_DEMO_ALLOW_REAL_BACKEND=true` + sztuczne `VITE_SUPABASE_*` — testy api/Contact bez zmian.
+- `useAuth`, `DemoGate`, `useDemoBasePath` — ujednolicone z `isDemoApp()`; usunięty martwy fallback `allowMockWithoutEnv` w `getSupabase`.
+
 ### 2026-03-26 — Vercel: naprawa `npm run build` (tsc / zależności)
 - `site/package.json`: `build` = `tsc -b && vite build` (bez `npx tsc` — uniknięcie błędnego pakietu `tsc` z npm gdy brak lokalnego TypeScript).
 - `typescript`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite` w **dependencies** — instalacja na Vercel przy `NODE_ENV=production` i tak obejmuje narzędzia builda.
