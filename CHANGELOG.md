@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-27 — Testy E2E (Playwright)
+- 13 testów Playwright (Chromium) na produkcji (wmgabi.pl): **13/13 passed**
+- Logowanie (4): mieszkaniec, admin, błędne hasło, puste pola
+- Głosowanie (4): lista uchwał, oddanie głosu, weryfikacja po głosowaniu, wyniki
+- Finanse (5): saldo + badge, karty podsumowania, naliczenia miesięczne, historia wpłat
+- Konta testowe: `e2e_admin@wmgabi.pl`, `e2e_resident@wmgabi.pl` (lokal 99)
+- Helper `waitForLoaded()` — czeka aż Supabase/Vercel załaduje dane
+- Skrypty: `npm run test:e2e` / `npm run test:e2e:headed`
+
 ### 2026-03-27 — Testy obciążeniowe (Locust)
 - Dodano infrastrukturę testów obciążeniowych: `api/tests/load/locustfile.py` (Locust) + `api/tests/test_concurrency.py` (4 testy race condition)
 - Scenariusze: ResidentUser (przeglądanie + głosowanie, waga 10) + AdminUser (residents/audit/rates, waga 1)

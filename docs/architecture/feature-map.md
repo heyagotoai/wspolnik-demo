@@ -45,7 +45,7 @@
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
 | CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
-| Testy E2E | ⬜ todo | WYSOKI | Playwright/Cypress: kluczowe ścieżki użytkownika (logowanie, głosowanie, finanse) |
+| Testy E2E | ✅ done | WYSOKI | Playwright (Chromium): 13 testów — logowanie (4), głosowanie (4), finanse (5). Konta testowe: e2e_admin/e2e_resident@wmgabi.pl. `site/e2e/` |
 | Testy obciążeniowe | ✅ done | ŚREDNI | Locust: 10 userów, prod (wmgabi.pl), 0 błędów aplikacji, median 460-630ms. `api/tests/load/locustfile.py` + `api/tests/test_concurrency.py` (4 testy race condition) |
 | Backup & recovery | ✅ done | WYSOKI | Strategia backupów Supabase (auto 7 dni), procedura przywracania, ograniczenia ręcznego eksportu SQL, rotacja sekretów — `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
 
