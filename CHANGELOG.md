@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-27 — Testy obciążeniowe (Locust)
+- Dodano infrastrukturę testów obciążeniowych: `api/tests/load/locustfile.py` (Locust) + `api/tests/test_concurrency.py` (4 testy race condition)
+- Scenariusze: ResidentUser (przeglądanie + głosowanie, waga 10) + AdminUser (residents/audit/rates, waga 1)
+- Wynik testu na produkcji (wmgabi.pl): **0 błędów aplikacji**, median 460-630ms, p99 do 3500ms (cold starty Vercel)
+- Współbieżne głosowanie działa poprawnie — brak race conditions
+- `locust` dodany do `requirements.txt`
+
 ### 2026-03-27 — Pentest bezpieczeństwa (19/19 testów)
 - Przeprowadzono pełny pentest na środowisku produkcyjnym: RLS (6 tabel), IDOR API (5 endpointów), autentykacja (3 scenariusze), IDOR głosowania, XSS (statyczny), Storage (3 testy)
 - Wynik: **19/19 testów zaliczonych, brak luk bezpieczeństwa**
