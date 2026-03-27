@@ -9,6 +9,7 @@ from api.routes.profile import router as profile_router
 from api.routes.announcements import router as announcements_router
 from api.routes.charges import router as charges_router
 from api.routes.audit import router as audit_router
+from api.routes.backup import router as backup_router
 
 app = FastAPI(
     title="GABI API",
@@ -36,6 +37,7 @@ app.include_router(profile_router, prefix="/api")
 app.include_router(announcements_router, prefix="/api")
 app.include_router(charges_router, prefix="/api")
 app.include_router(audit_router, prefix="/api")
+app.include_router(backup_router, prefix="/api")
 
 
 @app.get("/api/health")

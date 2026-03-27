@@ -47,7 +47,7 @@
 | CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
 | Testy E2E | ✅ done | WYSOKI | Playwright (Chromium): 13 testów — logowanie (4), głosowanie (4), finanse (5). Konta testowe: e2e_admin/e2e_resident@wmgabi.pl. `site/e2e/` |
 | Testy obciążeniowe | ✅ done | ŚREDNI | Locust: 10 userów, prod (wmgabi.pl), 0 błędów aplikacji, median 460-630ms. `api/tests/load/locustfile.py` + `api/tests/test_concurrency.py` (4 testy race condition) |
-| Backup & recovery | ✅ done | WYSOKI | Strategia backupów Supabase (auto 7 dni), procedura przywracania, ograniczenia ręcznego eksportu SQL, rotacja sekretów — `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
+| Backup & recovery | ✅ done | WYSOKI | Supabase auto-backup (7 dni) + tygodniowy cron backup do Storage (12 tyg. retencji): 9 tabel + auth.users + PDF-y. Email notification do adminów (OK/NIEUDANY). `POST /api/backup/cron` (niedziela 2:00 UTC). `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
 
 ### Faza: Dokumentacja operacyjna
 | Zadanie | Status | Priorytet | Opis |

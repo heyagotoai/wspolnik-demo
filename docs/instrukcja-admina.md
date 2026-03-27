@@ -23,7 +23,7 @@ Po wejściu do panelu widzisz **Dashboard** z podsumowaniem:
 - ostatnie 5 ogłoszeń
 
 Z lewej strony znajduje się **pasek nawigacji** z sekcjami:
-Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uchwały · Wiadomości
+Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uchwały · Wiadomości · Dziennik operacji
 
 ---
 
@@ -174,6 +174,26 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 
 ---
 
+## Dziennik operacji
+
+Dziennik rejestruje wszystkie ważne operacje w systemie: zmiany naliczeń, wpłat, stawek, lokali, głosów i uchwał. Dostępny tylko dla administratora.
+
+**Przeglądanie:**
+- W lewym menu kliknij **Dziennik operacji**
+- Tabela pokazuje: datę i godzinę, kto wykonał operację, typ akcji, obszar systemu i opis zmiany
+- Kliknij strzałkę (▾) przy wpisie, aby zobaczyć szczegóły — poprzednie i nowe dane
+
+**Filtrowanie:**
+- **Tabela** — np. Naliczenia, Wpłaty, Lokale, Głosy
+- **Akcja** — Utworzenie, Zmiana, Usunięcie, Generowanie, Reset głosów, Konfiguracja
+- **Od daty / Do daty** — zakres czasowy
+
+Wyniki paginowane po 50 wpisów.
+
+> Dziennik jest tylko do odczytu — nie można edytować ani usuwać wpisów.
+
+---
+
 ## Wiadomości
 
 Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
@@ -184,6 +204,26 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 - Liczba nieprzeczytanych wiadomości widoczna jest jako badge przy pozycji **Wiadomości** w menu
 
 > Formularz kontaktowy ma limit: 5 wiadomości na godzinę z jednego adresu email.
+
+---
+
+## Kopie zapasowe
+
+System automatycznie tworzy kopię zapasową danych **co niedzielę o 02:00 UTC** (04:00 polskiego czasu). Nie wymaga żadnej akcji ze strony administratora.
+
+**Co jest zapisywane:**
+- Wszystkie dane z bazy (lokale, mieszkańcy, naliczenia, wpłaty, stawki, uchwały, głosy, ustawienia)
+- Lista plików z dokumentów
+
+**Przechowywanie:**
+- Ostatnie 12 kopii (ok. 3 miesiące)
+- Starsze kopie są automatycznie usuwane
+
+**Powiadomienia:**
+- Po wykonaniu kopii system wysyła email potwierdzający do administratora
+- W razie błędu wysyłany jest email z informacją o problemie
+
+> Kopie przechowywane są w Supabase Storage (bucket `backups`). Dostęp do plików możliwy przez panel Supabase — w razie potrzeby odtworzenia danych skontaktuj się z administratorem systemu.
 
 ---
 
@@ -200,6 +240,8 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 | Głosowanie nad uchwałą | Uchwały → zmień status na Głosowanie |
 | Sprawdź saldo lokalu | Lokale → wiersz lokalu |
 | Odpowiedź na wiadomość | Wiadomości → odczyt emaila nadawcy, odpowiedz ręcznie |
+| Sprawdź historię zmian | Dziennik operacji → filtry |
+| Kopia zapasowa | Automatyczna (co niedzielę) — brak akcji wymagany |
 
 ---
 
@@ -219,4 +261,4 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 
 ---
 
-*Dokument wygenerowany: 2026-03-24. W razie pytań: administrator systemu.*
+*Dokument zaktualizowany: 2026-03-28. W razie pytań: administrator systemu.*

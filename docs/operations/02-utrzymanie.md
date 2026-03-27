@@ -116,7 +116,33 @@ Supabase Dashboard → Authentication → Users → znajdź usera → Send passw
 - Pro plan: Point-in-Time Recovery (do dowolnej sekundy)
 - Automatyczny backup obejmuje **wszystko** — jest lepszy niż ręczny eksport SQL
 
-### Przywracanie z backupu
+### Tygodniowy backup cron (rozszerzony)
+
+Oprócz automatycznych backupów Supabase, system wykonuje **tygodniowy pełny eksport danych** do Supabase Storage (bucket `backups`).
+
+**Harmonogram:** co niedzielę o 02:00 UTC (`POST /api/backup/cron`)
+
+**Co zawiera backup:**
+- 9 tabel: apartments, residents, charges, payments, charge_rates, bank_statements, resolutions, votes, system_settings
+- Listę `auth.users` (id, email, metadata) — przez Supabase Admin API
+- Pliki PDF z bucketu `documents` (zakodowane base64)
+- Metadane (data, rozmiar, liczba rekordów)
+
+**Retencja:** 12 tygodni (~3 miesiące). Starsze backupy kasowane automatycznie.
+
+**Powiadomienia email:** po każdym backupie wysyłany email do wszystkich aktywnych adminów:
+- `[WM GABI] Backup OK` — z podsumowaniem (rozmiar, liczba tabel/userów/dokumentów)
+- `[WM GABI] Backup NIEUDANY` — z opisem błędu
+
+**Format pliku:** `2026-03-28_backup.json` (JSON, max 50MB)
+
+**Przywracanie z backup cron:**
+1. Supabase Dashboard → Storage → bucket `backups` → pobierz plik JSON
+2. Dane tabelaryczne: zaimportuj przez SQL Editor (`INSERT INTO ...`)
+3. Auth users: re-invite ręcznie na podstawie listy emaili z backupu
+4. Dokumenty PDF: zdekoduj base64 i uploaduj do bucketu `documents`
+
+### Przywracanie z backupu Supabase (pełne)
 1. Supabase Dashboard → Project Settings → Backups
 2. Wybierz punkt przywracania → Restore
 3. **UWAGA:** przywrócenie nadpisze WSZYSTKIE obecne dane

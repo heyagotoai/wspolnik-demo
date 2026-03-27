@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — Tygodniowy backup cron
+- Nowy endpoint `POST /api/backup/cron` — Vercel Cron co niedzielę 2:00 UTC
+- Eksport 9 tabel + `auth.users` (Admin API) + pliki PDF z bucketu `documents` (base64)
+- Zapis do Supabase Storage (bucket `backups`), retencja 12 tygodni
+- Email notification do adminów: `[WM GABI] Backup OK` / `Backup NIEUDANY`
+- Migracja 016: bucket `backups` (prywatny, 50MB, JSON only)
+- 9 testów pytest (auth, eksport, cleanup, notification, dokumenty)
+
 ### 2026-03-27 — Testy E2E (Playwright)
 - 13 testów Playwright (Chromium) na produkcji (wmgabi.pl): **13/13 passed**
 - Logowanie (4): mieszkaniec, admin, błędne hasło, puste pola
