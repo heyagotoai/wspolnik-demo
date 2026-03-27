@@ -39,8 +39,8 @@
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
 | Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 55 testów: auth, role, izolacja danych, privilege escalation, reset głosów |
-| Pentest RLS na żywej bazie | ⬜ todo | KRYTYCZNY | Zaloguj się jako mieszkaniec, spróbuj odczytać dane innego (DevTools/curl). Sprawdź: charges, payments, apartments, votes, residents, storage |
-| Pentest IDOR frontend | ⬜ todo | KRYTYCZNY | Podmiana ID w URL/API calls, próba dostępu do cudzych zasobów |
+| Pentest RLS na żywej bazie | ✅ done | KRYTYCZNY | 2026-03-27: 19/19 testów zaliczonych. RLS, IDOR, autentykacja, XSS, Storage — brak luk. Raport: `docs/security/pentest-2026-03-27.md` |
+| Pentest IDOR frontend | ✅ done | KRYTYCZNY | 2026-03-27: admin endpointy (5/5 → 403), głosowanie IDOR (resident_id z JWT), brak dangerouslySetInnerHTML — patrz raport |
 | Audyt XSS/injection | ✅ done | KRYTYCZNY | escapeHtml() w PDF uchwał, CSP + security headers w vercel.json (2026-03-25) |
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |

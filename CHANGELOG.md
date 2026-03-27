@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-27 — Pentest bezpieczeństwa (19/19 testów)
+- Przeprowadzono pełny pentest na środowisku produkcyjnym: RLS (6 tabel), IDOR API (5 endpointów), autentykacja (3 scenariusze), IDOR głosowania, XSS (statyczny), Storage (3 testy)
+- Wynik: **19/19 testów zaliczonych, brak luk bezpieczeństwa**
+- Raport: `docs/security/pentest-2026-03-27.md`
+- Feature map: Pentest RLS i IDOR oznaczone jako ✅ done
+
 ### 2026-03-26 — Obsługa wygasłych sesji (session expiry)
 - Fix: wygasły refresh token powodował kaskadę błędów (401, CSS MIME error) zamiast przekierowania na logowanie
 - `useAuth` — wykrywanie wygasłej sesji (`getSession` error + nieoczekiwany `SIGNED_OUT`) z flagą `session_expired`
