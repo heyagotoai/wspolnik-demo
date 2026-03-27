@@ -70,6 +70,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
   - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
   - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec)
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
+- **Dziennik operacji** — historia wszystkich operacji finansowych i głosowań (kto, co, kiedy), filtrowanie po obszarze systemu i zakresie dat, podgląd szczegółów zmian
 - **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona
 - **Powiadomienie email o saldzie** — wysyłka informacji o saldzie na email mieszkańca jednym kliknięciem
 - **Import wyciągów bankowych** — import pliku z banku (format do ustalenia), automatyczne dopasowanie wpłat do lokali, panel weryfikacji przez admina
