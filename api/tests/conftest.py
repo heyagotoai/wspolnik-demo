@@ -62,6 +62,11 @@ class FakeSupabaseBuilder:
         self._is_single = True
         return self
 
+    def maybe_single(self):
+        """Like single(), but returns None instead of error when no data."""
+        self._is_single = True
+        return self
+
     def gte(self, *_a, **_kw):
         return self
 
@@ -112,7 +117,9 @@ def fake_sb():
          patch("api.routes.charges.get_supabase", return_value=sb), \
          patch("api.routes.contact.get_supabase", return_value=sb), \
          patch("api.routes.audit.get_supabase", return_value=sb), \
-         patch("api.routes.backup.get_supabase", return_value=sb):
+         patch("api.routes.backup.get_supabase", return_value=sb), \
+         patch("api.routes.billing_groups.get_supabase", return_value=sb), \
+         patch("api.routes.import_routes.get_supabase", return_value=sb):
         yield sb
 
 

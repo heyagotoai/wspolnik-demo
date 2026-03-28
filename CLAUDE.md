@@ -23,7 +23,7 @@ site/           — frontend React (Vite)
 api/            — backend FastAPI
   core/         — config, security, supabase_client
   models/       — Pydantic schemas
-  routes/       — residents.py, contact.py, resolutions.py, profile.py
+  routes/       — residents, contact, resolutions, profile, charges, audit, backup, billing_groups, import_routes, …
 supabase/
   migrations/   — SQL migracje (uruchamiane przez Supabase SQL Editor)
 docs/           — Obsidian vault (ADR-y, koncepty, architektura)
@@ -45,6 +45,8 @@ cd site && npm test
 cd api && pytest
 ```
 
+**Python (venv, Windows):** interpreter projektu to **`D:\_AI\gabi_site\.venv\Scripts\python.exe`** (katalog venv: `.venv` w katalogu głównym repo). Gdy w terminalu brak `python`/`pytest` w PATH, użyj tej ścieżki lub `.\.venv\Scripts\Activate.ps1` przed komendami w `api/`.
+
 ## Zasady implementacji
 
 ### Podejście do implementacji (WYMAGANE — "Junior Review")
@@ -62,9 +64,9 @@ cd api && pytest
 - **Retencja danych finansowych** — max 5 lat
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
 
-### Import bankowy
-- Format importu z banku **NIE jest jeszcze potwierdzony** — nie buduj parsera dopóki format nie będzie znany
-- Schemat bazy (payments, bank_statements) jest przygotowany, logika parsowania czeka
+### Import danych finansowych
+- **Wyciągi bankowe (MT940 / parser)** — format eksportu z banku **nie jest jeszcze potwierdzony**; nie buduj parsera dopóki format nie będzie znany. Schemat (`payments`, `bank_statements`) jest przygotowany.
+- **Stan początkowy z Excel** — zaimplementowany: `GET/POST /api/import` (szablon XLSX, `initial-state`, `openpyxl`), UI w panelu Lokale — osobna ścieżka niż przyszły import wyciągów.
 
 ### Testy (WYMAGANE)
 - **Po zakończeniu pracy nad nową funkcjonalnością** — dodaj odpowiednie testy (backend pytest i/lub frontend vitest, zależnie od zakresu zmian)
@@ -109,7 +111,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-017 uruchomione przez SQL Editor w dashboardzie Supabase
+- Migracje 001-018 (m.in. 017 zarządca, 018 grupy rozliczeniowe) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
@@ -119,4 +121,6 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej)
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
+- `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
+- `/api/import` — import stanu początkowego z Excel (`GET /template`, `POST /initial-state`, admin)
 - `GET /api/health` — health check

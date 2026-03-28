@@ -257,3 +257,70 @@ class ZawiadomienieConfig(BaseModel):
 
 class ZawiadomienieConfigUpdate(BaseModel):
     legal_basis: str | None = None
+
+
+# --- Billing Groups (Grupy rozliczeniowe) ---
+
+class BillingGroupCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Nazwa grupy nie może być pusta")
+        return v.strip()
+
+
+class BillingGroupUpdate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Nazwa grupy nie może być pusta")
+        return v.strip()
+
+
+class BillingGroupOut(BaseModel):
+    id: str
+    name: str
+    apartments: list[dict]
+    created_at: str
+
+
+class BillingGroupAssignApartments(BaseModel):
+    apartment_ids: list[str] = Field(..., min_length=1)
+
+
+class BillingGroupPaymentSplit(BaseModel):
+    amount: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
+    payment_date: str  # YYYY-MM-DD
+    title: str | None = None
+    split_month: str | None = None  # YYYY-MM-01, defaults to payment_date month
+
+
+class BillingGroupBalanceOut(BaseModel):
+    group_id: str
+    group_name: str
+    combined_balance: str
+    apartments: list[dict]
+
+
+# --- Import stanu początkowego ---
+
+class ImportRowResult(BaseModel):
+    row: int
+    apartment_number: str
+    status: str  # "updated" | "skipped" | "error"
+    message: str | None = None
+
+
+class ImportInitialStateResult(BaseModel):
+    dry_run: bool
+    rows_total: int
+    updated: int
+    skipped: int
+    errors: int
+    rows: list[ImportRowResult]

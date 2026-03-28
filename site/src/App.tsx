@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import PageLayout from './components/layout/PageLayout'
 import ResidentLayout from './components/layout/ResidentLayout'
 import AdminLayout from './components/layout/AdminLayout'
@@ -68,6 +68,10 @@ function AppRoutes() {
           <Route path="/admin/dokumenty" element={<AdminDocumentsPage />} />
           <Route path="/admin/terminy" element={<AdminDatesPage />} />
           <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
+          <Route
+            path="/admin/grupy-rozliczeniowe"
+            element={<Navigate to="/admin/naliczenia?tab=grupy" replace />}
+          />
           <Route path="/admin/wiadomosci" element={<AdminMessagesPage />} />
           <Route path="/admin/uchwaly" element={<AdminResolutionsPage />} />
           <Route path="/admin/dziennik" element={<AdminAuditLogPage />} />

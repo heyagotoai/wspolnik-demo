@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — Import Excel: stan początkowy (grupy + lokale zbiorcze)
+- **`numer_lokalu`**: najpierw dopasowanie **dokładnego** numeru z bazy (np. `3,4A`, `25,26` — jeden rekord „zbiorczy”); jeśli brak takiego klucza — rozbicie listy (przecinek, średnik, `|`, tab) oraz wzorce `25.26` / `3.4A` (float lub tekst z kropką z Excela)
+- Normalizacja separatorów Unicode (wide comma/dot), `openpyxl` `load_workbook(..., read_only=False)` dla stabilniejszego odczytu tekstu
+- Frontend: `ImportInitialStateModal` — krótki opis przecinka w Excelu PL (saldo vs lista numerów)
+- Testy: `api/tests/test_import.py` (grupy, float, lokale zbiorcze jednym rekordem)
+
 ### 2026-03-28 — Panel Terminy + kolejność sidebara
 - Panel Terminy: scalone widoki ręcznych terminów (`important_dates`) i dat głosowań z uchwał
 - Daty głosowań pobierane bezpośrednio z Supabase (bez zależności od backendu)

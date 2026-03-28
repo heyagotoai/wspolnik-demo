@@ -22,8 +22,8 @@ Po wejściu do panelu widzisz **Dashboard** z podsumowaniem:
 - najbliższe ważne terminy
 - ostatnie 5 ogłoszeń
 
-Z lewej strony znajduje się **pasek nawigacji** z sekcjami:
-Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uchwały · Wiadomości · Dziennik operacji
+Z lewej strony znajduje się **pasek nawigacji** z sekcjami (kolejność jak w systemie):
+Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) · Mieszkańcy · Uchwały · Dokumenty · Terminy · Ogłoszenia · Wiadomości · Dziennik operacji
 
 ---
 
@@ -55,6 +55,7 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 | Zarządzanie kontami (dodaj/edytuj/usuń) | ✅ | ❌ |
 | Stawki i generowanie naliczeń | ✅ | ❌ |
 | Wysyłka powiadomień email | ✅ | ❌ |
+| Grupy rozliczeniowe (wspólne rozliczenie wielu lokali) | ✅ | ❌ |
 
 ---
 
@@ -75,6 +76,22 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 
 **Powiadomienie emailem:**
 - Kliknij **Wyślij email** przy lokalu — na skrzynkę właściciela trafia **ta sama treść** co przy **Drukuj saldo** (pismo SALDO w wersji tekstowej)
+
+**Import stanu z pliku Excel (hurtowe ustawienie salda):**
+- Z listy lokali: pobierz **szablon .xlsx** (wiersz `data_salda`, nagłówki `numer_lokalu` / `saldo_poczatkowe`), wypełnij, **podgląd (dry-run)**, potem zastosuj
+- **Wiele lokali w jednym wierszu** (to samo saldo): rozdziel numery przecinkiem lub średnikiem; możesz też użyć zapisu z kropką, który Excel traktuje jak liczbę (np. dwa lokale obok siebie) — opis w oknie importu
+- **Jeden lokal o numerze z przecinkiem** (np. `3,4A` albo `25,26` — jedna pozycja na liście lokali): numer w pliku musi **dokładnie** odpowiadać polu „numer” w bazie; system dopasowuje najpierw cały tekst komórki, dopiero gdy go nie ma — traktuje wpis jako listę osobnych lokali
+- To **nie** jest import wyciągu bankowego — tylko pomoc przy wdrożeniu lub korekcie sald początkowych
+
+---
+
+## Grupy rozliczeniowe (tylko administrator)
+
+Gdy jeden właściciel ma kilka lokali i płaci jedną wpłatą na wszystkie:
+1. Utwórz **grupę rozliczeniową** i nadaj nazwę (np. nazwisko właściciela)
+2. Przypisz do grupy wybrane lokale na liście w tej sekcji (lub z edycji lokalu — pole grupy)
+3. Rejestruj **wpłatę grupową** — system rozdzieli ją proporcjonalnie do naliczeń na poszczególne lokale
+4. Mieszkaniec w panelu **Finanse** widzi saldo łączne oraz rozbicie per lokal
 
 ---
 

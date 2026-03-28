@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { PlusIcon, TrashIcon, XIcon, ChevronDownIcon, DownloadIcon, SendIcon, EditIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
+import { BillingGroupsPanel } from './BillingGroupsPage'
 
 interface Apartment {
   id: string
@@ -103,9 +105,10 @@ interface ZawiadomienieConfig {
   legal_basis: string
 }
 
-type Tab = 'charges' | 'rates' | 'zawiadomienia'
+type Tab = 'charges' | 'billing' | 'rates' | 'zawiadomienia'
 
 export default function AdminChargesPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('charges')
 
   // --- Shared state ---
@@ -223,6 +226,20 @@ export default function AdminChargesPage() {
   useEffect(() => {
     Promise.all([fetchChargesData(), fetchRates(), fetchAutoConfig(), fetchZawiadomienieConfig()])
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('tab') !== 'grupy') return
+    if (isAdmin) {
+      setTab('billing')
+    }
+    setSearchParams({}, { replace: true })
+  }, [searchParams, isAdmin, setSearchParams])
+
+  useEffect(() => {
+    if (!isAdmin && tab === 'billing') {
+      setTab('charges')
+    }
+  }, [isAdmin, tab])
 
   // --- Charges handlers ---
 
@@ -619,6 +636,11 @@ export default function AdminChargesPage() {
         <button className={tabClass('charges')} onClick={() => setTab('charges')}>
           Naliczenia
         </button>
+        {isAdmin && (
+          <button className={tabClass('billing')} onClick={() => setTab('billing')}>
+            Grupy rozliczeniowe
+          </button>
+        )}
         <button className={tabClass('rates')} onClick={() => setTab('rates')}>
           Stawki
         </button>
@@ -953,6 +975,9 @@ export default function AdminChargesPage() {
           )}
         </>
       )}
+
+      {/* TAB: GRUPY ROZLICZENIOWE (tylko admin) */}
+      {tab === 'billing' && isAdmin && <BillingGroupsPanel />}
 
       {/* ═══════════════════════════════════════════════════════════════
           TAB: STAWKI

@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
 import { communityInfo, saldoPrintCopy } from '../../data/mockData'
+import ImportInitialStateModal from '../../components/admin/ImportInitialStateModal'
 
 interface Resident {
   id: string
@@ -24,6 +25,8 @@ interface Apartment {
   initial_balance_date: string | null
   owner_resident_id: string | null
   owner_name: string | null
+  billing_group_id: string | null
+  billing_group_name: string | null
 }
 
 interface BulkResults {
@@ -63,16 +66,17 @@ export default function ApartmentsPage() {
   const [showBulkDateForm, setShowBulkDateForm] = useState(false)
   const [bulkDate, setBulkDate] = useState('')
   const [bulkDateSaving, setBulkDateSaving] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { isAdmin } = useRole()
 
   const fetchData = async () => {
-    const [aptsRes, resRes, chargesRes, paymentsRes] = await Promise.all([
+    const [aptsRes, resRes, chargesRes, paymentsRes, groupsRes] = await Promise.all([
       supabase
         .from('apartments')
-        .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id')
+        .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id, billing_group_id')
         .order('number', { ascending: true }),
       supabase
         .from('residents')
@@ -86,6 +90,9 @@ export default function ApartmentsPage() {
         .from('payments')
         .select('apartment_id, amount')
         .eq('confirmed_by_admin', true),
+      supabase
+        .from('billing_groups')
+        .select('id, name'),
     ])
 
     if (resRes.data) setResidents(resRes.data)
@@ -108,9 +115,13 @@ export default function ApartmentsPage() {
         balMap[a.id].balance = ib + balMap[a.id].payments - balMap[a.id].charges
       }
 
+      const groupsMap: Record<string, string> = {}
+      for (const g of groupsRes.data || []) groupsMap[g.id] = g.name
+
       const mapped = aptsRes.data.map((a) => ({
         ...a,
         owner_name: resRes.data?.find((r) => r.id === a.owner_resident_id)?.full_name || null,
+        billing_group_name: a.billing_group_id ? (groupsMap[a.billing_group_id] || null) : null,
       }))
       mapped.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
       setApartments(mapped)
@@ -476,6 +487,12 @@ export default function ApartmentsPage() {
               </button>
             )}
             <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
+            >
+              Importuj stan początkowy
+            </button>
+            <button
               onClick={openAdd}
               className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
             >
@@ -713,10 +730,17 @@ export default function ApartmentsPage() {
                       </td>
                     )}
                     <td className="px-5 py-3 font-medium text-charcoal">
-                      <span>{apt.number}</span>
-                      {bulkMode && !hasEmail && (
-                        <span className="ml-1.5 text-amber-500 text-xs" title="Brak adresu email">✕</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        <span>{apt.number}</span>
+                        {bulkMode && !hasEmail && (
+                          <span className="text-amber-500 text-xs" title="Brak adresu email">✕</span>
+                        )}
+                        {apt.billing_group_name && (
+                          <span className="px-1.5 py-0.5 bg-sage-pale/30 text-sage text-[10px] font-medium rounded-full" title={`Grupa: ${apt.billing_group_name}`}>
+                            {apt.billing_group_name}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3 text-slate">{apt.area_m2 ? `${apt.area_m2} m²` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.share ? `${(apt.share * 100).toFixed(2)}%` : '—'}</td>
@@ -893,6 +917,13 @@ export default function ApartmentsPage() {
           </div>,
           document.body
         )}
+
+      {showImportModal && (
+        <ImportInitialStateModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => { fetchData() }}
+        />
+      )}
     </div>
   )
 }

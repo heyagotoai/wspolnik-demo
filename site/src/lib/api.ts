@@ -4,6 +4,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 let _headersPromise: Promise<Record<string, string>> | null = null
 
+/** Równoległe 401 z jednego burstu — jedno odświeżenie tokenu zamiast wielu wywołań. */
+let _refreshInFlight: ReturnType<typeof supabase.auth.refreshSession> | null = null
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (_headersPromise) return _headersPromise
   _headersPromise = (async () => {
@@ -21,6 +24,28 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     () => { _headersPromise = null },
   )
   return _headersPromise
+}
+
+async function refreshSessionDeduped() {
+  if (!_refreshInFlight) {
+    _refreshInFlight = supabase.auth.refreshSession().finally(() => {
+      _refreshInFlight = null
+    })
+  }
+  return _refreshInFlight
+}
+
+/** Po 401: odśwież sesję i powtórz raz (wygasły access_token vs natychmiastowe wylogowanie). */
+async function fetchWithAuthRetry(execute: () => Promise<Response>): Promise<Response> {
+  let res = await execute()
+  if (res.status !== 401) return res
+
+  _headersPromise = null
+  const { data, error } = await refreshSessionDeduped()
+  if (data.session?.access_token && !error) {
+    res = await execute()
+  }
+  return res
 }
 
 export function parseApiError(body: unknown, status?: number): string {
@@ -52,43 +77,53 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
   async get<T>(path: string): Promise<T> {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, { headers })
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, { headers })
+    })
     return handleResponse<T>(res)
   },
 
   async post<T>(path: string, body: unknown): Promise<T> {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
     })
     return handleResponse<T>(res)
   },
 
   async patch<T>(path: string, body: unknown): Promise<T> {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify(body),
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      })
     })
     return handleResponse<T>(res)
   },
 
   async delete<T>(path: string): Promise<T> {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'DELETE',
-      headers,
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'DELETE',
+        headers,
+      })
     })
     return handleResponse<T>(res)
   },
 
   async getBlob(path: string): Promise<Blob> {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, { headers })
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, { headers })
+    })
     if (!res.ok) {
       if (res.status === 401) {
         _headersPromise = null

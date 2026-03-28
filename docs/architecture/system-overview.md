@@ -16,8 +16,8 @@
 ## Warstwy
 
 ### Frontend (React)
-- Panel mieszkańca: salda, dokumenty, głosowania
-- Panel admina: zarządzanie, naliczenia, import wyciągów
+- Panel mieszkańca: salda (w tym wiele lokali / grupa rozliczeniowa), dokumenty, głosowania
+- Panel admina: zarządzanie, naliczenia, grupy rozliczeniowe, import Excel (saldo początkowe); import wyciągów bankowych — backend w przygotowaniu po ustaleniu formatu
 - Strona publiczna: ogłoszenia, ważne daty
 
 ### Auth (Supabase)
@@ -26,7 +26,8 @@
 
 ### Backend (FastAPI)
 - Operacje uprzywilejowane (service_role)
-- Import wyciągów bankowych (format do ustalenia)
+- Import Excel — stan początkowy lokali (`/api/import`)
+- Import wyciągów bankowych — format do ustalenia (osobna ścieżka niż Excel)
 - Przyszłe: n8n webhooks, mailing
 
 ### Baza danych (PostgreSQL via Supabase)

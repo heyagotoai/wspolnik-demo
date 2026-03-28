@@ -25,3 +25,9 @@ tools/report-fetcher/
 # OS
 .DS_Store
 Thumbs.db
+
+# Playwright / test artifacts
+site/test-results/
+
+# Nieprzewidowany zduplikowany katalog (vault)
+docs/docs/
