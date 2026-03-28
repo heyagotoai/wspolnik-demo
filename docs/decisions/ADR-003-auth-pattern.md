@@ -10,7 +10,7 @@ Potrzebujemy globalnego stanu logowania dostępnego w całej aplikacji React —
 - `useAuth` hook z Context API — globalny stan sesji (user, loading, signIn, signOut)
 - `useRole` hook — osobny, pobiera rolę z tabeli `residents` przez [[Supabase]] RLS
 - `ProtectedRoute` — wrapper wymagający zalogowania → przekierowuje na `/logowanie`
-- `AdminRoute` — wrapper wymagający roli admin → przekierowuje na `/panel`
+- `AdminRoute` — wrapper wymagający roli **admin** lub **manager** (zarządca); `useRole` → `isAdminOrManager` → w przeciwnym razie przekierowanie na `/panel`. Operacje CRUD wymagające pełnych uprawnień w UI sprawdzają osobno `isAdmin`.
 
 ## Dlaczego
 - Context API wystarczy — nie potrzebujemy Redux/Zustand dla prostego stanu auth

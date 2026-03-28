@@ -2,6 +2,9 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — ADR-003: `AdminRoute` dla admin + manager
+- Dokumentacja: `docs/decisions/ADR-003-auth-pattern.md` — `AdminRoute` opiera się na `isAdminOrManager`; szczegółowe CRUD nadal przez `isAdmin` w komponentach.
+
 ### 2026-03-28 — wspolnik-demo: rola zarządcy, sync UI z gabi_site
 - **`useRole`:** `admin` | `manager` | `resident`; `isAdminOrManager` dla `AdminRoute` i linków do panelu administracyjnego.
 - **Panel administracyjny:** zsynchronizowane strony z gabi_site (m.in. mieszkańcy z rolą `manager` w formularzu, dashboard z tytułem admin/zarządca, ograniczenia `isAdmin` dla operacji CRUD).
