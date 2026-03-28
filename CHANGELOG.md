@@ -5,6 +5,11 @@
 ### 2026-03-29 — ADR-003: `AdminRoute` dla admin + manager
 - Dokumentacja: `docs/decisions/ADR-003-auth-pattern.md` — `AdminRoute` opiera się na `isAdminOrManager`; szczegółowe CRUD nadal przez `isAdmin` w komponentach.
 
+### 2026-03-29 — wspolnik-demo: sync z gabi_site (grupy rozliczeniowe, import stanu początkowego)
+- **Naliczenia:** zakładka „Grupy rozliczeniowe” (`BillingGroupsPanel` / `BillingGroupsPage`), przekierowanie `/admin/grupy-rozliczeniowe` → `/admin/naliczenia?tab=grupy` (także pod `/demo/...`).
+- **Lokale:** przycisk „Importuj stan początkowy” (`ImportInitialStateModal`), odznaki grup przy numerze lokalu; `fetch` tabeli `billing_groups` jak w gabi_site.
+- **Tryb demo:** mock API `/billing-groups` w `demoApiRouter`, `billing_groups` + `billing_group_id` w `demoStore`; `ImportInitialStateModal` w `isDemoApp()` — podgląd bez zapisu, szablon .xlsx z komunikatem zamiast pobrania; Vitest: `GET /billing-groups`.
+
 ### 2026-03-28 — wspolnik-demo: rola zarządcy, sync UI z gabi_site
 - **`useRole`:** `admin` | `manager` | `resident`; `isAdminOrManager` dla `AdminRoute` i linków do panelu administracyjnego.
 - **Panel administracyjny:** zsynchronizowane strony z gabi_site (m.in. mieszkańcy z rolą `manager` w formularzu, dashboard z tytułem admin/zarządca, ograniczenia `isAdmin` dla operacji CRUD).

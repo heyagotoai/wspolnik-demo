@@ -66,6 +66,10 @@ function AppRoutes() {
           <Route path="/admin/dokumenty" element={<AdminDocumentsPage />} />
           <Route path="/admin/terminy" element={<AdminDatesPage />} />
           <Route path="/admin/naliczenia" element={<AdminChargesPage />} />
+          <Route
+            path="/admin/grupy-rozliczeniowe"
+            element={<Navigate to="/admin/naliczenia?tab=grupy" replace />}
+          />
           <Route path="/admin/wiadomosci" element={<AdminMessagesPage />} />
           <Route path="/admin/uchwaly" element={<AdminResolutionsPage />} />
           <Route path="/admin/dziennik" element={<AdminAuditLogPage />} />
@@ -96,6 +100,10 @@ function AppRoutes() {
             <Route path="admin/dokumenty" element={<AdminDocumentsPage />} />
             <Route path="admin/terminy" element={<AdminDatesPage />} />
             <Route path="admin/naliczenia" element={<AdminChargesPage />} />
+            <Route
+              path="admin/grupy-rozliczeniowe"
+              element={<Navigate to="../naliczenia?tab=grupy" replace />}
+            />
             <Route path="admin/wiadomosci" element={<AdminMessagesPage />} />
             <Route path="admin/uchwaly" element={<AdminResolutionsPage />} />
             <Route path="admin/dziennik" element={<AdminAuditLogPage />} />

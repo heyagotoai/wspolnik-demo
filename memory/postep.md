@@ -4,6 +4,7 @@ Ostatnia aktualizacja: **2026-03-29**.
 
 ## Zrobione niedawno
 - **ADR-003** — dopisany opis: `AdminRoute` dla roli admin **lub** manager (zarządca); `isAdmin` w UI dla pełnego CRUD.
+- **wspolnik-demo (2026-03-29)** — synchronizacja z **gabi_site**: **grupy rozliczeniowe** (zakładka w Naliczeniach, redirect URL), **import stanu początkowego** na Lokalach, mock `/billing-groups` + `isDemoApp()` w imporcie; wpis w `CHANGELOG.md`.
 - **wspolnik-demo (2026-03-28)** — synchronizacja UI z **gabi_site**: rola **`manager`** (zarządca), `useRole` / `AdminRoute` / layouty; demo: przełącznik Mieszkaniec / Zarządca / Administrator; strony admin z ograniczeniami `isAdmin` (zsynchronizowane z produkcyjnym frontem); ogłoszenia i terminy admin — edycja tylko dla admina.
 - **Repo wspolnik-demo** — tryb demonstracyjny: `site/src/demo/` (mock API, Supabase, seed), `isDemoApp()` + `VITE_PUBLIC_DEMO_ROUTES`, assety `demo-logo` / `demo-hero`, dane fikcyjne wspólnoty w `mockData.communityInfo`, dokumentacja `docs/roadmap-demo.md` i `docs/operations/demo-wdrozenie-wspolnik.md`.
 - **Wydruk salda** (`/admin/lokale`): pismo jednostronicowe — saldo, warunkowo termin +14 dni / nadpłata, konto bankowe; portal do `document.body` + ukrycie `#root` przy druku (`body.saldo-printing`), żeby uniknąć wielu pustych stron od ukrytej listy lokali.

@@ -264,6 +264,176 @@ export async function routeDemoApi(
     return { sent: [] as string[], failed: [] as { number: string; error: string }[] }
   }
 
+  // --- Billing groups ---
+  const billingGroupsList = () =>
+    demoStore.billing_groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      created_at: g.created_at,
+      apartments: demoStore.apartments
+        .filter((a) => a.billing_group_id === g.id)
+        .map((a) => ({
+          id: a.id,
+          number: a.number,
+          area_m2: a.area_m2 != null ? String(a.area_m2) : null,
+          owner_resident_id: a.owner_resident_id,
+          owner_name:
+            demoStore.residents.find((r) => r.id === a.owner_resident_id)?.full_name ?? null,
+          initial_balance: a.initial_balance != null ? String(a.initial_balance) : null,
+          billing_group_id: a.billing_group_id,
+        })),
+    }))
+
+  if (pathname === '/billing-groups' && method === 'GET') {
+    return billingGroupsList()
+  }
+
+  if (pathname === '/billing-groups' && method === 'POST') {
+    const b = body as { name?: string }
+    const name = String(b.name ?? '').trim()
+    if (!name) throw new Error('Podaj nazwę grupy')
+    const row = {
+      id: crypto.randomUUID(),
+      name,
+      created_at: new Date().toISOString(),
+    }
+    demoStore.billing_groups.push(row)
+    return { id: row.id, name: row.name, created_at: row.created_at, apartments: [] }
+  }
+
+  const bgBalance = pathname.match(/^\/billing-groups\/([^/]+)\/balance$/)
+  if (bgBalance && method === 'GET') {
+    const groupId = bgBalance[1]
+    const g = demoStore.billing_groups.find((x) => x.id === groupId)
+    if (!g) throw new Error('Nie znaleziono grupy')
+    const apts = demoStore.apartments.filter((a) => a.billing_group_id === groupId)
+    let combined = 0
+    const apartments = apts.map((a) => {
+      let total_charges = 0
+      for (const c of demoStore.charges) {
+        if (c.apartment_id === a.id) total_charges += Number(c.amount)
+      }
+      let total_payments = 0
+      for (const p of demoStore.payments) {
+        if (p.apartment_id === a.id) total_payments += Number(p.amount)
+      }
+      const ib = Number(a.initial_balance) || 0
+      const balance = ib + total_payments - total_charges
+      combined += balance
+      return {
+        id: a.id,
+        number: a.number,
+        balance: String(Math.round(balance * 100) / 100),
+        total_charges: String(Math.round(total_charges * 100) / 100),
+        total_payments: String(Math.round(total_payments * 100) / 100),
+        initial_balance: String(ib),
+      }
+    })
+    return {
+      group_id: groupId,
+      group_name: g.name,
+      combined_balance: String(Math.round(combined * 100) / 100),
+      apartments,
+    }
+  }
+
+  const bgSplit = pathname.match(/^\/billing-groups\/([^/]+)\/split-payment$/)
+  if (bgSplit && method === 'POST') {
+    const groupId = bgSplit[1]
+    const g = demoStore.billing_groups.find((x) => x.id === groupId)
+    if (!g) throw new Error('Nie znaleziono grupy')
+    const b = body as { amount?: string; payment_date?: string; title?: string; split_month?: string }
+    const amount = parseFloat(String(b.amount ?? '0'))
+    if (!(amount > 0)) throw new Error('Podaj kwotę')
+    const apts = demoStore.apartments.filter((a) => a.billing_group_id === groupId)
+    if (apts.length === 0) throw new Error('Brak lokali w grupie')
+    const payDate = String(b.payment_date ?? '')
+    const monthKey = b.split_month
+      ? b.split_month.slice(0, 7)
+      : payDate.slice(0, 7)
+    const monthPrefix = monthKey.length >= 7 ? monthKey : new Date().toISOString().slice(0, 7)
+    const chargesByApt: Record<string, number> = {}
+    for (const a of apts) chargesByApt[a.id] = 0
+    for (const c of demoStore.charges) {
+      if (c.month.startsWith(monthPrefix) && chargesByApt[c.apartment_id] != null) {
+        chargesByApt[c.apartment_id] += Number(c.amount)
+      }
+    }
+    const sumW = apts.reduce((s, a) => s + (chargesByApt[a.id] || 0), 0)
+    const weights = apts.map((a) => (sumW <= 0 ? 1 : chargesByApt[a.id] || 0))
+    const wSum = weights.reduce((s, w) => s + w, 0)
+    const parent_payment_id = crypto.randomUUID()
+    const children: { apartment_id: string; apartment_number: string; amount: string }[] = []
+    let allocated = 0
+    for (let i = 0; i < apts.length; i++) {
+      const a = apts[i]
+      let share: number
+      if (i === apts.length - 1) {
+        share = Math.round((amount - allocated) * 100) / 100
+      } else {
+        const prop = wSum > 0 ? weights[i] / wSum : 1 / apts.length
+        share = Math.round(amount * prop * 100) / 100
+      }
+      allocated += share
+      demoStore.payments.push({
+        id: crypto.randomUUID(),
+        apartment_id: a.id,
+        amount: share,
+        confirmed_by_admin: true,
+      })
+      children.push({
+        apartment_id: a.id,
+        apartment_number: a.number,
+        amount: String(share),
+      })
+    }
+    const split_month = `${monthPrefix}-01`
+    return { parent_payment_id, total_amount: String(amount), split_month, children }
+  }
+
+  const bgAptDel = pathname.match(/^\/billing-groups\/([^/]+)\/apartments\/([^/]+)$/)
+  if (bgAptDel && method === 'DELETE') {
+    const [, groupId, aptId] = bgAptDel
+    const apt = demoStore.apartments.find((a) => a.id === aptId && a.billing_group_id === groupId)
+    if (!apt) throw new Error('Lokal nie należy do tej grupy')
+    apt.billing_group_id = null
+    return { detail: 'OK' }
+  }
+
+  const bgApts = pathname.match(/^\/billing-groups\/([^/]+)\/apartments$/)
+  if (bgApts && method === 'POST') {
+    const groupId = bgApts[1]
+    if (!demoStore.billing_groups.some((x) => x.id === groupId)) throw new Error('Nie znaleziono grupy')
+    const b = body as { apartment_ids?: string[] }
+    const ids = b.apartment_ids ?? []
+    for (const id of ids) {
+      const apt = demoStore.apartments.find((a) => a.id === id)
+      if (apt) apt.billing_group_id = groupId
+    }
+    return { detail: 'Przypisano' }
+  }
+
+  const bgOne = pathname.match(/^\/billing-groups\/([^/]+)$/)
+  if (bgOne && method === 'PATCH') {
+    const id = bgOne[1]
+    const row = demoStore.billing_groups.find((x) => x.id === id)
+    if (!row) throw new Error('Nie znaleziono grupy')
+    const b = body as { name?: string }
+    if (b.name !== undefined) row.name = String(b.name).trim() || row.name
+    return { id: row.id, name: row.name, created_at: row.created_at, apartments: [] }
+  }
+
+  if (bgOne && method === 'DELETE') {
+    const id = bgOne[1]
+    const ix = demoStore.billing_groups.findIndex((x) => x.id === id)
+    if (ix === -1) throw new Error('Nie znaleziono grupy')
+    demoStore.billing_groups.splice(ix, 1)
+    for (const a of demoStore.apartments) {
+      if (a.billing_group_id === id) a.billing_group_id = null
+    }
+    return { detail: 'Usunięto' }
+  }
+
   // --- Residents (API create/delete) ---
   if (pathname === '/residents' && method === 'POST') {
     const b = body as { email?: string; full_name?: string; apartment_number?: string; role?: string }

@@ -216,6 +216,7 @@ class TableQuery {
       const id = (row.id as string) || crypto.randomUUID()
       const full: Record<string, unknown> = { ...row, id }
       if (this.table === 'announcements' && full.created_at == null) full.created_at = now
+      if (this.table === 'apartments' && full.billing_group_id === undefined) full.billing_group_id = null
       arr.push(full)
       inserted.push(full)
     }

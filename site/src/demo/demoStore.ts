@@ -21,6 +21,13 @@ export interface DemoApartment {
   initial_balance: number
   initial_balance_date: string | null
   owner_resident_id: string | null
+  billing_group_id: string | null
+}
+
+export interface DemoBillingGroupRow {
+  id: string
+  name: string
+  created_at: string
 }
 
 export interface DemoAnnouncement {
@@ -155,6 +162,8 @@ function seed() {
     },
   ]
 
+  const billing_groups: DemoBillingGroupRow[] = []
+
   const apartments: DemoApartment[] = [
     {
       id: aptId,
@@ -165,6 +174,7 @@ function seed() {
       initial_balance: 120.5,
       initial_balance_date: '2025-01-01',
       owner_resident_id: DEMO_USER_ID,
+      billing_group_id: null,
     },
     {
       id: 'b2000000-0000-4000-8000-000000000002',
@@ -175,6 +185,7 @@ function seed() {
       initial_balance: 0,
       initial_balance_date: '2025-01-01',
       owner_resident_id: 'a2000000-0000-4000-8000-000000000002',
+      billing_group_id: null,
     },
   ]
 
@@ -316,6 +327,7 @@ function seed() {
   return {
     residents,
     apartments,
+    billing_groups,
     announcements,
     important_dates,
     documents,
@@ -352,6 +364,9 @@ class DemoStore {
   }
   get apartments() {
     return this.data.apartments
+  }
+  get billing_groups() {
+    return this.data.billing_groups
   }
   get announcements() {
     return this.data.announcements
