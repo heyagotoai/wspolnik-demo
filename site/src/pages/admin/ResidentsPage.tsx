@@ -330,9 +330,11 @@ export default function ResidentsPage() {
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         r.role === 'admin'
                           ? 'bg-amber-light text-amber'
-                          : 'bg-sage-pale/40 text-sage'
+                          : r.role === 'manager'
+                            ? 'bg-sky-100 text-sky-700'
+                            : 'bg-sage-pale/40 text-sage'
                       }`}>
-                        {r.role === 'admin' ? 'Admin' : 'Mieszkaniec'}
+                        {r.role === 'admin' ? 'Admin' : r.role === 'manager' ? 'Zarządca' : 'Mieszkaniec'}
                       </span>
                     </td>
                     <td className="px-5 py-3">
