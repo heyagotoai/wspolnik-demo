@@ -28,3 +28,5 @@ python-multipart==0.0.22
 
 # Import zestawień bankowych (.xls — stary format Excel)
 xlrd==2.0.2
+# Zapis testowych plików .xls w pytest (api/tests/test_bank_statement_parser.py)
+xlwt==1.3.0

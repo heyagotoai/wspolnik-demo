@@ -2,6 +2,9 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — CI: zależność `xlwt` dla testów .xls
+- **`xlwt==1.3.0`** w `api/requirements.txt` — generowanie plików `.xls` w `test_bank_statement_parser.py` (wcześniej na CI brak modułu `xlwt`)
+
 ### 2026-03-28 — CI: stabilny import `api.core.config` w pytest
 - Na początku `api/tests/conftest.py`: `os.environ.setdefault` dla `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` — brak masowego `KeyError`, gdy job nie ustawi zmiennych lub lokalnie odpala się `pytest` bez `.env`
 
