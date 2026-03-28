@@ -32,7 +32,7 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 **Dodawanie nowego mieszkańca:**
 1. Kliknij **Dodaj mieszkańca**
 2. Wpisz imię i nazwisko, adres email, numer lokalu
-3. Ustaw rolę: `mieszkaniec` (domyślnie) lub `admin`
+3. Ustaw rolę: `mieszkaniec` (domyślnie), `zarządca` lub `admin`
 4. Kliknij **Zapisz** — system automatycznie tworzy konto i wysyła link aktywacyjny na podany email
 
 **Edycja / dezaktywacja:**
@@ -43,6 +43,18 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 - Użyj ikony kosza — uwaga, operacja jest nieodwracalna
 
 > Mieszkaniec może zalogować się dopiero po aktywacji konta przez link z emaila.
+
+**Rola zarządcy vs administrator:**
+
+| Funkcja | Administrator | Zarządca |
+|---------|:---:|:---:|
+| Podgląd mieszkańców, lokali, finansów | ✅ | ✅ (read-only) |
+| Ogłoszenia i terminy (CRUD) | ✅ | ✅ |
+| Dokumenty, uchwały, wiadomości | ✅ pełny dostęp | ✅ podgląd |
+| Dziennik operacji | ✅ | ✅ |
+| Zarządzanie kontami (dodaj/edytuj/usuń) | ✅ | ❌ |
+| Stawki i generowanie naliczeń | ✅ | ❌ |
+| Wysyłka powiadomień email | ✅ | ❌ |
 
 ---
 

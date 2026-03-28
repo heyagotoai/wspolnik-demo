@@ -99,7 +99,8 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Różnice techniczne (np. pamięć Claude, format subagentów) dostosuj do możliwości danego narzędzia.
 
 ## Role użytkowników
-- **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
+- **admin** — pełny dostęp (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
+- **manager** (zarządca) — podgląd read-only (mieszkańcy, lokale, finanse, dokumenty, uchwały, wiadomości, audit log) + pełny CRUD ogłoszeń i terminów. BEZ: zarządzania kontami, stawek, generowania naliczeń, wysyłki email
 - **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
 
 ## Supabase
@@ -108,7 +109,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-016 uruchomione przez SQL Editor w dashboardzie Supabase
+- Migracje 001-017 uruchomione przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
@@ -116,6 +117,6 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
 - `/api/profile` — profil mieszkańca
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej)
-- `GET /api/audit` — dziennik operacji (admin only, filtry: tabela/akcja/daty, paginacja)
+- `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
 - `GET /api/health` — health check

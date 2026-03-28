@@ -71,7 +71,7 @@
 | Plan sprzedaży SaaS | ⬜ todo | ŚREDNI | Strategia multi-tenant: izolacja danych, onboarding, pricing, kanały dotarcia |
 | Multi-tenancy | ⬜ todo | ŚREDNI | Architektura wielu wspólnot: osobne schematy / tenant_id / osobne projekty Supabase |
 | Wielu mieszkańców na lokal | ⬜ todo | ŚREDNI | Współwłaściciele: kilku mieszkańców przypisanych do jednego lokalu (wymaga zmiany my_apartment_ids() i RLS) |
-| Rola zarządcy | ⬜ todo | WYSOKI | Nowa rola "zarządca" z ograniczonymi prawami vs admin (np. podgląd finansów bez edycji stawek, brak CRUD mieszkańców/auth). Wymaga rozszerzenia CHECK constraint na residents.role i nowych RLS policies |
+| Rola zarządcy | ✅ done | WYSOKI | Rola "manager": podgląd read-only (finanse, mieszkańcy, dokumenty, uchwały, wiadomości, audit log), pełny CRUD ogłoszeń i terminów. Migracja 017, RLS policies, FastAPI guards, React conditional UI. |
 | Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
 | Demo / trial | ⬜ todo | NISKI | Środowisko demo z przykładowymi danymi |
 | Regulamin i umowa SaaS | ⬜ todo | ŚREDNI | Dokumenty prawne: umowa, SLA, przetwarzanie danych (RODO) |

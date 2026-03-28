@@ -2,6 +2,16 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — Rola zarządcy (manager)
+- Nowa rola `manager` — podgląd read-only wszystkich danych + pełny CRUD ogłoszeń i terminów
+- Migracja 017: rozszerzenie CHECK constraint, helper functions (`is_manager()`, `is_admin_or_manager()`), 20+ RLS policies
+- Backend: `require_admin_or_manager` guard (FastAPI), aktualizacja endpointów (announcements, audit)
+- Frontend: `useRole` hook z `isManager`/`isAdminOrManager`, warunkowe ukrywanie akcji w 8 stronach admin
+- Sidebar: link "Panel zarządcy" dla managera w panelu mieszkańca, filtrowanie pozycji w panelu admin
+- Mieszkańcy: podgląd read-only dla zarządcy (bez Dodaj/Edytuj/Usuń/Aktywuj)
+- Badge zarządcy: niebieski (`sky-100/sky-700`), odróżnia się od admina (amber) i mieszkańca (sage)
+- Testy: 7 testów frontend (ResidentsPage, AdminRoute), fixture `manager_client` (pytest)
+
 ### 2026-03-28 — Tygodniowy backup cron
 - Nowy endpoint `POST /api/backup/cron` — Vercel Cron co niedzielę 2:00 UTC
 - Eksport 9 tabel + `auth.users` (Admin API) + pliki PDF z bucketu `documents` (base64)
