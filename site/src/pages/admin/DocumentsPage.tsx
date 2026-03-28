@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 import { UploadIcon, TrashIcon, FileIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
@@ -36,6 +37,7 @@ export default function AdminDocumentsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const { confirm } = useConfirm()
   const { toast } = useToast()
+  const { isAdmin } = useRole()
 
   // Upload form state
   const [showUpload, setShowUpload] = useState(false)
@@ -195,17 +197,19 @@ export default function AdminDocumentsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Dokumenty</h1>
-        <button
-          onClick={() => { setShowUpload(!showUpload); setError(null) }}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <UploadIcon className="w-4 h-4" />
-          Dodaj dokument
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setShowUpload(!showUpload); setError(null) }}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <UploadIcon className="w-4 h-4" />
+            Dodaj dokument
+          </button>
+        )}
       </div>
 
-      {/* Upload form */}
-      {showUpload && (
+      {/* Upload form — admin only */}
+      {isAdmin && showUpload && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <h2 className="text-lg font-semibold text-charcoal mb-4">Nowy dokument</h2>
 
@@ -324,17 +328,26 @@ export default function AdminDocumentsPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => togglePublic(doc)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
-                    doc.is_public
-                      ? 'bg-sage-pale/40 text-sage hover:bg-sage-pale'
-                      : 'bg-cream-medium text-outline hover:bg-cream-deep'
-                  }`}
-                  title={doc.is_public ? 'Kliknij aby ustawić jako prywatny' : 'Kliknij aby ustawić jako publiczny'}
-                >
-                  {doc.is_public ? 'Publiczny' : 'Prywatny'}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => togglePublic(doc)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+                      doc.is_public
+                        ? 'bg-sage-pale/40 text-sage hover:bg-sage-pale'
+                        : 'bg-cream-medium text-outline hover:bg-cream-deep'
+                    }`}
+                    title={doc.is_public ? 'Kliknij aby ustawić jako prywatny' : 'Kliknij aby ustawić jako publiczny'}
+                  >
+                    {doc.is_public ? 'Publiczny' : 'Prywatny'}
+                  </button>
+                )}
+                {!isAdmin && (
+                  <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                    doc.is_public ? 'bg-sage-pale/40 text-sage' : 'bg-cream-medium text-outline'
+                  }`}>
+                    {doc.is_public ? 'Publiczny' : 'Prywatny'}
+                  </span>
+                )}
                 <button
                   onClick={() => handleDownload(doc)}
                   className="p-2 text-outline hover:text-sage transition-colors"
@@ -342,14 +355,16 @@ export default function AdminDocumentsPage() {
                 >
                   <DownloadIcon className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => handleDelete(doc)}
-                  disabled={deleting === doc.id}
-                  className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
-                  title="Usuń"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDelete(doc)}
+                    disabled={deleting === doc.id}
+                    className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
+                    title="Usuń"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

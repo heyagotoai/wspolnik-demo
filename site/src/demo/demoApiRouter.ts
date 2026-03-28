@@ -1,5 +1,5 @@
 import { DEMO_USER_EMAIL, DEMO_USER_ID } from './demoConstants'
-import { demoStore, type DemoResolution, type DemoVote } from './demoStore'
+import { demoStore, type DemoResolution, type DemoRole, type DemoVote } from './demoStore'
 
 /** Minimalny, poprawny nagłówek PDF — wystarczy do podglądu w UI (demo). */
 export function demoPdfBlob(): Blob {
@@ -273,7 +273,7 @@ export async function routeDemoApi(
       email: String(b.email ?? 'nowy@demo.local'),
       full_name: String(b.full_name ?? 'Nowy mieszkaniec'),
       apartment_number: b.apartment_number?.trim() || null,
-      role: (b.role as 'admin' | 'resident') || 'resident',
+      role: (b.role as DemoRole) || 'resident',
       is_active: true,
       created_at: new Date().toISOString(),
     })

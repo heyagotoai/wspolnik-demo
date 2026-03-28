@@ -1,10 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
+import { useDemoBasePath } from '../../demo/useDemoBasePath'
 
 export default function AdminRoute() {
+  const prefix = useDemoBasePath()
   const { user, loading: authLoading } = useAuth()
-  const { isAdmin, loading: roleLoading } = useRole()
+  const { isAdminOrManager, loading: roleLoading } = useRole()
 
   if (authLoading || roleLoading) {
     return (
@@ -15,11 +17,11 @@ export default function AdminRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/logowanie" replace />
+    return <Navigate to={prefix ? `${prefix}/logowanie` : '/logowanie'} replace />
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/panel" replace />
+  if (!isAdminOrManager) {
+    return <Navigate to={prefix ? `${prefix}/panel` : '/panel'} replace />
   }
 
   return <Outlet />

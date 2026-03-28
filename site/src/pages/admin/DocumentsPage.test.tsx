@@ -4,6 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
 
+vi.mock('../../hooks/useRole', () => ({
+  useRole: () => ({
+    role: 'admin', isAdmin: true, isManager: false, isAdminOrManager: true, isResident: false, loading: false,
+  }),
+}))
+
 const mockFrom = vi.fn()
 const mockUpload = vi.fn()
 const mockRemove = vi.fn()

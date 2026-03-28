@@ -4,6 +4,7 @@ import { api } from '../../lib/api'
 import { PlusIcon, TrashIcon, XIcon, ChevronDownIcon, DownloadIcon, SendIcon, EditIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { useRole } from '../../hooks/useRole'
 
 interface Apartment {
   id: string
@@ -112,6 +113,7 @@ export default function AdminChargesPage() {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const { confirm } = useConfirm()
+  const { isAdmin } = useRole()
 
   // --- Charges state ---
   const [charges, setCharges] = useState<Charge[]>([])
@@ -630,28 +632,30 @@ export default function AdminChargesPage() {
           ═══════════════════════════════════════════════════════════════ */}
       {tab === 'charges' && (
         <>
-          {/* Action buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowGenerateModal(true)}
-              disabled={apartments.length === 0 || rates.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
-              title={ratesLoadError ? 'Nie udało się pobrać stawek — odśwież stronę' : rates.length === 0 ? 'Dodaj stawki w zakładce Stawki' : ''}
-            >
-              Generuj naliczenia
-            </button>
-            <button
-              onClick={openAddCharge}
-              disabled={apartments.length === 0}
-              className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/5 transition-colors disabled:opacity-50"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Dodaj ręcznie
-            </button>
-          </div>
+          {/* Action buttons — admin only */}
+          {isAdmin && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowGenerateModal(true)}
+                disabled={apartments.length === 0 || rates.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
+                title={ratesLoadError ? 'Nie udało się pobrać stawek — odśwież stronę' : rates.length === 0 ? 'Dodaj stawki w zakładce Stawki' : ''}
+              >
+                Generuj naliczenia
+              </button>
+              <button
+                onClick={openAddCharge}
+                disabled={apartments.length === 0}
+                className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/5 transition-colors disabled:opacity-50"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Dodaj ręcznie
+              </button>
+            </div>
+          )}
 
-          {/* Auto-generation config */}
-          <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4 flex flex-wrap items-center gap-4">
+          {/* Auto-generation config — admin only */}
+          {isAdmin && <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -685,7 +689,7 @@ export default function AdminChargesPage() {
             {rates.length === 0 && (
               <span className="text-xs text-outline">Dodaj stawki, aby włączyć</span>
             )}
-          </div>
+          </div>}
 
           {apartments.length === 0 && (
             <div className="bg-amber-light/30 rounded-[var(--radius-card)] p-4 text-sm text-amber">
@@ -693,8 +697,8 @@ export default function AdminChargesPage() {
             </div>
           )}
 
-          {/* Generate modal */}
-          {showGenerateModal && (
+          {/* Generate modal — admin only */}
+          {isAdmin && showGenerateModal && (
             <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-charcoal">Generuj naliczenia</h2>
@@ -926,14 +930,16 @@ export default function AdminChargesPage() {
                                 </span>
                               </td>
                               <td className="px-5 py-2 text-right">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteCharge(c.id) }}
-                                  disabled={deleting === c.id}
-                                  className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
-                                  title="Usuń"
-                                >
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
+                                {isAdmin && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteCharge(c.id) }}
+                                    disabled={deleting === c.id}
+                                    className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                                    title="Usuń"
+                                  >
+                                    <TrashIcon className="w-4 h-4" />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -957,13 +963,15 @@ export default function AdminChargesPage() {
             <p className="text-sm text-slate">
               Stawki określają kwoty używane do automatycznego generowania naliczeń.
             </p>
-            <button
-              onClick={openAddRate}
-              className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Dodaj stawkę
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openAddRate}
+                className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Dodaj stawkę
+              </button>
+            )}
           </div>
 
           {/* Rate form */}
@@ -1084,14 +1092,16 @@ export default function AdminChargesPage() {
                             )}
                           </td>
                           <td className="px-5 py-3 text-right">
-                            <button
-                              onClick={() => handleDeleteRate(r.id)}
-                              disabled={deletingRate === r.id}
-                              className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
-                              title="Usuń"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDeleteRate(r.id)}
+                                disabled={deletingRate === r.id}
+                                className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                                title="Usuń"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       )
@@ -1189,16 +1199,18 @@ export default function AdminChargesPage() {
                 className="px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
               />
             </div>
-            <button
-              onClick={() => { setZawBulkMode(!zawBulkMode); setZawSelectedIds(new Set()); setZawBulkResults(null) }}
-              className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
-                zawBulkMode
-                  ? 'bg-slate/10 text-charcoal'
-                  : 'border border-sage text-sage hover:bg-sage/5'
-              }`}
-            >
-              {zawBulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setZawBulkMode(!zawBulkMode); setZawSelectedIds(new Set()); setZawBulkResults(null) }}
+                className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
+                  zawBulkMode
+                    ? 'bg-slate/10 text-charcoal'
+                    : 'border border-sage text-sage hover:bg-sage/5'
+                }`}
+              >
+                {zawBulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
+              </button>
+            )}
           </div>
 
           {/* Tabela lokali */}
@@ -1283,14 +1295,16 @@ export default function AdminChargesPage() {
                               >
                                 <DownloadIcon className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleSendNotification(apt.id)}
-                                disabled={sendingNotification === apt.id || !hasOwner || monthlyCharge === 0}
-                                className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
-                                title={!hasOwner ? 'Brak właściciela' : 'Wyślij email'}
-                              >
-                                <SendIcon className="w-4 h-4" />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleSendNotification(apt.id)}
+                                  disabled={sendingNotification === apt.id || !hasOwner || monthlyCharge === 0}
+                                  className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                                  title={!hasOwner ? 'Brak właściciela' : 'Wyślij email'}
+                                >
+                                  <SendIcon className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1302,8 +1316,8 @@ export default function AdminChargesPage() {
             </div>
           )}
 
-          {/* Bulk send bar */}
-          {zawBulkMode && (
+          {/* Bulk send bar — admin only */}
+          {isAdmin && zawBulkMode && (
             <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4 flex items-center justify-between">
               <span className="text-sm text-slate">
                 Zaznaczono: {zawSelectedIds.size} {zawSelectedIds.size === 1 ? 'lokal' : 'lokali'}

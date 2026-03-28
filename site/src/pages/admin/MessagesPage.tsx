@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { TrashIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
+import { useRole } from '../../hooks/useRole'
 
 interface ContactMessage {
   id: string
@@ -22,6 +23,7 @@ export default function MessagesPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const { confirm } = useConfirm()
   const { toast } = useToast()
+  const { isAdmin } = useRole()
 
   const fetchMessages = async () => {
     const { data } = await supabase
@@ -156,16 +158,18 @@ export default function MessagesPage() {
                     <span>Temat: {msg.subject}</span>
                   </div>
                   <p className="text-sm text-charcoal whitespace-pre-wrap">{msg.message}</p>
-                  <div className="flex justify-end mt-4">
-                    <button
-                      onClick={() => handleDelete(msg.id)}
-                      disabled={deleting === msg.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-outline hover:text-error transition-colors disabled:opacity-50"
-                    >
-                      <TrashIcon className="w-3.5 h-3.5" />
-                      Usuń
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex justify-end mt-4">
+                      <button
+                        onClick={() => handleDelete(msg.id)}
+                        disabled={deleting === msg.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-outline hover:text-error transition-colors disabled:opacity-50"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" />
+                        Usuń
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

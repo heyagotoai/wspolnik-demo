@@ -1,6 +1,6 @@
 import { DEMO_USER_EMAIL, DEMO_USER_ID } from './demoConstants'
 
-export type DemoRole = 'admin' | 'resident'
+export type DemoRole = 'admin' | 'resident' | 'manager'
 
 export interface DemoResident {
   id: string

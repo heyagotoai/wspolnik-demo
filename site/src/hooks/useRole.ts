@@ -3,11 +3,13 @@ import { getSupabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { useDemoRole } from '../demo/DemoRoleContext'
 
-type Role = 'admin' | 'resident' | null
+type Role = 'admin' | 'resident' | 'manager' | null
 
 interface RoleState {
   role: Role
   isAdmin: boolean
+  isManager: boolean
+  isAdminOrManager: boolean
   isResident: boolean
   loading: boolean
 }
@@ -26,7 +28,7 @@ export function useRole(): RoleState {
     }
 
     if (demoRole) {
-      setRole(demoRole.role)
+      setRole(demoRole.role as Role)
       setLoading(false)
       return
     }
@@ -53,6 +55,8 @@ export function useRole(): RoleState {
   return {
     role,
     isAdmin: role === 'admin',
+    isManager: role === 'manager',
+    isAdminOrManager: role === 'admin' || role === 'manager',
     isResident: role === 'resident',
     loading,
   }

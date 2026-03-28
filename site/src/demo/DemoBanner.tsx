@@ -27,6 +27,17 @@ export function DemoBanner() {
         </button>
         <button
           type="button"
+          onClick={() => demo.setRole('manager')}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            demo.role === 'manager'
+              ? 'bg-sky-600 text-white'
+              : 'bg-cream text-slate hover:bg-cream-medium'
+          }`}
+        >
+          Zarządca
+        </button>
+        <button
+          type="button"
           onClick={() => demo.setRole('admin')}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
             demo.role === 'admin'

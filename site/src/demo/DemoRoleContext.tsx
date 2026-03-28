@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { DEMO_ROLE_STORAGE_KEY } from './demoConstants'
 
-export type DemoRole = 'admin' | 'resident'
+export type DemoRole = 'admin' | 'resident' | 'manager'
 
 interface DemoRoleContextValue {
   role: DemoRole
@@ -13,7 +13,8 @@ export const DemoRoleContext = createContext<DemoRoleContextValue | null>(null)
 function readStoredRole(): DemoRole {
   try {
     const s = sessionStorage.getItem(DEMO_ROLE_STORAGE_KEY)
-    return s === 'admin' ? 'admin' : 'resident'
+    if (s === 'admin' || s === 'manager' || s === 'resident') return s
+    return 'resident'
   } catch {
     return 'resident'
   }

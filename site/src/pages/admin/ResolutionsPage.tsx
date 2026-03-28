@@ -3,7 +3,7 @@ import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
-import { communityInfo } from '../../data/mockData'
+import { useRole } from '../../hooks/useRole'
 
 /** Escape HTML special characters to prevent XSS in generated HTML strings */
 function escapeHtml(str: string): string {
@@ -76,6 +76,7 @@ export default function AdminResolutionsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const { confirm } = useConfirm()
   const { toast } = useToast()
+  const { isAdmin } = useRole()
 
   const fetchResolutions = async () => {
     try {
@@ -392,7 +393,7 @@ export default function AdminResolutionsPage() {
     </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
   </section>
 
-  <div class="footer">${escapeHtml(communityInfo.shortName)} &bull; ${escapeHtml(communityInfo.footerWebsite)} &bull; Dokument wygenerowany automatycznie</div>
+  <div class="footer">WM Gabi &bull; wmgabi.pl &bull; Dokument wygenerowany automatycznie</div>
 </body>
 </html>`
 
@@ -419,17 +420,19 @@ export default function AdminResolutionsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Uchwały</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Dodaj uchwałę
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Dodaj uchwałę
+          </button>
+        )}
       </div>
 
-      {/* Form */}
-      {showForm && (
+      {/* Form — admin only */}
+      {isAdmin && showForm && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
@@ -570,7 +573,7 @@ export default function AdminResolutionsPage() {
                         <DownloadIcon className="w-4 h-4" />
                       </button>
                     )}
-                    {voteData && voteData.total > 0 && (
+                    {isAdmin && voteData && voteData.total > 0 && (
                       <button
                         onClick={() => handleResetVotes(r)}
                         className="p-2 text-outline hover:text-error transition-colors"
@@ -579,21 +582,25 @@ export default function AdminResolutionsPage() {
                         <XIcon className="w-4 h-4" />
                       </button>
                     )}
-                    <button
-                      onClick={() => openEdit(r)}
-                      className="p-2 text-outline hover:text-sage transition-colors"
-                      title="Edytuj"
-                    >
-                      <EditIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      disabled={deleting === r.id}
-                      className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
-                      title="Usuń"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="p-2 text-outline hover:text-sage transition-colors"
+                          title="Edytuj"
+                        >
+                          <EditIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          disabled={deleting === r.id}
+                          className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
+                          title="Usuń"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

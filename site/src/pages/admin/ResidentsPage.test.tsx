@@ -30,6 +30,16 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
+// Mock useRole — konfigurowalny per test
+const mockUseRole = vi.fn()
+vi.mock('../../hooks/useRole', () => ({
+  useRole: () => mockUseRole(),
+}))
+
+vi.mock('../../demo/useDemoBasePath', () => ({
+  useDemoBasePath: () => '',
+}))
+
 // Mock icons (nie potrzebujemy SVG w testach)
 vi.mock('../../components/ui/Icons', () => ({
   PlusIcon: ({ className }: { className?: string }) => <span data-testid="plus-icon" className={className}>+</span>,
@@ -65,6 +75,11 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+
+  // Default: admin
+  mockUseRole.mockReturnValue({
+    role: 'admin', isAdmin: true, isManager: false, isAdminOrManager: true, isResident: false, loading: false,
+  })
 
   // Default: supabase.from('residents').select().order() → returns mockResidents
   mockOrder.mockResolvedValue({ data: mockResidents, error: null })
@@ -112,7 +127,6 @@ describe('ResidentsPage', () => {
 
     await user.click(screen.getByText('Dodaj'))
     expect(screen.getByText('Nowy mieszkaniec')).toBeInTheDocument()
-    // Sprawdź że pola formularza (label *) są widoczne
     expect(screen.getByText('Imię i nazwisko *')).toBeInTheDocument()
     expect(screen.getByText('Email *')).toBeInTheDocument()
     expect(screen.getByText('Hasło *')).toBeInTheDocument()
@@ -158,5 +172,26 @@ describe('ResidentsPage', () => {
 
     expect(screen.getByText('Mieszkaniec')).toBeInTheDocument()
     expect(screen.getByText('Admin')).toBeInTheDocument()
+  })
+
+  it('zarządca widzi listę ale nie widzi akcji', async () => {
+    mockUseRole.mockReturnValue({
+      role: 'manager', isAdmin: false, isManager: true, isAdminOrManager: true, isResident: false, loading: false,
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan Kowalski')).toBeInTheDocument()
+    })
+
+    // Widzi dane
+    expect(screen.getByText('jan@gabi.pl')).toBeInTheDocument()
+    expect(screen.getByText('1A')).toBeInTheDocument()
+
+    // Nie widzi przycisków akcji
+    expect(screen.queryByText('Dodaj')).not.toBeInTheDocument()
+    expect(screen.queryByText('Dezaktywuj')).not.toBeInTheDocument()
+    expect(screen.queryByText('Akcje')).not.toBeInTheDocument()
   })
 })

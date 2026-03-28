@@ -5,21 +5,29 @@ import AdminRoute from './AdminRoute'
 import { AuthContext } from '../../hooks/useAuth'
 import type { User, Session } from '@supabase/supabase-js'
 
-// Mock useRole oddzielnie — każdy test kontroluje zwracaną rolę
 const mockUseRole = vi.fn()
 vi.mock('../../hooks/useRole', () => ({
   useRole: () => mockUseRole(),
 }))
 
+const mockUseDemoBasePath = vi.fn(() => '')
+vi.mock('../../demo/useDemoBasePath', () => ({
+  useDemoBasePath: () => mockUseDemoBasePath(),
+}))
+
 function renderWithAuth(
   user: User | null,
-  role: { isAdmin: boolean; loading: boolean },
+  role: { isAdmin?: boolean; isManager?: boolean; loading: boolean },
   initialPath: string = '/admin',
 ) {
+  const isAdmin = role.isAdmin ?? false
+  const isManager = role.isManager ?? false
   mockUseRole.mockReturnValue({
-    role: role.isAdmin ? 'admin' : 'resident',
-    isAdmin: role.isAdmin,
-    isResident: !role.isAdmin,
+    role: isAdmin ? 'admin' : isManager ? 'manager' : 'resident',
+    isAdmin,
+    isManager,
+    isAdminOrManager: isAdmin || isManager,
+    isResident: !isAdmin && !isManager,
     loading: role.loading,
   })
 
@@ -59,13 +67,18 @@ describe('AdminRoute', () => {
     expect(screen.getByText('Strona logowania')).toBeInTheDocument()
   })
 
-  it('przekierowuje na /panel gdy użytkownik nie jest adminem', () => {
+  it('przekierowuje na /panel gdy użytkownik nie jest adminem ani zarządcą', () => {
     renderWithAuth(fakeUser, { isAdmin: false, loading: false })
     expect(screen.getByText('Panel mieszkańca')).toBeInTheDocument()
   })
 
   it('renderuje panel admina dla administratora', () => {
     renderWithAuth(fakeUser, { isAdmin: true, loading: false })
+    expect(screen.getByText('Panel admina')).toBeInTheDocument()
+  })
+
+  it('renderuje panel dla zarządcy', () => {
+    renderWithAuth(fakeUser, { isManager: true, loading: false })
     expect(screen.getByText('Panel admina')).toBeInTheDocument()
   })
 })

@@ -30,7 +30,7 @@ const sidebarPaths = [
 
 export default function ResidentLayout() {
   const { user, signOut } = useAuth()
-  const { isAdmin } = useRole()
+  const { isAdmin, isAdminOrManager } = useRole()
   const location = useLocation()
   const prefix = useDemoBasePath()
   const to = (path: string) => (prefix ? `${prefix}${path}` : path)
@@ -83,13 +83,13 @@ export default function ResidentLayout() {
             <UserIcon className="w-5 h-5" />
             Mój profil
           </Link>
-          {isAdmin && (
+          {isAdminOrManager && (
             <Link
               to={to('/admin')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-input)] text-sm font-medium text-amber hover:bg-amber-light/30 transition-colors"
             >
               <SettingsIcon className="w-5 h-5" />
-              Panel admina
+              {isAdmin ? 'Panel admina' : 'Panel zarządcy'}
             </Link>
           )}
           <Link
@@ -162,14 +162,14 @@ export default function ResidentLayout() {
               <UserIcon className="w-5 h-5" />
               Mój profil
             </Link>
-            {isAdmin && (
+            {isAdminOrManager && (
               <Link
                 to={to('/admin')}
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-amber"
               >
                 <SettingsIcon className="w-5 h-5" />
-                Panel admina
+                {isAdmin ? 'Panel admina' : 'Panel zarządcy'}
               </Link>
             )}
             <Link

@@ -5,7 +5,7 @@ import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
-import { logoSrc } from '../../demo/demoAssets'
+import { useRole } from '../../hooks/useRole'
 import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 
 interface Resident {
@@ -66,6 +66,7 @@ export default function ApartmentsPage() {
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
+  const { isAdmin } = useRole()
 
   const fetchData = async () => {
     const [aptsRes, resRes, chargesRes, paymentsRes] = await Promise.all([
@@ -459,32 +460,34 @@ export default function ApartmentsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Lokale</h1>
-        <div className="flex items-center gap-2">
-          {apartments.length > 0 && (
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            {apartments.length > 0 && (
+              <button
+                onClick={toggleBulkMode}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
+                  bulkMode
+                    ? 'bg-outline text-white hover:bg-slate'
+                    : 'border border-outline text-slate hover:text-charcoal hover:border-charcoal'
+                }`}
+              >
+                <SendIcon className="w-4 h-4" />
+                {bulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
+              </button>
+            )}
             <button
-              onClick={toggleBulkMode}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
-                bulkMode
-                  ? 'bg-outline text-white hover:bg-slate'
-                  : 'border border-outline text-slate hover:text-charcoal hover:border-charcoal'
-              }`}
+              onClick={openAdd}
+              className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
             >
-              <SendIcon className="w-4 h-4" />
-              {bulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
+              <PlusIcon className="w-4 h-4" />
+              Dodaj lokal
             </button>
-          )}
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Dodaj lokal
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Bulk balance date banner */}
-      {aptsWithBalanceNoDate.length > 0 && !showBulkDateForm && (
+      {isAdmin && aptsWithBalanceNoDate.length > 0 && !showBulkDateForm && (
         <div className="bg-amber-50 border border-amber-200 rounded-[var(--radius-card)] p-4 flex items-center justify-between gap-4">
           <p className="text-sm text-amber-800">
             {aptsWithBalanceNoDate.length === 1
@@ -501,7 +504,7 @@ export default function ApartmentsPage() {
         </div>
       )}
 
-      {showBulkDateForm && (
+      {isAdmin && showBulkDateForm && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">Ustaw datę salda początkowego</h2>
@@ -536,8 +539,8 @@ export default function ApartmentsPage() {
         </div>
       )}
 
-      {/* Form */}
-      {showForm && (
+      {/* Form — admin only */}
+      {isAdmin && showForm && (
         <div ref={formRef} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
@@ -737,29 +740,33 @@ export default function ApartmentsPage() {
                         >
                           <PrinterIcon className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleSendEmail(apt)}
-                          disabled={sendingEmail === apt.id}
-                          className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
-                          title="Wyślij powiadomienie email"
-                        >
-                          <SendIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openEdit(apt)}
-                          className="p-1.5 text-outline hover:text-sage transition-colors"
-                          title="Edytuj"
-                        >
-                          <EditIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(apt)}
-                          disabled={deleting === apt.id}
-                          className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
-                          title="Usuń"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleSendEmail(apt)}
+                              disabled={sendingEmail === apt.id}
+                              className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                              title="Wyślij powiadomienie email"
+                            >
+                              <SendIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openEdit(apt)}
+                              className="p-1.5 text-outline hover:text-sage transition-colors"
+                              title="Edytuj"
+                            >
+                              <EditIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(apt)}
+                              disabled={deleting === apt.id}
+                              className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                              title="Usuń"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -772,7 +779,7 @@ export default function ApartmentsPage() {
       )}
 
       {/* Bulk send action bar */}
-      {bulkMode && (
+      {isAdmin && bulkMode && (
         <div className="sticky bottom-4 z-10">
           <div className="bg-white border border-cream-deep rounded-[var(--radius-card)] shadow-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 text-sm">
@@ -847,9 +854,9 @@ export default function ApartmentsPage() {
               <header className="flex flex-row justify-between items-start gap-4 mb-8">
                 <div className="flex items-start gap-4">
                   <img
-                    src={logoSrc()}
+                    src="/logo.png"
                     alt=""
-                    className="h-24 w-24 shrink-0 object-contain print:block"
+                    className="h-16 w-16 shrink-0 object-contain print:block"
                   />
                   <div>
                     <p className="font-bold text-base">{communityInfo.name}</p>
@@ -857,9 +864,7 @@ export default function ApartmentsPage() {
                     <p>{communityInfo.address.replace(/^ul\./i, 'Ul.')}</p>
                   </div>
                 </div>
-                <p className="text-right whitespace-nowrap shrink-0">
-                  {communityInfo.saldoPrintCity}, {saldoPrintSnapshot.dateLabel}
-                </p>
+                <p className="text-right whitespace-nowrap shrink-0">Chojnice, {saldoPrintSnapshot.dateLabel}</p>
               </header>
 
               <h1 className="text-center text-xl font-bold tracking-wide mb-8">SALDO</h1>

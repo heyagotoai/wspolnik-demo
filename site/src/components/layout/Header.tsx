@@ -9,7 +9,7 @@ export default function Header() {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user, signOut } = useAuth()
-  const { isAdmin } = useRole()
+  const { isAdmin, isAdminOrManager } = useRole()
 
   return (
     <header className="sticky top-0 z-50 bg-cream/80 backdrop-blur-xl">
@@ -36,12 +36,12 @@ export default function Header() {
           ))}
           {user ? (
             <div className="flex items-center gap-3 ml-2">
-              {isAdmin && (
+              {isAdminOrManager && (
                 <Link
                   to="/admin"
                   className="px-4 py-2 bg-amber text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-amber/80 transition-colors"
                 >
-                  Admin
+                  {isAdmin ? 'Admin' : 'Zarządca'}
                 </Link>
               )}
               <Link
@@ -100,13 +100,13 @@ export default function Header() {
           ))}
           {user ? (
             <>
-              {isAdmin && (
+              {isAdminOrManager && (
                 <Link
                   to="/admin"
                   onClick={() => setMobileOpen(false)}
                   className="block mt-2 px-4 py-2 bg-amber text-white text-sm font-medium rounded-[var(--radius-button)] text-center hover:bg-amber/80 transition-colors"
                 >
-                  Panel admina
+                  {isAdmin ? 'Panel admina' : 'Panel zarządcy'}
                 </Link>
               )}
               <Link
