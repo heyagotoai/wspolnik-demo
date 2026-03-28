@@ -2,6 +2,9 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — CI: stabilny import `api.core.config` w pytest
+- Na początku `api/tests/conftest.py`: `os.environ.setdefault` dla `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` — brak masowego `KeyError`, gdy job nie ustawi zmiennych lub lokalnie odpala się `pytest` bez `.env`
+
 ### 2026-03-28 — Audyt zależności (npm + pip)
 - **npm:** `npm audit fix` — usunięte podatności w `brace-expansion` / `picomatch` (transitive); `npm audit` → 0
 - **Python:** `fastapi` 0.115.12 → **0.135.2**, jawny **`starlette==0.49.1`** (CVE w łańcuchu ASGI), **`PyJWT==2.12.1`** (CVE); `pip-audit` — pozostaje znacznik **pygments** (CVE-2026-4539, brak nowszej wersji na PyPI — śledzić wydania)
