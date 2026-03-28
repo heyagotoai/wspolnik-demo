@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 import { useToast } from '../../components/ui/Toast'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
@@ -27,6 +28,7 @@ const emptyForm: AnnouncementForm = { title: '', content: '', excerpt: '', is_pi
 
 export default function AdminAnnouncementsPage() {
   const { user } = useAuth()
+  const { isAdmin } = useRole()
   const { toast } = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
@@ -182,17 +184,19 @@ export default function AdminAnnouncementsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Ogłoszenia</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Dodaj ogłoszenie
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Dodaj ogłoszenie
+          </button>
+        )}
       </div>
 
       {/* Form */}
-      {showForm && (
+      {isAdmin && showForm && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
@@ -273,7 +277,9 @@ export default function AdminAnnouncementsPage() {
       {/* Announcements list */}
       {announcements.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">
-          <p className="text-slate">Brak ogłoszeń. Dodaj pierwsze ogłoszenie.</p>
+          <p className="text-slate">
+            {isAdmin ? 'Brak ogłoszeń. Dodaj pierwsze ogłoszenie.' : 'Brak ogłoszeń.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -301,34 +307,40 @@ export default function AdminAnnouncementsPage() {
                       Wysłano
                     </span>
                   ) : (
-                    <button
-                      onClick={() => handleSendEmail(a)}
-                      disabled={sending === a.id}
-                      className="p-2 text-outline hover:text-sage transition-colors disabled:opacity-50"
-                      title="Wyślij emailem do mieszkańców"
-                    >
-                      {sending === a.id ? (
-                        <span className="w-4 h-4 block border-2 border-sage/30 border-t-sage rounded-full animate-spin" />
-                      ) : (
-                        <MailIcon className="w-4 h-4" />
-                      )}
-                    </button>
+                    isAdmin && (
+                      <button
+                        onClick={() => handleSendEmail(a)}
+                        disabled={sending === a.id}
+                        className="p-2 text-outline hover:text-sage transition-colors disabled:opacity-50"
+                        title="Wyślij emailem do mieszkańców"
+                      >
+                        {sending === a.id ? (
+                          <span className="w-4 h-4 block border-2 border-sage/30 border-t-sage rounded-full animate-spin" />
+                        ) : (
+                          <MailIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    )
                   )}
-                  <button
-                    onClick={() => openEdit(a)}
-                    className="p-2 text-outline hover:text-sage transition-colors"
-                    title="Edytuj"
-                  >
-                    <EditIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(a.id)}
-                    disabled={deleting === a.id}
-                    className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
-                    title="Usuń"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => openEdit(a)}
+                        className="p-2 text-outline hover:text-sage transition-colors"
+                        title="Edytuj"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(a.id)}
+                        disabled={deleting === a.id}
+                        className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
+                        title="Usuń"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

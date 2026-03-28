@@ -20,15 +20,15 @@
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów, wyniki |
 | Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
 
-## Panel admina (wymaga roli admin → [[ADR-003-auth-pattern|AdminRoute]])
+## Panel admina (wymaga roli **admin** lub **manager** (zarządca) → [[ADR-003-auth-pattern|AdminRoute]]; pełny CRUD tam, gdzie UI sprawdza `isAdmin` — zwykle tylko **admin**)
 | Strona | Route | Operacje |
 |--------|-------|----------|
-| Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
-| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
+| Dashboard | `/admin` | Statystyki: mieszkańcy (tylko admin), lokale, ogłoszenia, dokumenty |
+| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja) — **tylko admin**. Zarządca: podgląd listy. Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
 | Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela. Hurtowe ustawianie daty salda. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
-| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
-| Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
-| Terminy | `/admin/terminy` | CRUD z opisami |
+| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie — **tylko admin**; zarządca: podgląd |
+| Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle — **tylko admin**; zarządca: podgląd/pobieranie |
+| Terminy | `/admin/terminy` | CRUD z opisami — **tylko admin**; zarządca: podgląd |
 | Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
@@ -71,7 +71,7 @@
 | Plan sprzedaży SaaS | ⬜ todo | ŚREDNI | Strategia multi-tenant: izolacja danych, onboarding, pricing, kanały dotarcia |
 | Multi-tenancy | ⬜ todo | ŚREDNI | Architektura wielu wspólnot: osobne schematy / tenant_id / osobne projekty Supabase |
 | Wielu mieszkańców na lokal | ⬜ todo | ŚREDNI | Współwłaściciele: kilku mieszkańców przypisanych do jednego lokalu (wymaga zmiany my_apartment_ids() i RLS) |
-| Rola zarządcy | ⬜ todo | WYSOKI | Nowa rola "zarządca" z ograniczonymi prawami vs admin (np. podgląd finansów bez edycji stawek, brak CRUD mieszkańców/auth). Wymaga rozszerzenia CHECK constraint na residents.role i nowych RLS policies |
+| Rola zarządcy | 🔄 częściowo (UI + demo) | WYSOKI | Frontend: `manager` w `residents.role`, `AdminRoute` dla admin+manager, ograniczenia `isAdmin` w UI (wspolnik-demo zsynchronizowane z gabi_site). **Do domknięcia:** spójne RLS na żywej bazie i backend dla wszystkich endpointów |
 | Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
 | Demo / trial | ✅ done (wspolnik-demo) | NISKI | Osobne repo **wspolnik-demo**: mocki w `site/src/demo/`, `VITE_PUBLIC_DEMO_ROUTES`, fikcyjna wspólnota w `mockData` — patrz `docs/roadmap-demo.md` |
 | Regulamin i umowa SaaS | ⬜ todo | ŚREDNI | Dokumenty prawne: umowa, SLA, przetwarzanie danych (RODO) |

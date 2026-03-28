@@ -104,8 +104,9 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Różnice techniczne (np. pamięć Claude, format subagentów) dostosuj do możliwości danego narzędzia.
 
 ## Role użytkowników
-- **admin** — zarządca wspólnoty (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
-- **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
+- **admin** — pełny administrator (CRUD tam, gdzie UI wymaga `isAdmin`, m.in. tworzenie/usuwanie mieszkańców przez FastAPI, edycja krytycznych modułów)
+- **manager** (zarządca) — dostęp do panelu administracyjnego (`AdminRoute`), podgląd i moduły wspólne; operacje destrukcyjne / pełny CRUD tam, gdzie komponenty sprawdzają `isAdmin` (np. mieszkańcy, naliczenia, dokumenty) — wyłącznie dla admina
+- **resident** (mieszkaniec) — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
 
 ## Supabase
 - Region: EU (Frankfurt)

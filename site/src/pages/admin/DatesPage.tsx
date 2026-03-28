@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useRole } from '../../hooks/useRole'
 import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 
@@ -19,6 +20,7 @@ interface DateForm {
 const emptyForm: DateForm = { title: '', date: '', description: '' }
 
 export default function AdminDatesPage() {
+  const { isAdmin } = useRole()
   const [dates, setDates] = useState<ImportantDate[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -148,17 +150,19 @@ export default function AdminDatesPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Ważne terminy</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Dodaj termin
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Dodaj termin
+          </button>
+        )}
       </div>
 
       {/* Form */}
-      {showForm && (
+      {isAdmin && showForm && (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
@@ -257,23 +261,25 @@ export default function AdminDatesPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => openEdit(d)}
-                  className="p-2 text-outline hover:text-sage transition-colors"
-                  title="Edytuj"
-                >
-                  <EditIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(d.id)}
-                  disabled={deleting === d.id}
-                  className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
-                  title="Usuń"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openEdit(d)}
+                    className="p-2 text-outline hover:text-sage transition-colors"
+                    title="Edytuj"
+                  >
+                    <EditIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d.id)}
+                    disabled={deleting === d.id}
+                    className="p-2 text-outline hover:text-error transition-colors disabled:opacity-50"
+                    title="Usuń"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -14,6 +14,7 @@ Frontend (Vite/React) z **pełnymi mockami** w pamięci — bez obowiązkowego S
 
 ## Uwagi
 
+- **Przełącznik roli w UI:** banner demo pozwala przełączyć widok **Mieszkaniec / Zarządca / Administrator** (`DemoRoleContext`, `sessionStorage`). Używane do pokazania różnic w panelu (np. `isAdmin` vs `isAdminOrManager`).
 - **Backend `/api` na Vercel:** pełny projekt WM Gabi ma `api/` jako serverless; w samym demo frontend działa bez wywołań prawdziwego API dzięki `demoApiRouter`. Jeśli deployujesz **tylko** statyczny frontend demo, upewnij się, że żądania do `/api` nie są wymagane (w mockach wszystko jest obsłużone po stronie klienta).
 - **CSP w `vercel.json`:** przy problemach z zasobami zewnętrznymi sprawdź nagłówki `Content-Security-Policy` w ustawieniach projektu.
 

@@ -48,6 +48,12 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'admin-1', email: 'admin@gabi.pl' } }),
 }))
 
+vi.mock('../../hooks/useRole', () => ({
+  useRole: () => ({
+    role: 'admin', isAdmin: true, isManager: false, isAdminOrManager: true, isResident: false, loading: false,
+  }),
+}))
+
 vi.mock('../../components/ui/Icons', () => ({
   PlusIcon: () => <span data-testid="plus-icon">+</span>,
   EditIcon: () => <span data-testid="edit-icon" />,

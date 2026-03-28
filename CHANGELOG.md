@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — wspolnik-demo: rola zarządcy, sync UI z gabi_site
+- **`useRole`:** `admin` | `manager` | `resident`; `isAdminOrManager` dla `AdminRoute` i linków do panelu administracyjnego.
+- **Panel administracyjny:** zsynchronizowane strony z gabi_site (m.in. mieszkańcy z rolą `manager` w formularzu, dashboard z tytułem admin/zarządca, ograniczenia `isAdmin` dla operacji CRUD).
+- **Tryb demo:** przełącznik widoku Mieszkaniec / Zarządca / Administrator; `DemoRoleContext` i `demoStore` obsługują `manager`.
+- **Ogłoszenia i terminy (admin):** przyciski dodawania/edycji/usuwania tylko dla `isAdmin` — zarządca ma podgląd.
+- **Routing:** `AdminRoute` z prefiksem `/demo` (`useDemoBasePath`); `ResidentsPage` — redirect przy braku uprawnień na `/panel`.
+
 ### 2026-03-26 — Izolacja demo: domyślnie brak zapisu do prawdziwej bazy
 - **`VITE_DEMO_ALLOW_REAL_BACKEND`:** dopóki nie jest ustawione na `'true'`, `isDemoApp()` zwraca zawsze `true` — wyłącznie mocki (`getSupabase`, `api`, kontakt). Ochrona przed przypadkowymi kluczami Supabase na Vercelu.
 - Vitest: `VITE_DEMO_ALLOW_REAL_BACKEND=true` + sztuczne `VITE_SUPABASE_*` — testy api/Contact bez zmian.

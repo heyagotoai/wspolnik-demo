@@ -14,7 +14,7 @@ Synchronizacja produktu: **z gabi_site → do wspolnik-demo** (`upstream` + merg
 ### 1. Repo GitHub + implementacja w **wspolnik-demo**
 
 - [x] Repo **wspolnik-demo** na GitHubie (`heyagotoai/wspolnik-demo`).
-- [x] Warstwa demo: `site/src/demo/`, mocki API/Supabase, trasy `/demo/*`, testy Vitest.
+- [x] Warstwa demo: `site/src/demo/`, mocki API/Supabase, trasy `/demo/*`, testy Vitest; przełącznik roli (mieszkaniec / zarządca / admin) w `DemoBanner`.
 - [x] Zmienne: `VITE_PUBLIC_DEMO_ROUTES` / `VITE_DEMO_ONLY` / brak Supabase — opis w `site/.env.example`.
 - [ ] Vercel: deploy produkcyjny — patrz `docs/operations/demo-wdrozenie-wspolnik.md`.
 
