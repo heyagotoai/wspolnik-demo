@@ -21,7 +21,7 @@ const allSidebarLinks = [
   { label: 'Pulpit', path: '/admin', icon: LayoutDashboardIcon, adminOnly: false },
   { label: 'Lokale', path: '/admin/lokale', icon: HomeIcon, adminOnly: false },
   { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon, adminOnly: false },
-  { label: 'Mieszkańcy', path: '/admin/mieszkancy', icon: UsersIcon, adminOnly: true },
+  { label: 'Mieszkańcy', path: '/admin/mieszkancy', icon: UsersIcon, adminOnly: false },
   { label: 'Uchwały', path: '/admin/uchwaly', icon: VoteIcon, adminOnly: false },
   { label: 'Dokumenty', path: '/admin/dokumenty', icon: FolderIcon, adminOnly: false },
   { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon, adminOnly: false },

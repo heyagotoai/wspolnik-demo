@@ -28,7 +28,7 @@ interface ResidentForm {
 const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartment_number: '', role: 'resident' }
 
 export default function ResidentsPage() {
-  const { isAdmin, loading: roleLoading } = useRole()
+  const { isAdmin, isAdminOrManager, loading: roleLoading } = useRole()
   const [residents, setResidents] = useState<Resident[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -181,7 +181,7 @@ export default function ResidentsPage() {
     )
   }
 
-  if (!isAdmin) {
+  if (!isAdminOrManager) {
     return <Navigate to="/admin" replace />
   }
 
@@ -197,17 +197,19 @@ export default function ResidentsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Mieszkańcy</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Dodaj
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Dodaj
+          </button>
+        )}
       </div>
 
       {/* Form */}
-      {showForm && (
+      {isAdmin && showForm && (
         <div ref={formRef} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal">
@@ -317,7 +319,7 @@ export default function ResidentsPage() {
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Lokal</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Rola</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Status</th>
-                  <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>
+                  {isAdmin && <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Akcje</th>}
                 </tr>
               </thead>
               <tbody>
@@ -346,35 +348,37 @@ export default function ResidentsPage() {
                         {r.is_active ? 'Aktywny' : 'Nieaktywny'}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEdit(r)}
-                          className="p-1.5 text-outline hover:text-sage transition-colors"
-                          title="Edytuj"
-                        >
-                          <EditIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => toggleActive(r.id, r.is_active)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
-                            r.is_active
-                              ? 'text-error hover:bg-error-container'
-                              : 'text-sage hover:bg-sage-pale/40'
-                          }`}
-                        >
-                          {r.is_active ? 'Dezaktywuj' : 'Aktywuj'}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(r)}
-                          disabled={deleting === r.id}
-                          className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
-                          title="Usuń"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(r)}
+                            className="p-1.5 text-outline hover:text-sage transition-colors"
+                            title="Edytuj"
+                          >
+                            <EditIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => toggleActive(r.id, r.is_active)}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+                              r.is_active
+                                ? 'text-error hover:bg-error-container'
+                                : 'text-sage hover:bg-sage-pale/40'
+                            }`}
+                          >
+                            {r.is_active ? 'Dezaktywuj' : 'Aktywuj'}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(r)}
+                            disabled={deleting === r.id}
+                            className="p-1.5 text-outline hover:text-error transition-colors disabled:opacity-50"
+                            title="Usuń"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
