@@ -8,9 +8,9 @@
     "build": "npx tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run src",
+    "test:watch": "vitest src",
+    "test:coverage": "vitest run --coverage src",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
   },
