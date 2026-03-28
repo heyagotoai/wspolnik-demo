@@ -54,6 +54,9 @@ class FakeSupabaseBuilder:
     def in_(self, *_a, **_kw):
         return self
 
+    def is_(self, *_a, **_kw):
+        return self
+
     def order(self, *_a, **_kw):
         return self
 

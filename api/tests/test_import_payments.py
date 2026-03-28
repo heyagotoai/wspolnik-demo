@@ -148,6 +148,79 @@ class TestImportPaymentsDryRun:
         assert res.status_code == 200
         assert res.json()["errors"] == 1
 
+    def test_dedup_istniejaca_wplata_w_bazi(self, admin_client: TestClient, fake_sb):
+        """Ta sama para (lokal, data) co w payments → pominięcie, jak w imporcie z banku."""
+        fake_sb.set_table_data("apartments", [APT_1])
+        fake_sb.set_table_data("charges", [])
+        fake_sb.set_table_data("payments", [
+            {"apartment_id": "apt-1", "payment_date": "2026-01-08", "amount": "50.00"},
+        ])
+        xlsx = _make_payments_xlsx([("1", "08.01.2026", "139,20")])
+        res = admin_client.post(
+            "/api/import/payments?dry_run=true",
+            files={"file": ("w.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert res.status_code == 200
+        d = res.json()
+        assert d["updated"] == 0
+        assert d["skipped"] == 1
+        assert "duplikat" in (d["rows"][0].get("message") or "").lower()
+
+    def test_dedup_drugi_wiersz_pliku_ta_sama_data(self, admin_client: TestClient, fake_sb):
+        """W jednym imporcie drugi wiersz z tą samą datą/lokalem jest pomijany."""
+        fake_sb.set_table_data("apartments", [APT_1])
+        fake_sb.set_table_data("charges", [])
+        fake_sb.set_table_data("payments", [])
+        xlsx = _make_payments_xlsx([
+            ("1", "08.01.2026", "100,00"),
+            ("1", "08.01.2026", "200,00"),
+        ])
+        res = admin_client.post(
+            "/api/import/payments?dry_run=true",
+            files={"file": ("w.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert res.status_code == 200
+        d = res.json()
+        assert d["updated"] == 1
+        assert d["skipped"] == 1
+
+    def test_dedup_wiele_dat_czesc_z_bazy(self, admin_client: TestClient, fake_sb):
+        """Przy wielu datach w komórce tylko kolizyjne są pomijane, reszta się importuje."""
+        fake_sb.set_table_data("apartments", [APT_47])
+        fake_sb.set_table_data("charges", [])
+        fake_sb.set_table_data("payments", [
+            {"apartment_id": "apt-47", "payment_date": "2026-02-10", "amount": "1.00"},
+        ])
+        xlsx = _make_payments_xlsx([
+            ("47", "10.02.2026; 27.02.2026", "341,20"),
+        ])
+        res = admin_client.post(
+            "/api/import/payments?dry_run=true",
+            files={"file": ("w.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert res.status_code == 200
+        d = res.json()
+        assert d["updated"] == 1
+        assert d["skipped"] == 1
+
+    def test_dedup_import_zbiorczy_gdy_lokal_ma_juz_wplate(self, admin_client: TestClient, fake_sb):
+        """Przy wierszu wielolokalowym pomijamy całość, jeśli którykolwiek lokal ma wpłatę w tym dniu."""
+        fake_sb.set_table_data("apartments", [APT_1, APT_2])
+        fake_sb.set_table_data("charges", [])
+        fake_sb.set_table_data("payments", [
+            {"apartment_id": "apt-1", "payment_date": "2026-02-10", "amount": "10.00"},
+        ])
+        xlsx = _make_payments_xlsx([("1,2", "10.02.2026", "100,00")])
+        res = admin_client.post(
+            "/api/import/payments?dry_run=true",
+            files={"file": ("w.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert res.status_code == 200
+        d = res.json()
+        assert d["updated"] == 0
+        assert d["skipped"] == 1
+        assert "zbiorcza" in (d["rows"][0].get("message") or "").lower()
+
     def test_brak_wymaganych_kolumn_422(self, admin_client: TestClient, fake_sb):
         from openpyxl import Workbook
 

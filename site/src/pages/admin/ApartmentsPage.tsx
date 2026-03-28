@@ -9,6 +9,7 @@ import { useRole } from '../../hooks/useRole'
 import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 import ImportInitialStateModal from '../../components/admin/ImportInitialStateModal'
 import ImportPaymentsModal from '../../components/admin/ImportPaymentsModal'
+import ImportBankStatementModal from '../../components/admin/ImportBankStatementModal'
 
 interface Resident {
   id: string
@@ -28,6 +29,7 @@ interface Apartment {
   owner_name: string | null
   billing_group_id: string | null
   billing_group_name: string | null
+  billing_surname: string | null
 }
 
 interface BulkResults {
@@ -43,9 +45,10 @@ interface ApartmentForm {
   initial_balance: string
   initial_balance_date: string
   owner_resident_id: string
+  billing_surname: string
 }
 
-const emptyForm: ApartmentForm = { number: '', area_m2: '', share: '', declared_occupants: '', initial_balance: '', initial_balance_date: '', owner_resident_id: '' }
+const emptyForm: ApartmentForm = { number: '', area_m2: '', share: '', declared_occupants: '', initial_balance: '', initial_balance_date: '', owner_resident_id: '', billing_surname: '' }
 
 export default function ApartmentsPage() {
   const [apartments, setApartments] = useState<Apartment[]>([])
@@ -69,6 +72,7 @@ export default function ApartmentsPage() {
   const [bulkDateSaving, setBulkDateSaving] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [showImportPaymentsModal, setShowImportPaymentsModal] = useState(false)
+  const [showBankStatementModal, setShowBankStatementModal] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -78,7 +82,7 @@ export default function ApartmentsPage() {
     const [aptsRes, resRes, chargesRes, paymentsRes, groupsRes] = await Promise.all([
       supabase
         .from('apartments')
-        .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id, billing_group_id')
+        .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id, billing_group_id, billing_surname')
         .order('number', { ascending: true }),
       supabase
         .from('residents')
@@ -160,6 +164,7 @@ export default function ApartmentsPage() {
       initial_balance: apt.initial_balance ? apt.initial_balance.toString() : '0',
       initial_balance_date: apt.initial_balance_date || '',
       owner_resident_id: apt.owner_resident_id || '',
+      billing_surname: apt.billing_surname || '',
     })
     setError(null)
     setShowForm(true)
@@ -205,6 +210,7 @@ export default function ApartmentsPage() {
       initial_balance: form.initial_balance ? parseFloat(form.initial_balance) : 0,
       initial_balance_date: form.initial_balance_date || null,
       owner_resident_id: form.owner_resident_id || null,
+      billing_surname: form.billing_surname.trim() || null,
     }
 
     if (editingId) {
@@ -474,37 +480,43 @@ export default function ApartmentsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Lokale</h1>
         {isAdmin && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {apartments.length > 0 && (
               <button
                 onClick={toggleBulkMode}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--radius-button)] transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-button)] transition-colors ${
                   bulkMode
                     ? 'bg-outline text-white hover:bg-slate'
                     : 'border border-outline text-slate hover:text-charcoal hover:border-charcoal'
                 }`}
               >
-                <SendIcon className="w-4 h-4" />
+                <SendIcon className="w-3.5 h-3.5" />
                 {bulkMode ? 'Anuluj wysyłkę' : 'Wyślij do wielu'}
               </button>
             )}
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-sage text-sage text-xs font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
             >
-              Importuj stan początkowy
+              Import stanu
             </button>
             <button
               onClick={() => setShowImportPaymentsModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-sage text-sage text-xs font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
             >
-              Importuj wpłaty
+              Import wpłat
+            </button>
+            <button
+              onClick={() => setShowBankStatementModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-sage text-sage text-xs font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
+            >
+              Import z banku
             </button>
             <button
               onClick={openAdd}
-              className="flex items-center gap-2 px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sage text-white text-xs font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors"
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-3.5 h-3.5" />
               Dodaj lokal
             </button>
           </div>
@@ -667,6 +679,18 @@ export default function ApartmentsPage() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-charcoal mb-1">Nazwisko rozliczeniowe</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={form.billing_surname}
+                onChange={(e) => setForm({ ...form, billing_surname: e.target.value })}
+                placeholder="np. KOWALSKI"
+                className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+              <p className="text-xs text-outline mt-1">Do automatycznego dopasowania wpłat z zestawienia bankowego</p>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
@@ -713,7 +737,7 @@ export default function ApartmentsPage() {
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Nr</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Powierzchnia</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Udział</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Mieszkańcy</th>
+                  <th className="text-center px-2 py-3 text-xs font-medium text-outline uppercase tracking-wide w-16">Miesz.</th>
                   <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Saldo pocz.</th>
                   <th className="text-right px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Saldo</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-outline uppercase tracking-wide">Właściciel</th>
@@ -752,7 +776,7 @@ export default function ApartmentsPage() {
                     </td>
                     <td className="px-5 py-3 text-slate">{apt.area_m2 ? `${apt.area_m2} m²` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.share ? `${(apt.share * 100).toFixed(2)}%` : '—'}</td>
-                    <td className="px-5 py-3 text-slate">{apt.declared_occupants || 0}</td>
+                    <td className="px-2 py-3 text-slate text-center">{apt.declared_occupants || 0}</td>
                     <td className={`px-5 py-3 text-right ${apt.initial_balance < 0 ? 'text-error' : apt.initial_balance > 0 ? 'text-sage' : 'text-slate'}`}>
                       <div className="font-medium">{apt.initial_balance != null ? `${apt.initial_balance.toFixed(2)} zł` : '—'}</div>
                       {apt.initial_balance_date && (
@@ -935,6 +959,12 @@ export default function ApartmentsPage() {
       {showImportPaymentsModal && (
         <ImportPaymentsModal
           onClose={() => setShowImportPaymentsModal(false)}
+          onSuccess={() => { fetchData() }}
+        />
+      )}
+      {showBankStatementModal && (
+        <ImportBankStatementModal
+          onClose={() => setShowBankStatementModal(false)}
           onSuccess={() => { fetchData() }}
         />
       )}

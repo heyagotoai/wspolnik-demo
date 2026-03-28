@@ -65,10 +65,13 @@ cd api && pytest
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
 
 ### Import danych finansowych
-- **Wyciągi bankowe (MT940 / parser)** — format eksportu z banku **nie jest jeszcze potwierdzony**; nie buduj parsera dopóki format nie będzie znany. Schemat (`payments`, `bank_statements`) jest przygotowany.
-- **Stan początkowy i wpłaty z Excel** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale — osobna ścieżka niż przyszły import wyciągów bankowych.
+- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`.
+- **Stan początkowy i wpłaty z Excel (.xlsx)** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale.
+- **Deduplikacja wpłat** (import `.xls` i import wpłat `.xlsx`) — para `(apartment_id, payment_date)`; ponowny import tego samego pliku nie dubluje zapisów; szczegóły: `docs/decisions/ADR-014-payment-import-deduplication.md`.
+- **MT940** — format eksportu z banku **nie jest jeszcze potwierdzony**; schemat (`payments`, `bank_statements`) jest przygotowany.
 
 ### Testy (WYMAGANE)
+- **Wersje bibliotek** — `api/requirements.txt` używa `==` dla wszystkich pakietów; `site/package.json` ma przypięte wersje bez `^`/`~` (spójnie z `package-lock.json`). Podbicie wersji: świadomie, po testach (`pytest`, `npm test`).
 - **Po zakończeniu pracy nad nową funkcjonalnością** — dodaj odpowiednie testy (backend pytest i/lub frontend vitest, zależnie od zakresu zmian)
 - **Po zmianie istniejącej funkcjonalności** — zaktualizuj powiązane testy, aby odzwierciedlały nowe zachowanie
 - **Przed uznaniem zadania za ukończone** — uruchom pełny zestaw testów (`npm test` + `pytest`) i upewnij się, że wszystkie przechodzą
@@ -111,7 +114,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-018 (m.in. 017 zarządca, 018 grupy rozliczeniowe) — uruchamiane przez SQL Editor w dashboardzie Supabase
+- Migracje 001-019 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
@@ -122,5 +125,5 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
 - `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
-- `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, admin)
+- `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, `POST /payments-bank-statement`, admin)
 - `GET /api/health` — health check

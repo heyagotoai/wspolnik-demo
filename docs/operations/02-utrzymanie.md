@@ -41,6 +41,11 @@ Dokument opisuje codzienne operacje, monitoring i debugowanie systemu.
 - Vercel Functions logs — czy nie ma 500-tek
 - Supabase disk usage — czy nie zbliżasz się do limitu (500MB free)
 
+### Zależności (npm / pip) — okresowy audyt
+- **Frontend:** `cd site && npm audit` — przy `0 vulnerabilities` OK; przy ostrzeżeniach rozważ `npm audit fix` (bez `--force`, dopóki testy `npm test` przechodzą).
+- **Backend:** `pip install pip-audit` (w venv) → `pip-audit -r api/requirements.txt` — aktualizuj `requirements.txt` po świadomym podbiciu wersji; `pytest` przed commitem.
+- **Znany wyjątek:** `pygments` (łańcuch `pytest`) może nadal raportować CVE mimo najnowszej wersji na PyPI — śledź wydania; ryzyko w praktyce niskie (dev dependency, nie ścieżka produkcyjna API).
+
 ---
 
 ## 3. Typowe operacje
