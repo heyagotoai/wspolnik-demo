@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -16,23 +17,27 @@ import {
   UserIcon,
 } from '../ui/Icons'
 
-const sidebarLinks = [
-  { label: 'Pulpit', path: '/admin', icon: LayoutDashboardIcon },
-  { label: 'Mieszkańcy', path: '/admin/mieszkancy', icon: UsersIcon },
-  { label: 'Lokale', path: '/admin/lokale', icon: HomeIcon },
-  { label: 'Ogłoszenia', path: '/admin/ogloszenia', icon: MegaphoneIcon },
-  { label: 'Dokumenty', path: '/admin/dokumenty', icon: FolderIcon },
-  { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon },
-  { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon },
-  { label: 'Wiadomości', path: '/admin/wiadomosci', icon: MailIcon },
-  { label: 'Uchwały', path: '/admin/uchwaly', icon: VoteIcon },
-  { label: 'Dziennik operacji', path: '/admin/dziennik', icon: ShieldIcon },
+const allSidebarLinks = [
+  { label: 'Pulpit', path: '/admin', icon: LayoutDashboardIcon, adminOnly: false },
+  { label: 'Lokale', path: '/admin/lokale', icon: HomeIcon, adminOnly: false },
+  { label: 'Naliczenia', path: '/admin/naliczenia', icon: WalletIcon, adminOnly: false },
+  { label: 'Mieszkańcy', path: '/admin/mieszkancy', icon: UsersIcon, adminOnly: true },
+  { label: 'Uchwały', path: '/admin/uchwaly', icon: VoteIcon, adminOnly: false },
+  { label: 'Dokumenty', path: '/admin/dokumenty', icon: FolderIcon, adminOnly: false },
+  { label: 'Terminy', path: '/admin/terminy', icon: CalendarIcon, adminOnly: false },
+  { label: 'Ogłoszenia', path: '/admin/ogloszenia', icon: MegaphoneIcon, adminOnly: false },
+  { label: 'Wiadomości', path: '/admin/wiadomosci', icon: MailIcon, adminOnly: false },
+  { label: 'Dziennik operacji', path: '/admin/dziennik', icon: ShieldIcon, adminOnly: false },
 ]
 
 export default function AdminLayout() {
   const { user, signOut } = useAuth()
+  const { isAdmin } = useRole()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const sidebarLinks = allSidebarLinks.filter(link => !link.adminOnly || isAdmin)
+  const roleLabel = isAdmin ? 'Admin' : 'Zarządca'
 
   const isActive = (path: string) =>
     path === '/admin'
@@ -49,7 +54,7 @@ export default function AdminLayout() {
             WM GABI
           </Link>
           <span className="ml-2 px-2 py-0.5 bg-amber-light text-amber text-[10px] font-bold rounded-full uppercase tracking-wider">
-            Admin
+            {roleLabel}
           </span>
         </div>
 
@@ -109,7 +114,7 @@ export default function AdminLayout() {
           <div className="hidden md:block" />
 
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">Admin</span>
+            <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">{roleLabel}</span>
             <p className="text-sm text-slate">{user?.email}</p>
           </div>
         </header>
