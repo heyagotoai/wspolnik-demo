@@ -2,6 +2,9 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — CI: Vitest nie uruchamia Playwright (e2e)
+- **`vite.config.ts`:** `test.include` = tylko `src/**/*.test.ts(x)` — unika kolekcjonowania `e2e/*.spec.ts` przez `vitest run` (Vitest 4 + Playwright w jednym repo powodowało błąd `test.describe()` na CI)
+
 ### 2026-03-28 — CI: zależność `xlwt` dla testów .xls
 - **`xlwt==1.3.0`** w `api/requirements.txt` — generowanie plików `.xls` w `test_bank_statement_parser.py` (wcześniej na CI brak modułu `xlwt`)
 
