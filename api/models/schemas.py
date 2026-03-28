@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 # --- Shared types ---
 
-RoleType = Literal["admin", "resident"]
+RoleType = Literal["admin", "resident", "manager"]
 ResolutionStatus = Literal["draft", "voting", "closed"]
 VoteValue = Literal["za", "przeciw", "wstrzymuje"]
 ChargeRateType = Literal["eksploatacja", "fundusz_remontowy", "smieci"]

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.core.security import get_current_user, require_admin
+from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
 from api.models.schemas import (
     ResolutionCreate,
@@ -190,8 +190,8 @@ def get_vote_results(resolution_id: str, _user: dict = Depends(get_current_user)
 
 
 @router.get("/{resolution_id}/votes", response_model=list[VoteDetail])
-def get_resolution_vote_details(resolution_id: str, _admin: dict = Depends(require_admin)):
-    """Get all individual votes with resident details for a resolution (admin only)."""
+def get_resolution_vote_details(resolution_id: str, _user: dict = Depends(require_admin_or_manager)):
+    """Get all individual votes with resident details for a resolution (admin or manager)."""
     sb = get_supabase()
 
     check = sb.table("resolutions").select("id").eq("id", resolution_id).execute()

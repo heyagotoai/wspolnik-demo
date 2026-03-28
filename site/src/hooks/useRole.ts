@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-type Role = 'admin' | 'resident' | null
+type Role = 'admin' | 'resident' | 'manager' | null
 
 interface RoleState {
   role: Role
   isAdmin: boolean
+  isManager: boolean
+  isAdminOrManager: boolean
   isResident: boolean
   loading: boolean
 }
@@ -45,6 +47,8 @@ export function useRole(): RoleState {
   return {
     role,
     isAdmin: role === 'admin',
+    isManager: role === 'manager',
+    isAdminOrManager: role === 'admin' || role === 'manager',
     isResident: role === 'resident',
     loading,
   }

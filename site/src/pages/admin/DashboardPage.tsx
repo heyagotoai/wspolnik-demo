@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useRole } from '../../hooks/useRole'
 import { UsersIcon, MegaphoneIcon, FolderIcon, CalendarIcon, WalletIcon, ArrowRightIcon } from '../../components/ui/Icons'
 
 interface Stats {
@@ -21,6 +22,7 @@ interface RecentAnnouncement {
 
 export default function AdminDashboardPage() {
   const { user } = useAuth()
+  const { isAdmin } = useRole()
   const [stats, setStats] = useState<Stats>({ residents: 0, apartments: 0, announcements: 0, documents: 0, upcomingDates: 0 })
   const [recentAnnouncements, setRecentAnnouncements] = useState<RecentAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
@@ -74,7 +76,7 @@ export default function AdminDashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-charcoal">
-          Panel administratora
+          {isAdmin ? 'Panel administratora' : 'Panel zarządcy'}
         </h1>
         <p className="text-slate mt-1">
           Witaj, {user?.email?.split('@')[0]} — zarządzaj wspólnotą z jednego miejsca.
@@ -83,7 +85,9 @@ export default function AdminDashboardPage() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard icon={<UsersIcon className="w-6 h-6" />} label="Mieszkańcy" value={String(stats.residents)} to="/admin/mieszkancy" />
+        {isAdmin && (
+          <StatCard icon={<UsersIcon className="w-6 h-6" />} label="Mieszkańcy" value={String(stats.residents)} to="/admin/mieszkancy" />
+        )}
         <StatCard icon={<MegaphoneIcon className="w-6 h-6" />} label="Ogłoszenia" value={String(stats.announcements)} to="/admin/ogloszenia" />
         <StatCard icon={<FolderIcon className="w-6 h-6" />} label="Dokumenty" value={String(stats.documents)} to="/admin/dokumenty" />
         <StatCard icon={<CalendarIcon className="w-6 h-6" />} label="Nadchodzące terminy" value={String(stats.upcomingDates)} to="/admin/terminy" />

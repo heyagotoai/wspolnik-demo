@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.core.security import require_admin
+from api.core.security import require_admin_or_manager
 from api.core.supabase_client import get_supabase
 from api.models.schemas import MessageOut
 
@@ -45,9 +45,9 @@ def _send_one_email(
 @router.post("/{announcement_id}/send-email", response_model=MessageOut)
 def send_announcement_email(
     announcement_id: str,
-    _admin: dict = Depends(require_admin),
+    _user: dict = Depends(require_admin_or_manager),
 ):
-    """Send announcement to all active residents via email (admin only)."""
+    """Send announcement to all active residents via email (admin or manager)."""
     sb = get_supabase()
 
     # Fetch announcement

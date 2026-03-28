@@ -30,6 +30,13 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
+// Mock useRole — ResidentsPage jest dostępna tylko dla adminów
+vi.mock('../../hooks/useRole', () => ({
+  useRole: () => ({
+    role: 'admin', isAdmin: true, isManager: false, isAdminOrManager: true, isResident: false, loading: false,
+  }),
+}))
+
 // Mock icons (nie potrzebujemy SVG w testach)
 vi.mock('../../components/ui/Icons', () => ({
   PlusIcon: ({ className }: { className?: string }) => <span data-testid="plus-icon" className={className}>+</span>,

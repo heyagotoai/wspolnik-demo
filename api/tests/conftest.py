@@ -132,14 +132,25 @@ def client(fake_sb, app):
 
 @pytest.fixture()
 def admin_client(fake_sb, app):
-    """Return a TestClient where require_admin is overridden.
-
-    Skips JWT + role check entirely — for testing endpoint logic only.
-    """
-    from api.core.security import require_admin
+    """Return a TestClient where require_admin and require_admin_or_manager are overridden."""
+    from api.core.security import require_admin, require_admin_or_manager
 
     app.dependency_overrides[require_admin] = lambda: {
-        "sub": "admin-1", "email": "admin@gabi.pl",
+        "sub": "admin-1", "email": "admin@gabi.pl", "role": "admin",
+    }
+    app.dependency_overrides[require_admin_or_manager] = lambda: {
+        "sub": "admin-1", "email": "admin@gabi.pl", "role": "admin",
+    }
+    return TestClient(app)
+
+
+@pytest.fixture()
+def manager_client(fake_sb, app):
+    """Return a TestClient where require_admin_or_manager is overridden with manager role."""
+    from api.core.security import require_admin_or_manager
+
+    app.dependency_overrides[require_admin_or_manager] = lambda: {
+        "sub": "manager-1", "email": "manager@gabi.pl", "role": "manager",
     }
     return TestClient(app)
 

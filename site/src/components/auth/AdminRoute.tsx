@@ -4,7 +4,7 @@ import { useRole } from '../../hooks/useRole'
 
 export default function AdminRoute() {
   const { user, loading: authLoading } = useAuth()
-  const { isAdmin, loading: roleLoading } = useRole()
+  const { isAdminOrManager, loading: roleLoading } = useRole()
 
   if (authLoading || roleLoading) {
     return (
@@ -18,7 +18,7 @@ export default function AdminRoute() {
     return <Navigate to="/logowanie" replace />
   }
 
-  if (!isAdmin) {
+  if (!isAdminOrManager) {
     return <Navigate to="/panel" replace />
   }
 

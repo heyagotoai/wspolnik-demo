@@ -4,6 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
 
+// Mock useRole — testy działają jako admin
+vi.mock('../../hooks/useRole', () => ({
+  useRole: () => ({
+    role: 'admin', isAdmin: true, isManager: false, isAdminOrManager: true, isResident: false, loading: false,
+  }),
+}))
+
 // Mock api client
 const mockGet = vi.fn()
 const mockPost = vi.fn()

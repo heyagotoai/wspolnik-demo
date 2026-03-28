@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { useRole } from '../../hooks/useRole'
 
 interface Resident {
   id: string
@@ -26,6 +28,7 @@ interface ResidentForm {
 const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartment_number: '', role: 'resident' }
 
 export default function ResidentsPage() {
+  const { isAdmin, loading: roleLoading } = useRole()
   const [residents, setResidents] = useState<Resident[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -170,6 +173,18 @@ export default function ResidentsPage() {
     await fetchResidents()
   }
 
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-slate">Ładowanie...</p>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/admin" replace />
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -262,6 +277,7 @@ export default function ResidentsPage() {
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
               >
                 <option value="resident">Mieszkaniec</option>
+                <option value="manager">Zarządca</option>
                 <option value="admin">Administrator</option>
               </select>
             </div>
