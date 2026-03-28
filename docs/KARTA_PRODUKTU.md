@@ -38,7 +38,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 
 - **Dashboard** — aktualne saldo (nadpłata/zaległość), ostatnie ogłoszenia, nadchodzące terminy, aktywne głosowania
 - **Finanse**
-  - Saldo bieżące = saldo początkowe + suma wpłat − suma naliczeń
+  - Saldo bieżące = saldo początkowe + suma wpłat − suma naliczeń (przy grupie rozliczeniowej: saldo łączne + rozbicie per lokal)
   - Lista naliczeń miesięcznych z wyborem miesiąca
   - Historia wpłat
   - Wizualne rozróżnienie: nadpłata (zielone), zaległość (czerwone), rozliczone
@@ -53,6 +53,8 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Dashboard** — statystyki: liczba mieszkańców, lokali, ogłoszeń, dokumentów
 - **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem
 - **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, saldo początkowe + data obowiązywania salda. Możliwość hurtowego ustawiania daty salda
+- **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
+- **Grupy rozliczeniowe** — łączenie lokali w grupę, wpłaty grupowe z podziałem, saldo łączne u mieszkańca
 - **Ogłoszenia** — CRUD + przypinanie na górze + wysyłka emailem do wszystkich aktywnych mieszkańców
 - **Dokumenty** — upload plików PDF (max 10MB), przełącznik publiczny/prywatny
 - **Terminy** — CRUD ważnych dat z opisami
