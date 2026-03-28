@@ -8,6 +8,7 @@ import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
 import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 import ImportInitialStateModal from '../../components/admin/ImportInitialStateModal'
+import ImportPaymentsModal from '../../components/admin/ImportPaymentsModal'
 
 interface Resident {
   id: string
@@ -67,6 +68,7 @@ export default function ApartmentsPage() {
   const [bulkDate, setBulkDate] = useState('')
   const [bulkDateSaving, setBulkDateSaving] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showImportPaymentsModal, setShowImportPaymentsModal] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -491,6 +493,12 @@ export default function ApartmentsPage() {
               className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
             >
               Importuj stan początkowy
+            </button>
+            <button
+              onClick={() => setShowImportPaymentsModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-sage text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/10 transition-colors"
+            >
+              Importuj wpłaty
             </button>
             <button
               onClick={openAdd}
@@ -921,6 +929,12 @@ export default function ApartmentsPage() {
       {showImportModal && (
         <ImportInitialStateModal
           onClose={() => setShowImportModal(false)}
+          onSuccess={() => { fetchData() }}
+        />
+      )}
+      {showImportPaymentsModal && (
+        <ImportPaymentsModal
+          onClose={() => setShowImportPaymentsModal(false)}
           onSuccess={() => { fetchData() }}
         />
       )}

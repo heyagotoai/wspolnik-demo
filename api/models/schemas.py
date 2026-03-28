@@ -324,3 +324,14 @@ class ImportInitialStateResult(BaseModel):
     skipped: int
     errors: int
     rows: list[ImportRowResult]
+
+
+class ImportPaymentsResult(BaseModel):
+    """Wynik importu wpłat z Excela (ten sam kształt co ImportInitialStateResult)."""
+
+    dry_run: bool
+    rows_total: int
+    updated: int
+    skipped: int
+    errors: int
+    rows: list[ImportRowResult]

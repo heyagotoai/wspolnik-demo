@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — Import wpłat z Excela (dopasowania)
+- Arkusz **Dopasowania**: kolumny **Lokal**, **Data wpłaty**, **Kwota** (np. nazwisko — ignorowane)
+- **Wiele dat** w komórce (`10.02.2026; 27.02.2026`): jedna kwota bez średnika → **ta sama kwota** na każdą datę (osobne wpłaty); **różne kwoty** → `341,20; 450,00` w tej samej kolejności co daty
+- Wiele dat **+ wiele lokali** w jednym wierszu: błąd — podziel na wiersze lub jedna data
+- `GET /api/import/payments-template`, `POST /api/import/payments?dry_run=`; wpłata na wielu lokalach: parent + dzieci (`api/core/payment_split.py`, proporcje z naliczeń lub równo)
+- Frontend: `ImportPaymentsModal`; testy: `api/tests/test_import_payments.py`, `api/tests/test_payment_split.py`
+
 ### 2026-03-28 — Import Excel: stan początkowy (grupy + lokale zbiorcze)
 - **`numer_lokalu`**: najpierw dopasowanie **dokładnego** numeru z bazy (np. `3,4A`, `25,26` — jeden rekord „zbiorczy”); jeśli brak takiego klucza — rozbicie listy (przecinek, średnik, `|`, tab) oraz wzorce `25.26` / `3.4A` (float lub tekst z kropką z Excela)
 - Normalizacja separatorów Unicode (wide comma/dot), `openpyxl` `load_workbook(..., read_only=False)` dla stabilniejszego odczytu tekstu

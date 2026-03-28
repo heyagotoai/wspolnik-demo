@@ -2,10 +2,11 @@
 
 import logging
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from api.core.payment_split import compute_split_amounts
 from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
 from api.models.schemas import (
@@ -277,30 +278,8 @@ def split_payment(
     for c in (charges_res.data or []):
         apt_charges[c["apartment_id"]] += Decimal(str(c["amount"]))
 
-    total_charges = sum(apt_charges.values())
     total_amount = body.amount
-
-    # Calculate proportions
-    if total_charges > 0:
-        proportions = {aid: ch / total_charges for aid, ch in apt_charges.items()}
-    else:
-        # Equal split if no charges
-        n = len(apt_ids)
-        proportions = {aid: Decimal("1") / Decimal(str(n)) for aid in apt_ids}
-
-    # Calculate split amounts with rounding correction
-    split_amounts: dict[str, Decimal] = {}
-    running_sum = Decimal("0")
-    apt_list = list(proportions.keys())
-
-    for i, aid in enumerate(apt_list):
-        if i == len(apt_list) - 1:
-            # Last apartment gets the remainder to avoid rounding drift
-            split_amounts[aid] = total_amount - running_sum
-        else:
-            amt = (total_amount * proportions[aid]).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            split_amounts[aid] = amt
-            running_sum += amt
+    split_amounts = compute_split_amounts(apt_ids, apt_charges, total_amount)
 
     # Create parent payment
     parent_data = {

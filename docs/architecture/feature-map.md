@@ -25,7 +25,7 @@
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
 | Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
@@ -64,6 +64,7 @@
 | SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
 | Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
 | Import Excel — saldo / stan początkowy lokali | ✅ done | WYSOKI | Szablon + upload z panelu Lokale; `GET/POST /api/import/*`; nie zastępuje importu wyciągów bankowych |
+| Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; inne kolumny ignorowane |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
 

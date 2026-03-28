@@ -5,6 +5,7 @@ Ostatnia aktualizacja: **2026-03-28**.
 ## Zrobione niedawno
 - **Grupy rozliczeniowe** — migracja 018, `/api/billing-groups`, panel `/admin/grupy-rozliczeniowe`, RLS przez `my_apartment_ids()`, Finanse/Dashboard z saldem łącznym i zakładkami per-lokal. ADR-013.
 - **Import stanu początkowego (Excel)** — `/api/import`, dopasowanie pełnego numeru lokalu (zbiorcze) lub wielu numerów w komórce; modal `ImportInitialStateModal`, `openpyxl`. Odrębne od importu wyciągów bankowych.
+- **Import wpłat z Excela** — `/api/import/payments`, `/payments-template`; kolumny Lokal / Data wpłaty / Kwota; wiele dat i kwot po średniku; `ImportPaymentsModal` w Lokale; `payment_split.py` wspólne z rozbiciem grupowym.
 - **Rola zarządcy (manager)** — migracja 017, read-only + ogłoszenia/terminy; wcześniejsza sesja (changelog).
 
 ## W toku / znane luki

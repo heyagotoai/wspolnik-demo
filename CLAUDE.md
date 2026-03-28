@@ -66,7 +66,7 @@ cd api && pytest
 
 ### Import danych finansowych
 - **Wyciągi bankowe (MT940 / parser)** — format eksportu z banku **nie jest jeszcze potwierdzony**; nie buduj parsera dopóki format nie będzie znany. Schemat (`payments`, `bank_statements`) jest przygotowany.
-- **Stan początkowy z Excel** — zaimplementowany: `GET/POST /api/import` (szablon XLSX, `initial-state`, `openpyxl`), UI w panelu Lokale — osobna ścieżka niż przyszły import wyciągów.
+- **Stan początkowy i wpłaty z Excel** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale — osobna ścieżka niż przyszły import wyciągów bankowych.
 
 ### Testy (WYMAGANE)
 - **Po zakończeniu pracy nad nową funkcjonalnością** — dodaj odpowiednie testy (backend pytest i/lub frontend vitest, zależnie od zakresu zmian)
@@ -122,5 +122,5 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
 - `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
-- `/api/import` — import stanu początkowego z Excel (`GET /template`, `POST /initial-state`, admin)
+- `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, admin)
 - `GET /api/health` — health check

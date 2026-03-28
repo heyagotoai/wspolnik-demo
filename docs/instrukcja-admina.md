@@ -83,6 +83,12 @@ Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) 
 - **Jeden lokal o numerze z przecinkiem** (np. `3,4A` albo `25,26` — jedna pozycja na liście lokali): numer w pliku musi **dokładnie** odpowiadać polu „numer” w bazie; system dopasowuje najpierw cały tekst komórki, dopiero gdy go nie ma — traktuje wpis jako listę osobnych lokali
 - To **nie** jest import wyciągu bankowego — tylko pomoc przy wdrożeniu lub korekcie sald początkowych
 
+**Import wpłat z pliku Excel (zestawienie dopasowań):**
+- Z listy lokali: **Importuj wpłaty** — szablon lub własny arkusz **Dopasowania** z kolumnami **Lokal**, **Data wpłaty**, **Kwota** (inne kolumny, np. nazwisko, są ignorowane)
+- **Kilka dni księgowania** w jednym wierszu: daty oddziel średnikiem (`10.02.2026; 27.02.2026`). Jedna kwota w komórce = osobna wpłata o tej kwocie na każdą datę; **różne kwoty** — ten sam układ po średniku w Kwota (`341,20; 450,00`)
+- **Wiele lokali** w jednym wierszu z **wieloma datami** w tym samym wierszu nie jest obsługiwane — użyj osobnych wierszy lub jednej daty
+- To **nie** jest automatyczny import MT940 — osobna ścieżka niż przyszły import wyciągów bankowych
+
 ---
 
 ## Grupy rozliczeniowe (tylko administrator)
