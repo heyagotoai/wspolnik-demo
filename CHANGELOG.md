@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — Panel Terminy + kolejność sidebara
+- Panel Terminy: scalone widoki ręcznych terminów (`important_dates`) i dat głosowań z uchwał
+- Daty głosowań pobierane bezpośrednio z Supabase (bez zależności od backendu)
+- `voting_start`: tylko dla uchwał `status='voting'`; `voting_end`: dla `voting` i `closed` (wyszarzone)
+- Sortowanie malejące (najnowsze na górze), link "Uchwały →" do panelu uchwał
+- Sidebar admina: nowa kolejność (Pulpit > Lokale > Naliczenia > Mieszkańcy > Uchwały > Dokumenty > Terminy > Ogłoszenia > Wiadomości > Dziennik operacji)
+
 ### 2026-03-28 — Rola zarządcy (manager)
 - Nowa rola `manager` — podgląd read-only wszystkich danych + pełny CRUD ogłoszeń i terminów
 - Migracja 017: rozszerzenie CHECK constraint, helper functions (`is_manager()`, `is_admin_or_manager()`), 20+ RLS policies
