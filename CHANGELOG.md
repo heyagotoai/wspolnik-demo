@@ -2,6 +2,11 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — Dokumentacja feature-map; zaostrzenie GET stawek i auto-config
+- **`docs/architecture/feature-map.md`** — usunięty nieistniejący route `/o-nas`; sekcja panelu: **admin lub manager** (`AdminRoute`) + krótki opis różnic uprawnień
+- **`GET /api/charges/rates`**, **`GET /api/charges/auto-config`** — tylko **admin** lub **manager** (`require_admin_or_manager`); mieszkaniec nie pobiera stawek ani konfiguracji auto-naliczeń przez API (backend ze `service_role`); **`PATCH /auto-config`** bez zmian (wyłącznie admin)
+- **Testy:** `api/tests/test_charges.py`, `api/tests/test_rls_isolation.py`
+
 ### 2026-03-29 — Głosowanie: udziały, uprawnienia, UI wyników
 - **`GET /api/resolutions/:id/results`** — agregacja **wag wg udziałów** (`apartments.share` × właściciel lokalu `owner_resident_id`); pola `share_*`, `total_share_community`; liczby głosów bez zmian
 - **`api/core/voting_eligibility.py`** — kto może głosować: rola `resident` (konto aktywne); **admin** i **manager** tylko jeśli mają przypisany lokal jako właściciel w Lokale

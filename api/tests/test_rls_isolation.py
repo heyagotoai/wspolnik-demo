@@ -97,6 +97,16 @@ class TestResidentCannotDoAdminOps:
         r = client.delete("/api/charges/rates/rate-1", headers=resident_headers)
         assert r.status_code == 403
 
+    def test_resident_nie_moze_pobrac_listy_stawek(self, client, resident_headers):
+        """GET /api/charges/rates wymaga admina lub zarządcy."""
+        r = client.get("/api/charges/rates", headers=resident_headers)
+        assert r.status_code == 403
+
+    def test_resident_nie_moze_odczytac_auto_config_get(self, client, resident_headers):
+        """GET /api/charges/auto-config wymaga admina lub zarządcy."""
+        r = client.get("/api/charges/auto-config", headers=resident_headers)
+        assert r.status_code == 403
+
     def test_resident_nie_moze_aktualizowac_auto_config(self, client, resident_headers):
         """PATCH /api/charges/auto-config wymaga admina."""
         r = client.patch("/api/charges/auto-config", headers=resident_headers, json={
@@ -404,6 +414,14 @@ class TestAdminEndpointsRejectResidentTokens:
 
     def test_reset_glosow_odrzuca_resident(self, client, resident_headers):
         r = client.delete("/api/resolutions/res-1/votes", headers=resident_headers)
+        assert r.status_code == 403
+
+    def test_lista_stawek_odrzuca_resident(self, client, resident_headers):
+        r = client.get("/api/charges/rates", headers=resident_headers)
+        assert r.status_code == 403
+
+    def test_odczyt_auto_config_get_odrzuca_resident(self, client, resident_headers):
+        r = client.get("/api/charges/auto-config", headers=resident_headers)
         assert r.status_code == 403
 
     def test_aktualizacja_auto_config_odrzuca_resident(self, client, resident_headers):

@@ -4,7 +4,6 @@
 | Strona | Route | Opis |
 |--------|-------|------|
 | Strona główna | `/` | Hero, karty szybkiego dostępu, ostatnie ogłoszenia |
-| O nas | `/o-nas` | Opis wspólnoty, wartości, działania |
 | Aktualności | `/aktualnosci` | Przypięte + zwykłe ogłoszenia, ważne daty |
 | Dokumenty | `/dokumenty` | Publiczne dokumenty z filtrowaniem kategorii |
 | Kontakt | `/kontakt` | Formularz, dane kontaktowe, numery alarmowe |
@@ -20,7 +19,10 @@
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów (wg `can_vote_resolutions` z `/profile`), wyniki: udziały (`apartments.share` + właściciel) lub fallback % wg liczby głosów — [[ADR-010-voting-system]] |
 | Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
 
-## Panel admina (wymaga roli admin → [[ADR-003-auth-pattern|AdminRoute]])
+## Panel administratora / zarządcy (wymaga roli **admin** lub **manager** → [[ADR-003-auth-pattern|AdminRoute]])
+
+**Uwaga:** Ten sam zestaw tras `/admin/*`; szczegółowe operacje zależą od roli. **Administrator** — pełny CRUD tam, gdzie w opisie nie ma ograniczenia. **Zarządca (`manager`)** — zgodnie z [[CLAUDE.md]]: podgląd read-only (m.in. finanse, mieszkańcy, dokumenty, uchwały, wiadomości, audit), pełny CRUD **ogłoszeń** i **terminów**; bez m.in. CRUD mieszkańców, stawek, generowania naliczeń, importów, wysyłki e-mail z naliczeń.
+
 | Strona | Route | Operacje |
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
