@@ -152,6 +152,11 @@ class VoteResults(BaseModel):
     przeciw: int = 0
     wstrzymuje: int = 0
     total: int = 0
+    # Wagi wg pól apartments.share (suma udziałów wspólnoty = 1.0 przy pełnej dokumentacji)
+    share_za: float = 0.0
+    share_przeciw: float = 0.0
+    share_wstrzymuje: float = 0.0
+    total_share_community: float = 0.0
 
 
 class VoteDetail(BaseModel):
@@ -172,6 +177,7 @@ class ProfileOut(BaseModel):
     role: str
     is_active: bool
     created_at: str
+    can_vote_resolutions: bool = False
 
 
 class ProfileUpdate(BaseModel):

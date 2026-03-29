@@ -18,10 +18,10 @@ site/           — frontend React (Vite)
   src/
     components/ — komponenty UI (auth/, layout/, ui/)
     hooks/      — useAuth, useRole
-    lib/        — supabase.ts (klient), api.ts (FastAPI klient)
+    lib/        — supabase.ts (klient), api.ts (FastAPI klient), voteResultsDisplay.ts (wyniki głosowań: udziały vs fallback %)
     pages/      — publiczne + resident/ + admin/
 api/            — backend FastAPI
-  core/         — config, security, supabase_client
+  core/         — config, security, supabase_client, voting_eligibility (kto może głosować w uchwałach)
   models/       — Pydantic schemas
   routes/       — residents, contact, resolutions, profile, charges, audit, backup, billing_groups, import_routes, …
 supabase/
@@ -119,8 +119,8 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
-- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
-- `/api/profile` — profil mieszkańca
+- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu)
+- `/api/profile` — profil mieszkańca + pole `can_vote_resolutions` (spójne z głosowaniem)
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej)
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)

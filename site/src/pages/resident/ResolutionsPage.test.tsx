@@ -62,12 +62,35 @@ function renderPage() {
   )
 }
 
+const mockResultsPayload = {
+  za: 2,
+  przeciw: 1,
+  wstrzymuje: 0,
+  total: 3,
+  share_za: 0,
+  share_przeciw: 0,
+  share_wstrzymuje: 0,
+  total_share_community: 0,
+}
+
+const mockProfilePayload = {
+  id: 'res-1',
+  email: 'jan@gabi.pl',
+  full_name: 'Jan Kowalski',
+  apartment_number: '12',
+  role: 'resident',
+  is_active: true,
+  created_at: '2026-01-01T00:00:00Z',
+  can_vote_resolutions: true,
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 
   mockGet.mockImplementation((path: string) => {
     if (path === '/resolutions') return Promise.resolve(mockResolutions)
-    if (path.includes('/results')) return Promise.resolve({ za: 2, przeciw: 1, wstrzymuje: 0, total: 3 })
+    if (path === '/profile') return Promise.resolve(mockProfilePayload)
+    if (path.includes('/results')) return Promise.resolve(mockResultsPayload)
     if (path.includes('/my-vote')) return Promise.resolve(null)
     return Promise.resolve(null)
   })
@@ -97,7 +120,7 @@ describe('ResidentResolutionsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getAllByText('Za: 2').length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Za:\s*2/).length).toBeGreaterThan(0)
     })
   })
 
@@ -108,6 +131,7 @@ describe('ResidentResolutionsPage', () => {
         ...mockResolutions[0],
         status: 'draft',
       }])
+      if (path === '/profile') return Promise.resolve(mockProfilePayload)
       return Promise.resolve(null)
     })
 
@@ -141,7 +165,8 @@ describe('ResidentResolutionsPage', () => {
   it('pokazuje oddany głos', async () => {
     mockGet.mockImplementation((path: string) => {
       if (path === '/resolutions') return Promise.resolve(mockResolutions)
-      if (path.includes('/results')) return Promise.resolve({ za: 2, przeciw: 1, wstrzymuje: 0, total: 3 })
+      if (path === '/profile') return Promise.resolve(mockProfilePayload)
+      if (path.includes('/results')) return Promise.resolve(mockResultsPayload)
       if (path === '/resolutions/res-1/my-vote') return Promise.resolve({
         id: 'vote-1', vote: 'za', voted_at: '2026-03-21T12:00:00',
       })

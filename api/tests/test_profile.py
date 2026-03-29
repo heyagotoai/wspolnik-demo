@@ -1,5 +1,9 @@
 """Tests for profile endpoints (GET/PATCH /profile, POST /profile/change-password)."""
 
+from fastapi.testclient import TestClient
+
+from api.core.security import get_current_user
+
 PROFILE_DATA = {
     "id": "res-1",
     "email": "jan@gabi.pl",
@@ -19,6 +23,58 @@ def test_get_profile(fake_sb, resident_client):
     assert data["full_name"] == "Jan Kowalski"
     assert data["email"] == "jan@gabi.pl"
     assert data["apartment_number"] == "12A"
+    assert data.get("can_vote_resolutions") is True
+
+
+def test_get_profile_admin_bez_lokalu_can_vote_false(fake_sb, app):
+    """Admin bez przypisanego lokalu jako właściciel — nie głosuje w uchwałach."""
+    fake_sb.set_table_data("residents", [{
+        "id": "admin-1",
+        "email": "admin@gabi.pl",
+        "full_name": "Admin",
+        "apartment_number": None,
+        "role": "admin",
+        "is_active": True,
+        "created_at": "2026-01-15T10:00:00Z",
+    }])
+    fake_sb.set_table_data("apartments", [])
+
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "admin-1",
+        "email": "admin@gabi.pl",
+    }
+    try:
+        r = TestClient(app).get("/api/profile")
+        assert r.status_code == 200
+        assert r.json().get("can_vote_resolutions") is False
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_get_profile_admin_z_lokalem_can_vote_true(fake_sb, app):
+    fake_sb.set_table_data("residents", [{
+        "id": "admin-1",
+        "email": "admin@gabi.pl",
+        "full_name": "Admin",
+        "apartment_number": None,
+        "role": "admin",
+        "is_active": True,
+        "created_at": "2026-01-15T10:00:00Z",
+    }])
+    fake_sb.set_table_data("apartments", [
+        {"id": "apt-1", "owner_resident_id": "admin-1", "share": 0.1},
+    ])
+
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "admin-1",
+        "email": "admin@gabi.pl",
+    }
+    try:
+        r = TestClient(app).get("/api/profile")
+        assert r.status_code == 200
+        assert r.json().get("can_vote_resolutions") is True
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_get_profile_not_found(fake_sb, resident_client):

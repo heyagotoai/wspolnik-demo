@@ -39,7 +39,12 @@ class FakeSupabaseBuilder:
         # Keep pre-set data (from set_table_data) so response validates.
         # Only use inserted data if no pre-set data exists.
         if isinstance(data, dict) and not self._data:
-            self._data = [data]
+            row = dict(data)
+            # Głosy (POST /resolutions/:id/vote) — VoteOut wymaga id i voted_at
+            if "vote" in row and "resolution_id" in row:
+                row.setdefault("id", "vote-gen-1")
+                row.setdefault("voted_at", "2026-03-21T12:00:00Z")
+            self._data = [row]
         return self
 
     def upsert(self, data):

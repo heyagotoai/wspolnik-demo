@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { useToast } from '../../components/ui/Toast'
+import {
+  barWidthPrzeciwPct,
+  barWidthWstrzymujePct,
+  barWidthZaPct,
+  hasWeightedVoteShares,
+  pctDisplayParticipation,
+  pctDisplayPrzeciw,
+  pctDisplayWstrzymuje,
+  pctDisplayZa,
+} from '../../lib/voteResultsDisplay'
 
 interface Resolution {
   id: string
@@ -17,12 +27,22 @@ interface VoteResults {
   przeciw: number
   wstrzymuje: number
   total: number
+  share_za: number
+  share_przeciw: number
+  share_wstrzymuje: number
+  total_share_community: number
 }
 
 interface MyVote {
   id: string
   vote: string
   voted_at: string
+}
+
+/** Fragment profilu z GET /profile — uprawnienie do głosu (admin/zarządca tylko jako właściciel lokalu) */
+interface ProfileVoteFields {
+  role: string
+  can_vote_resolutions: boolean
 }
 
 const statusLabels: Record<string, { label: string; bg: string; text: string }> = {
@@ -43,11 +63,19 @@ export default function ResidentResolutionsPage() {
   const [myVotes, setMyVotes] = useState<Record<string, MyVote>>({})
   const [loading, setLoading] = useState(true)
   const [voting, setVoting] = useState<string | null>(null)
+  const [voteEligibility, setVoteEligibility] = useState<ProfileVoteFields | null>(null)
   const { toast } = useToast()
 
   const fetchData = async () => {
     try {
-      const data = await api.get<Resolution[]>('/resolutions')
+      const [data, profile] = await Promise.all([
+        api.get<Resolution[]>('/resolutions'),
+        api.get<ProfileVoteFields>('/profile'),
+      ])
+      setVoteEligibility({
+        role: profile.role,
+        can_vote_resolutions: profile.can_vote_resolutions,
+      })
       // Show only voting and closed resolutions to residents
       const visible = data.filter((r) => r.status === 'voting' || r.status === 'closed')
       setResolutions(visible)
@@ -136,7 +164,16 @@ export default function ResidentResolutionsPage() {
             const status = statusLabels[r.status] || statusLabels.draft
             const voteData = results[r.id]
             const myVote = myVotes[r.id]
-            const canVote = r.status === 'voting' && !myVote
+            const canVote =
+              r.status === 'voting' &&
+              !myVote &&
+              voteEligibility !== null &&
+              voteEligibility.can_vote_resolutions
+            const pctSuffix = voteData && hasWeightedVoteShares(voteData) ? 'udziałów' : 'głosów'
+            const pZa = voteData ? pctDisplayZa(voteData) : null
+            const pPrzeciw = voteData ? pctDisplayPrzeciw(voteData) : null
+            const pWstrz = voteData ? pctDisplayWstrzymuje(voteData) : null
+            const pFrek = voteData ? pctDisplayParticipation(voteData) : null
 
             return (
               <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
@@ -163,31 +200,53 @@ export default function ResidentResolutionsPage() {
                 {voteData && voteData.total > 0 && (
                   <div className="mt-4">
                     <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-cream-deep">
-                      {voteData.za > 0 && (
-                        <div
-                          className="bg-sage transition-all"
-                          style={{ width: `${(voteData.za / voteData.total) * 100}%` }}
-                        />
-                      )}
-                      {voteData.przeciw > 0 && (
-                        <div
-                          className="bg-error transition-all"
-                          style={{ width: `${(voteData.przeciw / voteData.total) * 100}%` }}
-                        />
-                      )}
-                      {voteData.wstrzymuje > 0 && (
-                        <div
-                          className="bg-slate/40 transition-all"
-                          style={{ width: `${(voteData.wstrzymuje / voteData.total) * 100}%` }}
-                        />
-                      )}
+                      <>
+                        {voteData.za > 0 && (
+                          <div
+                            className="bg-sage transition-all"
+                            style={{ width: `${barWidthZaPct(voteData)}%` }}
+                          />
+                        )}
+                        {voteData.przeciw > 0 && (
+                          <div
+                            className="bg-error transition-all"
+                            style={{ width: `${barWidthPrzeciwPct(voteData)}%` }}
+                          />
+                        )}
+                        {voteData.wstrzymuje > 0 && (
+                          <div
+                            className="bg-slate/40 transition-all"
+                            style={{ width: `${barWidthWstrzymujePct(voteData)}%` }}
+                          />
+                        )}
+                      </>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-xs">
-                      <span className="text-sage font-medium">Za: {voteData.za}</span>
-                      <span className="text-error font-medium">Przeciw: {voteData.przeciw}</span>
-                      <span className="text-slate font-medium">Wstrzymuje: {voteData.wstrzymuje}</span>
-                      <span className="text-outline ml-auto">Łącznie: {voteData.total}</span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs">
+                      <span className="text-sage font-medium">
+                        Za: {voteData.za}
+                        {pZa != null && ` (${pZa}% ${pctSuffix})`}
+                      </span>
+                      <span className="text-error font-medium">
+                        Przeciw: {voteData.przeciw}
+                        {pPrzeciw != null && ` (${pPrzeciw}% ${pctSuffix})`}
+                      </span>
+                      <span className="text-slate font-medium">
+                        Wstrzymuje: {voteData.wstrzymuje}
+                        {pWstrz != null && ` (${pWstrz}% ${pctSuffix})`}
+                      </span>
+                      <span className="text-outline ml-auto">
+                        Głosów: {voteData.total}
+                        {pFrek != null && ` · frekwencja wg udziałów: ${pFrek}%`}
+                      </span>
                     </div>
+                    {voteData.total_share_community > 0 &&
+                      !hasWeightedVoteShares(voteData) &&
+                      voteData.total > 0 && (
+                        <p className="text-xs text-outline mt-2">
+                          U głosujących nie ma przypisanych udziałów w Lokale (właściciel) — wykres i procenty
+                          liczone jak udział w liczbie oddanych głosów.
+                        </p>
+                      )}
                   </div>
                 )}
 
@@ -198,6 +257,17 @@ export default function ResidentResolutionsPage() {
                     <span className="text-outline ml-2">({formatDate(myVote.voted_at)})</span>
                   </div>
                 )}
+
+                {voteEligibility &&
+                  r.status === 'voting' &&
+                  !myVote &&
+                  !voteEligibility.can_vote_resolutions && (
+                    <p className="mt-4 text-sm text-slate bg-cream-deep/80 rounded-[var(--radius-input)] px-3 py-2">
+                      {voteEligibility.role === 'admin' || voteEligibility.role === 'manager'
+                        ? 'Jako administrator lub zarządca możesz głosować tylko wtedy, gdy jesteś przypisany jako właściciel lokalu w panelu Lokale. Po przypisaniu odśwież stronę — wtedy pojawią się przyciski głosowania.'
+                        : 'Nie możesz oddać głosu (np. konto nieaktywne). W razie pytań skontaktuj się z administratorem.'}
+                    </p>
+                  )}
 
                 {/* Voting buttons */}
                 {canVote && (

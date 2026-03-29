@@ -1,8 +1,9 @@
 # Postęp projektu WM GABI (skrót)
 
-Ostatnia aktualizacja: **2026-03-28**.
+Ostatnia aktualizacja: **2026-03-29**.
 
 ## Zrobione niedawno
+- **Głosowanie nad uchwałami (2026-03-29)** — wyniki API z wagami udziałów (`apartments.share`, właściciel lokalu); uprawnienia: `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu); `can_vote_resolutions` w profilu; UI `voteResultsDisplay.ts` (fallback % gdy brak wag); PDF z dwoma trybami. ADR-010, CHANGELOG.
 - **Grupy rozliczeniowe** — migracja 018, `/api/billing-groups`, panel `/admin/grupy-rozliczeniowe`, RLS przez `my_apartment_ids()`, Finanse/Dashboard z saldem łącznym i zakładkami per-lokal. ADR-013.
 - **Import stanu początkowego (Excel)** — `/api/import`, dopasowanie pełnego numeru lokalu (zbiorcze) lub wielu numerów w komórce; modal `ImportInitialStateModal`, `openpyxl`. Odrębne od importu wyciągów bankowych.
 - **Import wpłat z Excela** — `/api/import/payments`, `/payments-template`; kolumny Lokal / Data wpłaty / Kwota; wiele dat i kwot po średniku; deduplikacja `(lokal, data)` względem bazy i w obrębie pliku (ADR-014); `ImportPaymentsModal` w Lokale; `payment_split.py` wspólne z rozbiciem grupowym.

@@ -155,7 +155,7 @@ describe('AdminResolutionsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Za: 1')).toBeInTheDocument()
+      expect(screen.getByText(/Za:\s*1/)).toBeInTheDocument()
     })
   })
 

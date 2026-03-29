@@ -11,6 +11,7 @@ interface Profile {
   role: string
   is_active: boolean
   created_at: string
+  can_vote_resolutions?: boolean
 }
 
 export default function ProfilePage() {

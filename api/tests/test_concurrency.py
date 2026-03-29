@@ -17,6 +17,8 @@ RESOLUTION_DATA = {
     "created_at": "2026-03-20T10:00:00",
 }
 
+RESIDENT_FOR_VOTE = {"id": "res-1", "role": "resident", "is_active": True}
+
 
 def _patch_votes_insert_to_raise(fake_sb, exception_message: str):
     """Zwraca kontekst w którym insert do tabeli votes rzuca wyjątek.
@@ -51,6 +53,7 @@ class TestVotingRaceCondition:
         PostgreSQL wyrzuca 23505 dla drugiej kopii — endpoint musi zwrócić 409.
         """
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
         fake_sb.set_table_data("votes", [])
 
         fake_sb.table = _patch_votes_insert_to_raise(
@@ -68,6 +71,7 @@ class TestVotingRaceCondition:
     def test_unique_keyword_w_bledzie_zwraca_409(self, resident_client, fake_sb):
         """Wyjątek zawierający słowo 'unique' (bez kodu 23505) → też 409."""
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
         fake_sb.set_table_data("votes", [])
 
         fake_sb.table = _patch_votes_insert_to_raise(
@@ -84,6 +88,7 @@ class TestVotingRaceCondition:
     def test_nieoczekiwany_wyjatek_db_zwraca_500(self, resident_client, fake_sb):
         """Nieoczekiwany wyjątek DB podczas insertu → 500 (nie 409, nie crash)."""
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
         fake_sb.set_table_data("votes", [])
 
         fake_sb.table = _patch_votes_insert_to_raise(
@@ -101,6 +106,7 @@ class TestVotingRaceCondition:
     def test_pusty_wynik_insertu_zwraca_500(self, resident_client, fake_sb):
         """Insert zwraca puste data (bez wyjątku) → 500."""
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
         fake_sb.set_table_data("votes", [])
         # Domyślnie insert do pustej tabeli zwraca [] gdy pre-set data jest []
         # i insert() nie nadpisuje (bo _data = [] → insert ustawia _data = [dane])

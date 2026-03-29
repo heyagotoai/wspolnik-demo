@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — Głosowanie: udziały, uprawnienia, UI wyników
+- **`GET /api/resolutions/:id/results`** — agregacja **wag wg udziałów** (`apartments.share` × właściciel lokalu `owner_resident_id`); pola `share_*`, `total_share_community`; liczby głosów bez zmian
+- **`api/core/voting_eligibility.py`** — kto może głosować: rola `resident` (konto aktywne); **admin** i **manager** tylko jeśli mają przypisany lokal jako właściciel w Lokale
+- **`POST /api/resolutions/:id/vote`** — walidacja przez `check_resolution_vote_eligibility`
+- **`GET/PATCH /api/profile`** — pole `can_vote_resolutions` (spójna reguła z głosowaniem)
+- **Frontend:** `site/src/lib/voteResultsDisplay.ts` — pasek i procenty: **udziały** gdy są niezerowe wagi głosów; w przeciwnym razie **fallback na liczbę głosów** (uniknięcie „pustego” wykresu przy braku `owner_resident_id` u głosujących); PDF z trybem ważonym / wg głosów
+- **Panel Głosowania** — równoległe ładowanie `/resolutions` + `/profile`; przyciski głosu wg `can_vote_resolutions`
+- **Testy:** pytest (profile, głosowanie admin/właściciel, conftest: insert głosu z `id`/`voted_at`); vitest dopasowania tekstu wyników
+
 ### 2026-03-28 — CI: Vitest nie uruchamia Playwright (e2e)
 - **`vite.config.ts`:** `test.include` = tylko `src/**/*.test.ts(x)`
 - **`package.json`:** `npm test` → `vitest run src` (oraz `test:watch` / `test:coverage` z katalogiem `src`) — na CI nie polegamy wyłącznie na `include` z Vite; jawna ścieżka wyklucza `e2e/*.spec.ts` nawet przy innej wersji Vitest

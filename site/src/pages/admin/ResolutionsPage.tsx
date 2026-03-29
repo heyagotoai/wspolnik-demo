@@ -4,6 +4,12 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../compon
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
+import {
+  hasWeightedVoteShares,
+  pctDisplayPrzeciw,
+  pctDisplayWstrzymuje,
+  pctDisplayZa,
+} from '../../lib/voteResultsDisplay'
 
 /** Escape HTML special characters to prevent XSS in generated HTML strings */
 function escapeHtml(str: string): string {
@@ -31,6 +37,10 @@ interface VoteResults {
   przeciw: number
   wstrzymuje: number
   total: number
+  share_za: number
+  share_przeciw: number
+  share_wstrzymuje: number
+  total_share_community: number
 }
 
 interface VoteDetail {
@@ -273,8 +283,32 @@ export default function AdminResolutionsPage() {
     const status = statusLabels[r.status] || statusLabels.draft
     const generated = new Date().toLocaleString('pl-PL')
 
-    const percentOf = (n: number) =>
-      voteData && voteData.total > 0 ? ((n / voteData.total) * 100).toFixed(1) + '%' : '—'
+    const weighted =
+      voteData && voteData.total > 0 && hasWeightedVoteShares(voteData)
+    const pctCol = (shareSum: number, headCount: number) => {
+      if (!voteData || voteData.total <= 0) return '—'
+      if (weighted) {
+        return (
+          ((shareSum / voteData.total_share_community) * 100).toFixed(1).replace('.', ',') + '%'
+        )
+      }
+      return ((headCount / voteData.total) * 100).toFixed(1).replace('.', ',') + '%'
+    }
+    const participationShare = voteData
+      ? voteData.share_za + voteData.share_przeciw + voteData.share_wstrzymuje
+      : 0
+    const pctParticipation = () => {
+      if (!voteData || voteData.total <= 0) return '—'
+      if (weighted) {
+        return (
+          ((participationShare / voteData.total_share_community) * 100).toFixed(1).replace('.', ',') + '%'
+        )
+      }
+      return '100,0%'
+    }
+    const pctColumnTitle = weighted
+      ? '% udziałów (wg ogółu lokali)'
+      : '% (wg liczby głosów — brak udziałów u głosujących)'
 
     const html = `<!DOCTYPE html>
 <html lang="pl">
@@ -333,32 +367,33 @@ export default function AdminResolutionsPage() {
         <tr>
           <th>Opcja</th>
           <th>Liczba głosów</th>
-          <th>Udział</th>
+          <th>${pctColumnTitle}</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="vote-za">Za</td>
           <td>${voteData.za}</td>
-          <td>${percentOf(voteData.za)}</td>
+          <td>${pctCol(voteData.share_za, voteData.za)}</td>
         </tr>
         <tr>
           <td class="vote-przeciw">Przeciw</td>
           <td>${voteData.przeciw}</td>
-          <td>${percentOf(voteData.przeciw)}</td>
+          <td>${pctCol(voteData.share_przeciw, voteData.przeciw)}</td>
         </tr>
         <tr>
           <td class="vote-wstrzymuje">Wstrzymuje się</td>
           <td>${voteData.wstrzymuje}</td>
-          <td>${percentOf(voteData.wstrzymuje)}</td>
+          <td>${pctCol(voteData.share_wstrzymuje, voteData.wstrzymuje)}</td>
         </tr>
         <tr>
-          <td class="vote-total">Łącznie</td>
+          <td class="vote-total">Łącznie (frekwencja)</td>
           <td class="vote-total">${voteData.total}</td>
-          <td>100%</td>
+          <td>${weighted ? pctParticipation() : '100,0% (wszyscy głosujący w podziale)'}</td>
         </tr>
       </tbody>
-    </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
+    </table>
+    <p style="font-size:11px;color:#64748b;margin-top:8px">${weighted ? 'Kolumna procentowa: suma udziałów lokali (apartments.share) przypisanych do głosujących względem sumy udziałów wszystkich lokali. Brak udziału przy lokalu = waga głosu 0.' : 'Głosujący nie mają przypisanych udziałów jako właściciele lokali — procenty jak udział w liczbie oddanych głosów.'}</p>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
   </section>
 
   <section>
@@ -532,6 +567,10 @@ export default function AdminResolutionsPage() {
           {resolutions.map((r) => {
             const status = statusLabels[r.status] || statusLabels.draft
             const voteData = results[r.id]
+            const adminPctSuf =
+              voteData && voteData.total > 0 && hasWeightedVoteShares(voteData)
+                ? 'udz.'
+                : 'głos.'
 
             return (
               <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
@@ -555,11 +594,23 @@ export default function AdminResolutionsPage() {
                       </p>
                     )}
                     {voteData && voteData.total > 0 && (
-                      <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="text-sage font-medium">Za: {voteData.za}</span>
-                        <span className="text-error font-medium">Przeciw: {voteData.przeciw}</span>
-                        <span className="text-slate font-medium">Wstrzymuje: {voteData.wstrzymuje}</span>
-                        <span className="text-outline">Razem: {voteData.total}</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs">
+                        <span className="text-sage font-medium">
+                          Za: {voteData.za}
+                          {pctDisplayZa(voteData) != null &&
+                            ` (${pctDisplayZa(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-error font-medium">
+                          Przeciw: {voteData.przeciw}
+                          {pctDisplayPrzeciw(voteData) != null &&
+                            ` (${pctDisplayPrzeciw(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-slate font-medium">
+                          Wstrzymuje: {voteData.wstrzymuje}
+                          {pctDisplayWstrzymuje(voteData) != null &&
+                            ` (${pctDisplayWstrzymuje(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-outline">Razem głosów: {voteData.total}</span>
                       </div>
                     )}
                   </div>

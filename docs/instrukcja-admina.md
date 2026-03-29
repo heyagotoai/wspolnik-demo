@@ -199,8 +199,10 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 **Uruchomienie głosowania:**
 - Zmień status na **Głosowanie** — mieszkańcy zobaczyją uchwałę i będą mogli głosować
 
+**Kto może głosować:** mieszkaniec (aktywne konto). Administrator lub zarządca — tylko jeśli w Lokale jest przypisany jako właściciel lokalu (inaczej brak przycisków głosowania).
+
 **Podgląd wyników:**
-- Kliknij na uchwałę, aby zobaczyć bieżące wyniki: Za / Przeciw / Wstrzymuję się
+- Kliknij na uchwałę, aby zobaczyć bieżące wyniki: Za / Przeciw / Wstrzymuję się (procenty wg udziałów wspólnoty lub — gdy u głosujących brak przypisanych udziałów — wg liczby głosów)
 - Lista głosów z imionami i datami
 
 **Zamknięcie głosowania:**

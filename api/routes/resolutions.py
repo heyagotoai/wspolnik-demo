@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
+from api.core.voting_eligibility import check_resolution_vote_eligibility
 from api.models.schemas import (
     ResolutionCreate,
     ResolutionUpdate,
@@ -173,19 +174,41 @@ def get_vote_results(resolution_id: str, _user: dict = Depends(get_current_user)
     if not check.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
-    votes = sb.table("votes").select("vote").eq("resolution_id", resolution_id).execute()
+    votes = sb.table("votes").select("vote, resident_id").eq("resolution_id", resolution_id).execute()
+    apartments = sb.table("apartments").select("owner_resident_id, share").execute()
+
+    resident_share: dict[str, float] = {}
+    total_share_community = 0.0
+    for a in apartments.data or []:
+        sh = a.get("share")
+        if sh is None:
+            continue
+        fv = float(sh)
+        total_share_community += fv
+        oid = a.get("owner_resident_id")
+        if oid:
+            resident_share[oid] = resident_share.get(oid, 0.0) + fv
 
     counts = {"za": 0, "przeciw": 0, "wstrzymuje": 0}
-    for v in votes.data:
+    shares = {"za": 0.0, "przeciw": 0.0, "wstrzymuje": 0.0}
+    for v in votes.data or []:
         vote_val = v["vote"]
-        if vote_val in counts:
-            counts[vote_val] += 1
+        if vote_val not in counts:
+            continue
+        counts[vote_val] += 1
+        rid = v.get("resident_id")
+        w = resident_share.get(rid, 0.0) if rid else 0.0
+        shares[vote_val] += w
 
     return VoteResults(
         za=counts["za"],
         przeciw=counts["przeciw"],
         wstrzymuje=counts["wstrzymuje"],
         total=sum(counts.values()),
+        share_za=round(shares["za"], 8),
+        share_przeciw=round(shares["przeciw"], 8),
+        share_wstrzymuje=round(shares["wstrzymuje"], 8),
+        total_share_community=round(total_share_community, 8),
     )
 
 
@@ -265,6 +288,10 @@ def cast_vote(
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
     if resolution.data[0]["status"] != "voting":
         raise HTTPException(status_code=400, detail="Głosowanie nie jest aktywne dla tej uchwały")
+
+    ok, denial = check_resolution_vote_eligibility(sb, user["sub"])
+    if not ok:
+        raise HTTPException(status_code=403, detail=denial)
 
     # Check if user already voted
     existing = (

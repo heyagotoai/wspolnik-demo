@@ -17,7 +17,7 @@
 | Dokumenty | `/panel/dokumenty` | Download z Supabase Storage |
 | Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem + terminy głosowań (nieodgłosowane uchwały), wyróżnione wizualnie |
 | Finanse | `/panel/finanse` | Saldo (łączne przy wielu lokalach / grupie rozliczeniowej), naliczenia, historia wpłat; zakładki per-lokal; lookup przez `my_apartment_ids` (właściciel + grupa rozliczeniowa) |
-| Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów, wyniki |
+| Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów (wg `can_vote_resolutions` z `/profile`), wyniki: udziały (`apartments.share` + właściciel) lub fallback % wg liczby głosów — [[ADR-010-voting-system]] |
 | Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
 
 ## Panel admina (wymaga roli admin → [[ADR-003-auth-pattern|AdminRoute]])
@@ -31,7 +31,7 @@
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
 | Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Grupy rozliczeniowe | `/admin/grupy-rozliczeniowe` | CRUD grup, przypisywanie lokali, rejestracja wpłat grupowych z auto-rozbiciem, podgląd salda łącznego (admin; backend `/api/billing-groups`) |
-| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki głosowania, eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
+| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki (agregacja wg udziałów + fallback w UI/PDF), eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
 ## Roadmapa — przed produkcją

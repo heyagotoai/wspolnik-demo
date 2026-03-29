@@ -12,6 +12,7 @@ Pokryte scenariusze:
 - POST   /api/resolutions/:id/vote     — oddanie głosu
 """
 
+import pytest
 
 RESOLUTION_DATA = {
     "id": "res-1",
@@ -37,6 +38,13 @@ RESIDENT_DATA = {
     "full_name": "Jan Kowalski",
     "apartment_number": "12",
     "role": "resident",
+}
+
+# Wymagane przy POST /vote — endpoint sprawdza rolę i is_active
+RESIDENT_FOR_VOTE = {
+    "id": "res-1",
+    "role": "resident",
+    "is_active": True,
 }
 
 
@@ -188,10 +196,15 @@ class TestDeleteResolution:
 class TestVoteResults:
     def test_wyniki_glosowania(self, resident_client, fake_sb):
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("apartments", [
+            {"owner_resident_id": "r1", "share": 0.5},
+            {"owner_resident_id": "r2", "share": 0.2},
+            {"owner_resident_id": "r3", "share": 0.3},
+        ])
         fake_sb.set_table_data("votes", [
-            {"vote": "za"},
-            {"vote": "za"},
-            {"vote": "przeciw"},
+            {"vote": "za", "resident_id": "r1", "resolution_id": "res-1"},
+            {"vote": "za", "resident_id": "r2", "resolution_id": "res-1"},
+            {"vote": "przeciw", "resident_id": "r3", "resolution_id": "res-1"},
         ])
 
         response = resident_client.get("/api/resolutions/res-1/results")
@@ -201,6 +214,10 @@ class TestVoteResults:
         assert data["przeciw"] == 1
         assert data["wstrzymuje"] == 0
         assert data["total"] == 3
+        assert data["total_share_community"] == pytest.approx(1.0)
+        assert data["share_za"] == pytest.approx(0.7)
+        assert data["share_przeciw"] == pytest.approx(0.3)
+        assert data["share_wstrzymuje"] == pytest.approx(0.0)
 
 
 # --- POST /api/resolutions/:id/vote ----------------------------------------
@@ -209,6 +226,7 @@ class TestCastVote:
     def test_duplikat_glosu_zwraca_409(self, resident_client, fake_sb):
         """Resident who already voted gets 409."""
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
         fake_sb.set_table_data("votes", [VOTE_DATA])
 
         response = resident_client.post("/api/resolutions/res-1/vote", json={
@@ -218,6 +236,7 @@ class TestCastVote:
 
     def test_nieprawidlowy_glos(self, resident_client, fake_sb):
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
 
         response = resident_client.post("/api/resolutions/res-1/vote", json={
             "vote": "invalid",
@@ -227,11 +246,99 @@ class TestCastVote:
     def test_glosowanie_na_nieaktywna_uchwale(self, resident_client, fake_sb):
         closed_resolution = {**RESOLUTION_DATA, "status": "closed"}
         fake_sb.set_table_data("resolutions", [closed_resolution])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
 
         response = resident_client.post("/api/resolutions/res-1/vote", json={
             "vote": "za",
         })
         assert response.status_code == 400
+
+    def test_admin_nie_moze_glosowac(self, fake_sb, app):
+        from fastapi.testclient import TestClient
+
+        from api.core.security import get_current_user
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "admin-1",
+            "email": "admin@gabi.pl",
+        }
+        try:
+            fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+            fake_sb.set_table_data("votes", [])
+            fake_sb.set_table_data(
+                "residents",
+                [{"id": "admin-1", "role": "admin", "is_active": True}],
+            )
+            fake_sb.set_table_data("apartments", [])
+            client = TestClient(app)
+            response = client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
+            assert response.status_code == 403
+            assert "właściciel" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_admin_wlasciciel_moze_glosowac(self, fake_sb, app):
+        """Administrator będący właścicielem lokalu może głosować."""
+        from fastapi.testclient import TestClient
+
+        from api.core.security import get_current_user
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "admin-1",
+            "email": "admin@gabi.pl",
+        }
+        try:
+            fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+            fake_sb.set_table_data("votes", [])
+            fake_sb.set_table_data(
+                "residents",
+                [{"id": "admin-1", "role": "admin", "is_active": True}],
+            )
+            fake_sb.set_table_data(
+                "apartments",
+                [{"id": "apt-1", "owner_resident_id": "admin-1", "share": 0.05}],
+            )
+            client = TestClient(app)
+            response = client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
+            assert response.status_code == 201
+            assert response.json()["vote"] == "za"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_zarzadca_nie_moze_glosowac(self, fake_sb, app):
+        from fastapi.testclient import TestClient
+
+        from api.core.security import get_current_user
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "manager-1",
+            "email": "manager@gabi.pl",
+        }
+        try:
+            fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+            fake_sb.set_table_data("votes", [])
+            fake_sb.set_table_data(
+                "residents",
+                [{"id": "manager-1", "role": "manager", "is_active": True}],
+            )
+            fake_sb.set_table_data("apartments", [])
+            client = TestClient(app)
+            response = client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
+            assert response.status_code == 403
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_nieaktywny_mieszkaniec_nie_moze_glosowac(self, resident_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [])
+        fake_sb.set_table_data(
+            "residents",
+            [{**RESIDENT_FOR_VOTE, "is_active": False}],
+        )
+
+        response = resident_client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
+        assert response.status_code == 403
+        assert "nieaktywne" in response.json()["detail"].lower()
 
 
 # --- GET /api/resolutions/:id/votes ----------------------------------------
