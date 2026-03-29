@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, VoteIcon, CalendarIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface ImportantDate {
   id: string
@@ -135,7 +136,7 @@ export default function AdminDatesPage() {
         .eq('id', editingId)
 
       if (updateError) {
-        setError(updateError.message)
+        setError(mapSupabaseError(updateError))
         setSaving(false)
         return
       }
@@ -145,7 +146,7 @@ export default function AdminDatesPage() {
         .insert(payload)
 
       if (insertError) {
-        setError(insertError.message)
+        setError(mapSupabaseError(insertError))
         setSaving(false)
         return
       }

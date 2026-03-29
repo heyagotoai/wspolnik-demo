@@ -39,13 +39,19 @@ describe('parseApiError', () => {
     expect(parseApiError(pydanticError)).toBe('Sprawdź poprawność wypełnionych pól.')
   })
 
-  it('zwraca fallback z kodem HTTP gdy brak detail', () => {
-    expect(parseApiError({}, 500)).toBe('Błąd serwera (500)')
-    expect(parseApiError(null, 422)).toBe('Błąd serwera (422)')
+  it('zwraca przyjazny komunikat gdy brak detail (bez surowego kodu HTTP)', () => {
+    expect(parseApiError({}, 500)).toBe('Wystąpił nieoczekiwany błąd. Spróbuj ponownie za chwilę.')
+    expect(parseApiError(null, 422)).toBe('Wystąpił nieoczekiwany błąd. Spróbuj ponownie za chwilę.')
   })
 
-  it('zwraca fallback bez kodu gdy brak statusu', () => {
-    expect(parseApiError({})).toBe('Błąd serwera')
+  it('mapuje 502/503 i 429 na dedykowane komunikaty', () => {
+    expect(parseApiError({}, 503)).toBe('Serwis jest chwilowo niedostępny. Spróbuj ponownie za chwilę.')
+    expect(parseApiError({}, 502)).toBe('Serwis jest chwilowo niedostępny. Spróbuj ponownie za chwilę.')
+    expect(parseApiError({}, 429)).toBe('Zbyt wiele żądań. Odczekaj chwilę i spróbuj ponownie.')
+  })
+
+  it('zwraca ogólny komunikat gdy brak statusu', () => {
+    expect(parseApiError({})).toBe('Wystąpił nieoczekiwany błąd. Spróbuj ponownie za chwilę.')
   })
 })
 

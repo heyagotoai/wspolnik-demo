@@ -4,6 +4,7 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../compon
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
+import { formatCaughtError } from '../../lib/userFacingErrors'
 import {
   hasWeightedVoteShares,
   pctDisplayPrzeciw,
@@ -202,7 +203,7 @@ export default function AdminResolutionsPage() {
       await fetchResolutions()
       closeForm()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd')
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setSaving(false)
     }

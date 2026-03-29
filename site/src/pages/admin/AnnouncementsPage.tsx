@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../components/ui/Toast'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Announcement {
   id: string
@@ -107,7 +108,7 @@ export default function AdminAnnouncementsPage() {
         .eq('id', editingId)
 
       if (updateError) {
-        setError(updateError.message)
+        setError(mapSupabaseError(updateError))
         setSaving(false)
         return
       }
@@ -117,7 +118,7 @@ export default function AdminAnnouncementsPage() {
         .insert({ ...payload, author_id: user?.id })
 
       if (insertError) {
-        setError(insertError.message)
+        setError(mapSupabaseError(insertError))
         setSaving(false)
         return
       }
@@ -157,7 +158,7 @@ export default function AdminAnnouncementsPage() {
       toast(result.detail, 'success')
       await fetchAnnouncements()
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Błąd wysyłki', 'error')
+      toast(formatCaughtError(e, 'Błąd wysyłki'), 'error')
     } finally {
       setSending(null)
     }

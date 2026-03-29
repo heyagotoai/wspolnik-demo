@@ -18,7 +18,7 @@ site/           — frontend React (Vite)
   src/
     components/ — komponenty UI (auth/, layout/, ui/)
     hooks/      — useAuth, useRole
-    lib/        — supabase.ts (klient), api.ts (FastAPI klient), voteResultsDisplay.ts (wyniki głosowań: udziały vs fallback %)
+    lib/        — supabase.ts, api.ts (401 + retry sesji), voteResultsDisplay.ts, money.ts (saldo PLN), userFacingErrors.ts, authLoginErrors.ts
     pages/      — publiczne + resident/ + admin/
 api/            — backend FastAPI
   core/         — config, security, supabase_client, voting_eligibility (kto może głosować w uchwałach)

@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
 import { BillingGroupsPanel } from './BillingGroupsPage'
+import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Apartment {
   id: string
@@ -284,7 +285,7 @@ export default function AdminChargesPage() {
     })
 
     if (insertError) {
-      setChargeError(insertError.message)
+      setChargeError(mapSupabaseError(insertError))
       setChargeSaving(false)
       return
     }
@@ -349,7 +350,7 @@ export default function AdminChargesPage() {
       setFilterMonth(generateMonth)
       await fetchChargesData()
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd generowania naliczeń.', 'error')
+      toast(formatCaughtError(err, 'Błąd generowania naliczeń.'), 'error')
     } finally {
       setGenerating(false)
     }
@@ -369,7 +370,7 @@ export default function AdminChargesPage() {
         'success',
       )
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd zapisu ustawień.', 'error')
+      toast(formatCaughtError(err, 'Błąd zapisu ustawień.'), 'error')
     } finally {
       setAutoSaving(false)
     }
@@ -387,7 +388,7 @@ export default function AdminChargesPage() {
       setEditingLegalBasis(false)
       toast('Podstawa prawna zaktualizowana.', 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd zapisu.', 'error')
+      toast(formatCaughtError(err, 'Błąd zapisu.'), 'error')
     } finally {
       setSavingLegalBasis(false)
     }
@@ -407,7 +408,7 @@ export default function AdminChargesPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd pobierania PDF.', 'error')
+      toast(formatCaughtError(err, 'Błąd pobierania PDF.'), 'error')
     } finally {
       setDownloadingPdf(null)
     }
@@ -427,7 +428,7 @@ export default function AdminChargesPage() {
       const result = await api.post<{ detail: string }>(`/charges/charge-notification/${aptId}?valid_from=${zawValidFrom}`, {})
       toast(result.detail, 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd wysyłki.', 'error')
+      toast(formatCaughtError(err, 'Błąd wysyłki.'), 'error')
     } finally {
       setSendingNotification(null)
     }
@@ -456,7 +457,7 @@ export default function AdminChargesPage() {
         toast(`Wysłano zawiadomienia do ${result.sent.length} lokali.`, 'success')
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd wysyłki.', 'error')
+      toast(formatCaughtError(err, 'Błąd wysyłki.'), 'error')
     } finally {
       setZawBulkSending(false)
     }
@@ -525,7 +526,7 @@ export default function AdminChargesPage() {
       closeRateForm()
       await fetchRates()
     } catch (err) {
-      setRateError(err instanceof Error ? err.message : 'Błąd zapisu stawki.')
+      setRateError(formatCaughtError(err, 'Błąd zapisu stawki.'))
     } finally {
       setRateSaving(false)
     }

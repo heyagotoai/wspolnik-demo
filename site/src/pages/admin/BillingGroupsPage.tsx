@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
+import { formatCaughtError } from '../../lib/userFacingErrors'
 
 interface Apartment {
   id: string
@@ -89,7 +90,7 @@ export function BillingGroupsPanel() {
       setGroups(groupsData)
       setAllApartments((aptsRes.data || []) as Apartment[])
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd ładowania', 'error')
+      toast(formatCaughtError(e, 'Błąd ładowania'), 'error')
     } finally {
       setLoading(false)
     }
@@ -111,7 +112,7 @@ export function BillingGroupsPanel() {
       setShowCreateForm(false)
       await fetchAll()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd tworzenia grupy', 'error')
+      toast(formatCaughtError(e, 'Błąd tworzenia grupy'), 'error')
     } finally {
       setCreating(false)
     }
@@ -126,7 +127,7 @@ export function BillingGroupsPanel() {
       setEditingGroupId(null)
       await fetchAll()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd', 'error')
+      toast(formatCaughtError(e, 'Błąd'), 'error')
     }
   }
 
@@ -144,7 +145,7 @@ export function BillingGroupsPanel() {
       toast('Grupa usunięta', 'success')
       await fetchAll()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd', 'error')
+      toast(formatCaughtError(e, 'Błąd'), 'error')
     }
   }
 
@@ -161,7 +162,7 @@ export function BillingGroupsPanel() {
       setSelectedAptIds([])
       await fetchAll()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd', 'error')
+      toast(formatCaughtError(e, 'Błąd'), 'error')
     } finally {
       setAssigning(false)
     }
@@ -181,7 +182,7 @@ export function BillingGroupsPanel() {
       toast(`Lokal ${aptNumber} usunięty z grupy`, 'success')
       await fetchAll()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd', 'error')
+      toast(formatCaughtError(e, 'Błąd'), 'error')
     }
   }
 
@@ -204,7 +205,7 @@ export function BillingGroupsPanel() {
       toast('Wpłata rozdzielona', 'success')
       setPaymentForm({ amount: '', payment_date: '', title: '', split_month: '' })
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd rozbicia', 'error')
+      toast(formatCaughtError(e, 'Błąd rozbicia'), 'error')
     } finally {
       setSplitting(false)
     }
@@ -223,7 +224,7 @@ export function BillingGroupsPanel() {
       const data = await api.get<BalanceInfo>(`/billing-groups/${groupId}/balance`)
       setBalance(data)
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd', 'error')
+      toast(formatCaughtError(e, 'Błąd'), 'error')
       setBalanceGroupId(null)
     } finally {
       setLoadingBalance(false)

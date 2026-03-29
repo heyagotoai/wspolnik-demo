@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { roundMoney2 } from '../../lib/money'
 import { useAuth } from '../../hooks/useAuth'
 import { WalletIcon } from '../../components/ui/Icons'
 
@@ -149,7 +150,7 @@ export default function FinancesPage() {
       const totalPayments = aptPayments
         .filter(p => p.confirmed_by_admin)
         .reduce((sum, p) => sum + Number(p.amount), 0)
-      const balance = initial + totalPayments - totalCharges
+      const balance = roundMoney2(initial + totalPayments - totalCharges)
 
       return { apartment: apt, charges: aptCharges, payments: aptPayments, balance, totalCharges, totalPayments }
     })
@@ -175,12 +176,12 @@ export default function FinancesPage() {
   }, [user])
 
   const hasGroup = apartmentsData.some(d => d.apartment.billing_group_id)
-  const combinedBalance = apartmentsData.reduce((sum, d) => sum + d.balance, 0)
+  const combinedBalance = roundMoney2(apartmentsData.reduce((sum, d) => sum + d.balance, 0))
   const combinedCharges = apartmentsData.reduce((sum, d) => sum + d.totalCharges, 0)
   const combinedPayments = apartmentsData.reduce((sum, d) => sum + d.totalPayments, 0)
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(amount)
+    new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(roundMoney2(amount))
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pl-PL', {
@@ -272,9 +273,9 @@ export default function FinancesPage() {
                     <td className="py-2 font-medium text-charcoal">Lokal {d.apartment.number}</td>
                     <td className="py-2 text-right text-error">{formatCurrency(d.totalCharges)}</td>
                     <td className="py-2 text-right text-sage">{formatCurrency(d.totalPayments)}</td>
-                    <td className={`py-2 text-right font-semibold ${d.balance >= 0 ? 'text-sage' : 'text-error'}`}>
+                    <td className={`py-2 text-right font-semibold ${roundMoney2(d.balance) >= 0 ? 'text-sage' : 'text-error'}`}>
                       {formatCurrency(Math.abs(d.balance))}
-                      {d.balance < 0 && <span className="text-[10px] ml-0.5">-</span>}
+                      {roundMoney2(d.balance) < 0 && <span className="text-[10px] ml-0.5">-</span>}
                     </td>
                   </tr>
                 ))}
@@ -463,8 +464,9 @@ function BalanceCard({
   formatCurrency: (n: number) => string
   highlight?: boolean
 }) {
+  const rounded = roundMoney2(amount)
   const colorClass = highlight
-    ? amount >= 0
+    ? rounded >= 0
       ? 'text-sage'
       : 'text-error'
     : 'text-charcoal'
@@ -474,13 +476,13 @@ function BalanceCard({
       <p className="text-xs text-outline uppercase tracking-wide mb-1">{label}</p>
       <p className={`text-xl font-bold ${colorClass}`}>
         {formatCurrency(Math.abs(amount))}
-        {highlight && amount < 0 && (
+        {highlight && rounded < 0 && (
           <span className="text-xs font-normal text-error ml-1">niedopłata</span>
         )}
-        {highlight && amount > 0 && (
+        {highlight && rounded > 0 && (
           <span className="text-xs font-normal text-sage ml-1">nadpłata</span>
         )}
-        {highlight && amount === 0 && (
+        {highlight && rounded === 0 && (
           <span className="text-xs font-normal text-slate ml-1">rozliczone</span>
         )}
       </p>

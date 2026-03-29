@@ -59,7 +59,13 @@ export function parseApiError(body: unknown, status?: number): string {
       return 'Sprawdź poprawność wypełnionych pól.'
     }
   }
-  return `Błąd serwera${status ? ` (${status})` : ''}`
+  if (status === 503 || status === 502) {
+    return 'Serwis jest chwilowo niedostępny. Spróbuj ponownie za chwilę.'
+  }
+  if (status === 429) {
+    return 'Zbyt wiele żądań. Odczekaj chwilę i spróbuj ponownie.'
+  }
+  return 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie za chwilę.'
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {

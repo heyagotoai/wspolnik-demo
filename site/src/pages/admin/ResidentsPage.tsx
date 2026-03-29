@@ -6,6 +6,7 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
+import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Resident {
   id: string
@@ -114,7 +115,7 @@ export default function ResidentsPage() {
           .eq('id', editingId)
 
         if (updateError) {
-          setError(updateError.message)
+          setError(mapSupabaseError(updateError))
           setSaving(false)
           return
         }
@@ -138,7 +139,7 @@ export default function ResidentsPage() {
       await fetchResidents()
       closeForm()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wystąpił błąd')
+      setError(formatCaughtError(err, 'Wystąpił błąd'))
     }
 
     setSaving(false)
@@ -159,7 +160,7 @@ export default function ResidentsPage() {
       await fetchResidents()
       toast('Mieszkaniec został usunięty', 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd usuwania', 'error')
+      toast(formatCaughtError(err, 'Błąd usuwania'), 'error')
     }
     setDeleting(null)
   }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { XIcon } from '../ui/Icons'
 import { parseApiError } from '../../lib/api'
+import { formatCaughtError } from '../../lib/userFacingErrors'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -90,7 +91,7 @@ export default function ImportBankStatementModal({ onClose, onSuccess }: Props) 
       setPreview(res)
       setStep('preview')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd')
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setLoading(false)
     }
@@ -106,7 +107,7 @@ export default function ImportBankStatementModal({ onClose, onSuccess }: Props) 
       setStep('done')
       onSuccess()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd')
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setLoading(false)
     }

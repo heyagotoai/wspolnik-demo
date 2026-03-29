@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { useToast } from '../../components/ui/Toast'
+import { formatCaughtError } from '../../lib/userFacingErrors'
 import {
   barWidthPrzeciwPct,
   barWidthWstrzymujePct,
@@ -119,7 +120,7 @@ export default function ResidentResolutionsPage() {
 
       toast('Głos został oddany', 'success')
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd głosowania', 'error')
+      toast(formatCaughtError(e, 'Błąd głosowania'), 'error')
     } finally {
       setVoting(null)
     }

@@ -10,6 +10,8 @@ import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 import ImportInitialStateModal from '../../components/admin/ImportInitialStateModal'
 import ImportPaymentsModal from '../../components/admin/ImportPaymentsModal'
 import ImportBankStatementModal from '../../components/admin/ImportBankStatementModal'
+import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
+import { roundMoney2 } from '../../lib/money'
 
 interface Resident {
   id: string
@@ -118,7 +120,7 @@ export default function ApartmentsPage() {
       for (const a of aptsRes.data) {
         if (!balMap[a.id]) balMap[a.id] = { charges: 0, payments: 0, balance: 0 }
         const ib = Number(a.initial_balance) || 0
-        balMap[a.id].balance = ib + balMap[a.id].payments - balMap[a.id].charges
+        balMap[a.id].balance = roundMoney2(ib + balMap[a.id].payments - balMap[a.id].charges)
       }
 
       const groupsMap: Record<string, string> = {}
@@ -220,7 +222,7 @@ export default function ApartmentsPage() {
         .eq('id', editingId)
 
       if (updateErr) {
-        setError(updateErr.message)
+        setError(mapSupabaseError(updateErr))
         setSaving(false)
         return
       }
@@ -231,7 +233,11 @@ export default function ApartmentsPage() {
         .insert(payload)
 
       if (insertErr) {
-        setError(insertErr.code === '23505' ? 'Lokal o tym numerze już istnieje.' : insertErr.message)
+        setError(
+          insertErr.code === '23505'
+            ? 'Lokal o tym numerze już istnieje.'
+            : mapSupabaseError(insertErr),
+        )
         setSaving(false)
         return
       }
@@ -331,7 +337,7 @@ export default function ApartmentsPage() {
       const result = await api.post<{ detail: string }>(`/charges/balance-notification/${apt.id}`, {})
       toast(result.detail, 'success')
     } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Błąd wysyłki emaila', 'error')
+      toast(formatCaughtError(err, 'Błąd wysyłki emaila'), 'error')
     } finally {
       setSendingEmail(null)
     }
@@ -410,7 +416,7 @@ export default function ApartmentsPage() {
         toast(`Wysłano: ${result.sent.length}, błędy: ${result.failed.length}.`, 'error')
       }
     } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Błąd wysyłki masowej', 'error')
+      toast(formatCaughtError(err, 'Błąd wysyłki masowej'), 'error')
     } finally {
       setBulkSending(false)
     }
@@ -443,13 +449,13 @@ export default function ApartmentsPage() {
         toast(`Ponowienie: wysłano ${result.sent.length}, błędy: ${result.failed.length}.`, 'error')
       }
     } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Błąd ponowienia wysyłki', 'error')
+      toast(formatCaughtError(err, 'Błąd ponowienia wysyłki'), 'error')
     } finally {
       setBulkSending(false)
     }
   }
 
-  const formatCurrency = (n: number) => `${n.toFixed(2)} zł`
+  const formatCurrency = (n: number) => `${roundMoney2(n).toFixed(2)} zł`
 
   const formatAmountPl = (n: number) =>
     `${n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`
@@ -777,13 +783,13 @@ export default function ApartmentsPage() {
                     <td className="px-5 py-3 text-slate">{apt.area_m2 ? `${apt.area_m2} m²` : '—'}</td>
                     <td className="px-5 py-3 text-slate">{apt.share ? `${(apt.share * 100).toFixed(2)}%` : '—'}</td>
                     <td className="px-2 py-3 text-slate text-center">{apt.declared_occupants || 0}</td>
-                    <td className={`px-5 py-3 text-right ${apt.initial_balance < 0 ? 'text-error' : apt.initial_balance > 0 ? 'text-sage' : 'text-slate'}`}>
-                      <div className="font-medium">{apt.initial_balance != null ? `${apt.initial_balance.toFixed(2)} zł` : '—'}</div>
+                    <td className={`px-5 py-3 text-right ${roundMoney2(apt.initial_balance) < 0 ? 'text-error' : roundMoney2(apt.initial_balance) > 0 ? 'text-sage' : 'text-slate'}`}>
+                      <div className="font-medium">{apt.initial_balance != null ? `${roundMoney2(apt.initial_balance).toFixed(2)} zł` : '—'}</div>
                       {apt.initial_balance_date && (
                         <div className="text-xs text-outline">na {apt.initial_balance_date}</div>
                       )}
                     </td>
-                    <td className={`px-5 py-3 text-right font-medium ${(balances[apt.id]?.balance ?? 0) < 0 ? 'text-error' : (balances[apt.id]?.balance ?? 0) > 0 ? 'text-sage' : 'text-slate'}`}>
+                    <td className={`px-5 py-3 text-right font-medium ${roundMoney2(balances[apt.id]?.balance ?? 0) < 0 ? 'text-error' : roundMoney2(balances[apt.id]?.balance ?? 0) > 0 ? 'text-sage' : 'text-slate'}`}>
                       {formatCurrency(balances[apt.id]?.balance ?? 0)}
                     </td>
                     <td className="px-5 py-3 text-slate">{apt.owner_name || '—'}</td>

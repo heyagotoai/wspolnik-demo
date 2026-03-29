@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds } from '../../lib/readAnnouncements'
+import { roundMoney2 } from '../../lib/money'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 
 interface Announcement {
@@ -151,7 +152,7 @@ export default function DashboardPage() {
             .filter((p: { confirmed_by_admin: boolean }) => p.confirmed_by_admin)
             .reduce((s, p) => s + Number(p.amount), 0)
           const initialBalanceSum = apartments.reduce((s, a) => s + (Number(a.initial_balance) || 0), 0)
-          setBalance(initialBalanceSum + totalPayments - totalCharges)
+          setBalance(roundMoney2(initialBalanceSum + totalPayments - totalCharges))
         }
       }
 

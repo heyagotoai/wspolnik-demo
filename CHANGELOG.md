@@ -2,6 +2,11 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — Saldo bez „-0,00 zł”; komunikaty błędów; klient API (401)
+- **`site/src/lib/money.ts`** — `roundMoney2()` (zaokrąglenie do groszy); usuwa artefakty float przy sumowaniu salda (`initial + wpłaty − naliczenia`), które dawały **-0,00 zł** i czerwony kolor przy teoretycznym zerze — użycie w **Lokale** (`ApartmentsPage`), **Finanse**, **Dashboard**; test `money.test.ts`
+- **`site/src/lib/userFacingErrors.ts`** — `formatCaughtError`, `mapSupabaseError` (sieć, duplicate key, FK, RLS, JWT); import z wielu stron i modali zamiast duplikatów; **`userFacingErrors.test.ts`**
+- **`site/src/lib/api.ts`** — po **401**: deduplikacja `refreshSession()`, jedno ponowne żądanie (wygasły access token); testy w `api.test.ts`
+
 ### 2026-03-29 — Import z banku: kilka lokali w opisie; logowanie: błędy po polsku
 - **`api/services/bank_statement_parser.py`** — ekstrakcja wielu numerów z opisu (`lokal nr 11,16`, `11 i 16` itd.); gdy trafienia należą do jednej grupy rozliczeniowej, ustawiane jest `group_records` (rozbicie wpłaty jak przy dopasowaniu po nazwisku); testy w `api/tests/test_bank_statement_parser.py`
 - **`site/src/lib/authLoginErrors.ts`** — mapowanie komunikatów Supabase Auth na zrozumiałe teksty po polsku; **`LoginPage`** używa `getLoginErrorMessage`; testy jednostkowe modułu
