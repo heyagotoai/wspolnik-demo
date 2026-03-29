@@ -16,6 +16,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 from api.core.config import CRON_SECRET, SUPABASE_URL
+from api.core.email_disclaimer import automated_email_footer
 from api.core.supabase_client import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -222,6 +223,7 @@ def backup_cron(request: Request):
                 f"Tygodniowy backup z {today.isoformat()} nie powiódł się.\n\n"
                 f"Błąd: {e}\n\n"
                 f"Sprawdź logi w Vercel Dashboard."
+                f"{automated_email_footer()}"
             ),
         )
         raise HTTPException(status_code=500, detail=f"Backup upload failed: {e}")
@@ -243,6 +245,7 @@ def backup_cron(request: Request):
             f"Dokumenty PDF: {len(documents)}\n"
             f"Usunięto starych backupów: {deleted}\n\n"
             f"Retencja: {RETENTION_WEEKS} tygodni"
+            f"{automated_email_footer()}"
         ),
     )
 

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import APIRouter, HTTPException
 
+from api.core.email_disclaimer import contact_form_relay_footer
 from api.core.supabase_client import get_supabase
 from api.models.schemas import ContactMessageCreate, MessageOut
 
@@ -28,6 +29,7 @@ def _try_send_email(msg: ContactMessageCreate) -> None:
         f"Lokal: {msg.apartment_number or '—'}\n"
         f"Temat: {msg.subject}\n\n"
         f"{msg.message}"
+        f"{contact_form_relay_footer()}"
     )
 
     try:

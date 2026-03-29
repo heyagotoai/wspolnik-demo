@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
+from api.core.email_disclaimer import automated_email_footer, PUBLIC_SITE_URL
 from api.core.security import require_admin_or_manager
 from api.core.supabase_client import get_supabase
 from api.models.schemas import MessageOut
@@ -77,10 +78,9 @@ def send_announcement_email(
         f"Nowe ogłoszenie w serwisie WM GABI:\n\n"
         f"{title}\n"
         f"{'=' * len(title)}\n\n"
-        f"{content}\n\n"
-        f"---\n"
-        f"Wiadomość wysłana automatycznie z systemu WM GABI.\n"
-        f"Zaloguj się na wmgabi.pl aby zobaczyć szczegóły."
+        f"{content}"
+        f"{automated_email_footer()}"
+        f"Szczegóły ogłoszenia po zalogowaniu: {PUBLIC_SITE_URL}\n"
     )
 
     sent = 0
