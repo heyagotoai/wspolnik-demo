@@ -196,6 +196,12 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 3. Status domyślnie: `Szkic` — uchwała niewidoczna dla mieszkańców
 4. Kliknij **Zapisz**
 
+**Głosy z zebrania (osobiście przed głosowaniem online):**
+- Jeśli część mieszkańców oddała głos na zebraniu wspólnoty, zanim włączysz głosowanie w systemie: przy uchwale w statusie **Szkic** kliknij **Głosy z zebrania**
+- Wybierz mieszkańca i opcję (Za / Przeciw / Wstrzymuje się). W systemie obowiązuje **jeden głos na mieszkańca** przy danej uchwale — osoba wpisana tutaj **nie zagłosuje ponownie** w panelu po uruchomieniu głosowania
+- Możesz **usunąć** pojedynczy wpis przed publikacją (korekta). **Resetuj głosy** usuwa wszystkie głosy naraz (także po starcie głosowania — z podwójnym potwierdzeniem)
+- **Uwaga:** cofnięcie uchwały do szkicu z etapu głosowania **usuwa wszystkie głosy** (także z zebrania) — patrz komunikat przy zapisie uchwały
+
 **Uruchomienie głosowania:**
 - Zmień status na **Głosowanie** — mieszkańcy zobaczyją uchwałę i będą mogli głosować
 
@@ -213,7 +219,8 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 - Wymagane jest wpisanie potwierdzenia tekstowego — operacja jest nieodwracalna
 
 **Eksport do PDF:**
-- Kliknij **Eksportuj PDF**, aby pobrać protokół głosowania z wynikami
+- Kliknij ikonę pobrania (**Eksportuj wyniki głosowania (PDF)**) w prawym górnym rogu karty uchwały — ta sama grupa co reset głosów, edycja i usunięcie (obok przycisku «Głosy z zebrania», gdy jest widoczny)
+- Otwiera się podgląd wydruku do zapisu/druku jako PDF
 
 ---
 

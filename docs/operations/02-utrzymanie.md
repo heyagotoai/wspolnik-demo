@@ -21,6 +21,7 @@ Dokument opisuje codzienne operacje, monitoring i debugowanie systemu.
 - **Frontend** → Supabase bezpośrednio (odczyty, auth, storage)
 - **Frontend** → FastAPI `/api/*` (operacje uprzywilejowane: CRUD mieszkańców, naliczenia)
 - **FastAPI** → Supabase z `service_role` key (omija RLS)
+- **Głosy z zebrania (uchwały):** rejestracja głosu za mieszkańca (`POST /api/resolutions/:id/votes/register`) jest możliwa tylko w tej warstwie — nie da się jej zrobić bezpiecznie samym klientem Supabase z rolą mieszkańca (RLS: `votes_insert_own`). Szczegóły: [[ADR-010-voting-system]], panel `/admin/uchwaly`.
 
 ---
 

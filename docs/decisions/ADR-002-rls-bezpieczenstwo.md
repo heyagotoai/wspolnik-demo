@@ -26,7 +26,7 @@ Funkcje `is_admin()` i `my_apartment_ids()` muszą być `SECURITY DEFINER`, bo:
 - Bez tego RLS blokowałby sam siebie (zapętlenie)
 
 ## Edge cases
-- Głosy (`votes`) — brak UPDATE policy = głosu nie da się zmienić (celowe, chroni integralność głosowania). Admin może usuwać głosy (`votes_delete_admin`, migracja 012) — do resetu głosowania z podwójnym potwierdzeniem w UI
+- Głosy (`votes`) — brak UPDATE policy = głosu nie da się zmienić (celowe, chroni integralność głosowania). Admin może usuwać głosy (`votes_delete_admin`, migracja 012) — do resetu głosowania z podwójnym potwierdzeniem w UI. **Głos w imieniu mieszkańca** (np. z zebrania) wymaga **FastAPI + `service_role`** — patrz [[ADR-010-voting-system]] (`POST .../votes/register`); RLS dla zwykłego użytkownika nadal wymaga `resident_id = auth.uid()` przy INSERT
 - Ogłoszenia (`announcements`) — `USING (true)` = w pełni publiczne, każdy widzi wszystkie
 - Dokumenty — dwa poziomy: niezalogowany widzi tylko `is_public = true`, zalogowany widzi wszystkie
 - Wiadomości kontaktowe (`contact_messages`) — rate limiting: max 5 INSERT/godz per email (RLS policy + FastAPI, migracja 012)

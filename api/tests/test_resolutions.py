@@ -8,6 +8,8 @@ Pokryte scenariusze:
 - GET    /api/resolutions/:id/results  — wyniki głosowania
 - GET    /api/resolutions/:id/votes    — lista głosów z danymi mieszkańców (admin)
 - DELETE /api/resolutions/:id/votes    — reset głosów (admin)
+- POST   /api/resolutions/:id/votes/register — rejestracja głosu z zebrania (admin, tylko szkic)
+- DELETE /api/resolutions/:id/votes/:resident_id — usunięcie pojedynczego głosu (admin, tylko szkic)
 - GET    /api/resolutions/:id/my-vote  — mój głos
 - POST   /api/resolutions/:id/vote     — oddanie głosu
 """
@@ -379,6 +381,73 @@ class TestVoteDetails:
 
 
 # --- DELETE /api/resolutions/:id/votes ------------------------------------
+
+class TestRegisterMeetingVote:
+    def test_rejestracja_glosu_w_szkicu(self, admin_client, fake_sb):
+        draft = {**RESOLUTION_DATA, "status": "draft"}
+        fake_sb.set_table_data("resolutions", [draft])
+        fake_sb.set_table_data("votes", [])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
+
+        response = admin_client.post(
+            "/api/resolutions/res-1/votes/register",
+            json={"resident_id": "res-1", "vote": "za"},
+        )
+        assert response.status_code == 201
+        assert response.json()["vote"] == "za"
+
+    def test_rejestracja_wymaga_statusu_draft(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
+
+        response = admin_client.post(
+            "/api/resolutions/res-1/votes/register",
+            json={"resident_id": "res-1", "vote": "za"},
+        )
+        assert response.status_code == 400
+
+    def test_duplikat_rejestracji(self, admin_client, fake_sb):
+        draft = {**RESOLUTION_DATA, "status": "draft"}
+        fake_sb.set_table_data("resolutions", [draft])
+        fake_sb.set_table_data("votes", [VOTE_DATA])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
+
+        response = admin_client.post(
+            "/api/resolutions/res-1/votes/register",
+            json={"resident_id": "res-1", "vote": "przeciw"},
+        )
+        assert response.status_code == 409
+
+    def test_rejestracja_tylko_dla_admina(self, resident_client, fake_sb):
+        draft = {**RESOLUTION_DATA, "status": "draft"}
+        fake_sb.set_table_data("resolutions", [draft])
+        fake_sb.set_table_data("votes", [])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
+
+        response = resident_client.post(
+            "/api/resolutions/res-1/votes/register",
+            json={"resident_id": "res-1", "vote": "za"},
+        )
+        assert response.status_code == 403
+
+
+class TestDeleteSingleVoteDraft:
+    def test_usuniecie_pojedynczego_glosu_w_szkicu(self, admin_client, fake_sb):
+        draft = {**RESOLUTION_DATA, "status": "draft"}
+        fake_sb.set_table_data("resolutions", [draft])
+        fake_sb.set_table_data("votes", [VOTE_DATA])
+
+        response = admin_client.delete("/api/resolutions/res-1/votes/res-1")
+        assert response.status_code == 200
+
+    def test_usuniecie_pojedynczego_nie_gdy_glosowanie(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [VOTE_DATA])
+
+        response = admin_client.delete("/api/resolutions/res-1/votes/res-1")
+        assert response.status_code == 400
+
 
 class TestResetVotes:
     def test_reset_glosow_usuwa_wszystkie(self, admin_client, fake_sb):

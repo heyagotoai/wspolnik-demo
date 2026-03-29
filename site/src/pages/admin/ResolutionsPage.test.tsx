@@ -83,13 +83,38 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
 
-  // Default: api.get returns resolutions list, results and votes return mock data
+  const resultsVoting = {
+    za: 1,
+    przeciw: 0,
+    wstrzymuje: 0,
+    total: 1,
+    share_za: 0.5,
+    share_przeciw: 0,
+    share_wstrzymuje: 0,
+    total_share_community: 1,
+  }
+  const resultsEmpty = {
+    za: 0,
+    przeciw: 0,
+    wstrzymuje: 0,
+    total: 0,
+    share_za: 0,
+    share_przeciw: 0,
+    share_wstrzymuje: 0,
+    total_share_community: 1,
+  }
+
+  // Default: wyniki tylko dla uchwały w głosowaniu; szkic bez głosów (jak po zmianie: /results także dla draft)
   mockGet.mockImplementation((path: string) => {
     if (path === '/resolutions') return Promise.resolve(mockResolutions)
-    if (path.includes('/results')) return Promise.resolve({ za: 1, przeciw: 0, wstrzymuje: 0, total: 1 })
-    if (path.includes('/votes')) return Promise.resolve([
-      { resident_id: 'r1', full_name: 'Jan Kowalski', apartment_number: '12', vote: 'za', voted_at: '2026-03-21T12:00:00' },
-    ])
+    if (path === '/resolutions/res-1/results') return Promise.resolve(resultsVoting)
+    if (path === '/resolutions/res-2/results') return Promise.resolve(resultsEmpty)
+    if (path === '/resolutions/res-1/votes') {
+      return Promise.resolve([
+        { resident_id: 'r1', full_name: 'Jan Kowalski', apartment_number: '12', vote: 'za', voted_at: '2026-03-21T12:00:00' },
+      ])
+    }
+    if (path === '/resolutions/res-2/votes') return Promise.resolve([])
     return Promise.resolve(null)
   })
 })
@@ -222,10 +247,23 @@ describe('AdminResolutionsPage', () => {
         title: xssTitle,
         description: 'Test <b>bold</b> injection',
       }])
-      if (path.includes('/results')) return Promise.resolve({ za: 1, przeciw: 0, wstrzymuje: 0, total: 1 })
-      if (path.includes('/votes')) return Promise.resolve([
-        { resident_id: 'r1', full_name: xssName, apartment_number: '<a>', vote: 'za', voted_at: '2026-03-21T12:00:00' },
-      ])
+      if (path === '/resolutions/res-1/results') {
+        return Promise.resolve({
+          za: 1,
+          przeciw: 0,
+          wstrzymuje: 0,
+          total: 1,
+          share_za: 0.5,
+          share_przeciw: 0,
+          share_wstrzymuje: 0,
+          total_share_community: 1,
+        })
+      }
+      if (path === '/resolutions/res-1/votes') {
+        return Promise.resolve([
+          { resident_id: 'r1', full_name: xssName, apartment_number: '<a>', vote: 'za', voted_at: '2026-03-21T12:00:00' },
+        ])
+      }
       return Promise.resolve(null)
     })
 

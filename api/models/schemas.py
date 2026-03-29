@@ -139,6 +139,13 @@ class VoteCreate(BaseModel):
     vote: VoteValue
 
 
+class VoteRegisterAdmin(BaseModel):
+    """Rejestracja głosu oddanego na zebraniu (tylko admin, uchwała w szkicu)."""
+
+    resident_id: str
+    vote: VoteValue
+
+
 class VoteOut(BaseModel):
     id: str
     resolution_id: str

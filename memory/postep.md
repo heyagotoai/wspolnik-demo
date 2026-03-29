@@ -3,6 +3,7 @@
 Ostatnia aktualizacja: **2026-03-29**.
 
 ## Zrobione niedawno
+- **Głosy z zebrania (uchwały, 2026-03-29)** — przed publikacją uchwały admin rejestruje w panelu głosy oddane osobiście na zebraniu (`POST /api/resolutions/:id/votes/register`, `DELETE .../votes/:resident_id` w szkicu); `UNIQUE` blokuje drugi głos online; UI `/admin/uchwaly` — „Głosy z zebrania”, PDF dla szkicu z głosami; **pasek akcji:** ikona PDF w grupie z resetem / edycją / usunięciem (ADR-010, CHANGELOG). Zsynchronizowane: `feature-map.md` (roadmapa + uzupełnienie), `system-overview.md`, `KARTA_PRODUKTU.md`, ADR-002/010, pentest-doc, `operations/02`, `instrukcja-admina.md`.
 - **UI panelu (2026-03-29)** — sidebary `ResidentLayout` / `AdminLayout`: sticky `h-screen`, linki profil/wyloguj zaraz pod menu (bez zjeżdżania przy długiej treści). Finanse: kolejność naliczeń; historia wpłat bez znaczników importu dla mieszkańca; `paymentDisplay` + modal wpłat w Lokale (admin/zarządca). Ogłoszenia: link z tytułu „Nowe głosowanie” do `#resolution-{id}` + scroll w Głosowania; `votingAnnouncement.ts`.
 - **UX / frontend (2026-03-29)** — saldo: `roundMoney2` (brak „-0,00 zł” z floatów); `userFacingErrors` + spójne importy; klient `api.ts`: retry po 401 z deduplikacją odświeżenia sesji.
 - **Głosowanie nad uchwałami (2026-03-29)** — wyniki API z wagami udziałów (`apartments.share`, właściciel lokalu); uprawnienia: `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu); `can_vote_resolutions` w profilu; UI `voteResultsDisplay.ts` (fallback % gdy brak wag); PDF z dwoma trybami. ADR-010, CHANGELOG.
@@ -16,7 +17,7 @@ Ostatnia aktualizacja: **2026-03-29**.
 - Import **MT940** (lub inny format poza `.xls`) — opcjonalnie, gdy bank udostępni inny eksport.
 - Ewentualne dopracowanie wydruku salda (marginesy, logo w `public/logo.png`).
 
-Powiązane: `CHANGELOG.md`, `docs/architecture/feature-map.md`, `docs/decisions/ADR-014-payment-import-deduplication.md`, `docs/instrukcja-admina.md`.
+Powiązane: `CHANGELOG.md`, `docs/architecture/feature-map.md`, `docs/decisions/` (m.in. ADR-010, ADR-002, ADR-014), `docs/instrukcja-admina.md`, `docs/KARTA_PRODUKTU.md`, `docs/operations/02-utrzymanie.md`, `CLAUDE.md`, `.cursorrules`.
 
 **Zależności:** `api/requirements.txt` — same `==`; `site/package.json` — wersje bez `^` (reprodukowalne buildy). `npm ci` w `site/` po klonowaniu.
 

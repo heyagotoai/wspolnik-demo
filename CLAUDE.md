@@ -29,6 +29,8 @@ supabase/
 docs/           — Obsidian vault (ADR-y, koncepty, architektura)
 ```
 
+**Panel Uchwały (`site/src/pages/admin/ResolutionsPage.tsx`):** głosy z zebrania (modal), eksport PDF; pasek akcji — «Głosy z zebrania», potem ikony (reset głosów, PDF, edycja, usuń). Szczegóły: `docs/decisions/ADR-010-voting-system.md`.
+
 ## Komendy deweloperskie
 ```bash
 # Frontend
@@ -119,7 +121,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
-- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu)
+- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `POST :id/votes/register` (głosy z zebrania, tylko szkic) + `DELETE :id/votes/:resident_id` (pojedynczy głos, tylko szkic); `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu)
 - `/api/profile` — profil mieszkańca + pole `can_vote_resolutions` (spójne z głosowaniem)
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej); **GET** `/charges/rates` i `/charges/auto-config` — tylko admin lub manager (mieszkaniec nie pobiera przez API)
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)

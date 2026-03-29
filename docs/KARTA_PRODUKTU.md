@@ -69,9 +69,11 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
   - Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym (ochrona przed podwójnym naliczeniem)
 - **Uchwały i głosowania**
   - Workflow statusów: szkic → głosowanie → zamknięte
+  - Rejestracja **głosów z zebrania** (osobiście) w szkicu przed publikacją — ten sam zapis co głos online, brak podwójnego głosu w panelu
+  - Panel admina: logiczny układ akcji — przycisk «Głosy z zebrania», potem ikony (reset głosów, eksport PDF, edycja, usunięcie)
   - Automatyczne ogłoszenie do mieszkańców przy otwarciu głosowania
   - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
-  - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec)
+  - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec), także dla szkicu z już wprowadzonymi głosami
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
 - **Dziennik operacji** — historia wszystkich operacji finansowych i głosowań (kto, co, kiedy), filtrowanie po obszarze systemu i zakresie dat, podgląd szczegółów zmian
 - **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona

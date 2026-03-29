@@ -33,7 +33,7 @@
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
 | Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Grupy rozliczeniowe | `/admin/grupy-rozliczeniowe` | CRUD grup, przypisywanie lokali, rejestracja wpłat grupowych z auto-rozbiciem, podgląd salda łącznego (admin; backend `/api/billing-groups`) |
-| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), wyniki (agregacja wg udziałów + fallback w UI/PDF), eksport PDF (podsumowanie + lista głosów per mieszkaniec) |
+| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), **głosy z zebrania** (modal przy szkicu — rejestracja głosów osobistych przed publikacją; API `POST /resolutions/:id/votes/register`, korekta `DELETE .../votes/:resident_id` tylko w szkicu, tylko **admin**), wyniki (agregacja wg udziałów + fallback w UI/PDF), eksport PDF także dla szkicu z głosami; **pasek akcji:** „Głosy z zebrania” → ikony (reset głosów, PDF, edycja, usuń) — [[ADR-010-voting-system]] |
 | Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
 
 ## Roadmapa — przed produkcją
@@ -81,6 +81,9 @@
 | Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
 | Demo / trial | ⬜ todo | NISKI | Środowisko demo z przykładowymi danymi |
 | Regulamin i umowa SaaS | ⬜ todo | ŚREDNI | Dokumenty prawne: umowa, SLA, przetwarzanie danych (RODO) |
+
+### Uzupełnienie roadmapy (2026-03-29)
+- **Uchwały — głosy z zebrania** — wdrożone (API + panel admina + dokumentacja); brak odrębnego wiersza w tabeli „Brakujące funkcjonalności”, bo funkcja wynika z bieżącej obsługi uchwał — źródło prawdy: [[ADR-010-voting-system]].
 
 ## Powiązania
 - [[ADR-004-data-access-pattern]] — kiedy frontend vs backend

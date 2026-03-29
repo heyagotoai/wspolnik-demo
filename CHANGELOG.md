@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — Uchwały: głosy z zebrania przed publikacją
+- **`POST /api/resolutions/:id/votes/register`** (admin, tylko `status=draft`) — rejestracja głosu mieszkańca oddanego osobiście na zebraniu; te same reguły co `POST /vote` (`voting_eligibility`); **`DELETE /api/resolutions/:id/votes/:resident_id`** — pojedyncze usunięcie w szkicu
+- **Panel admina Uchwały** — przycisk „Głosy z zebrania” przy szkicu; podgląd wyników także dla szkicu z głosami; eksport PDF gdy są głosy
+- **UI (ten sam dzień):** `ResolutionsPage` — ikona eksportu PDF przeniesiona do **jednej grupy** z resetem głosów, edycją i usunięciem (po przycisku „Głosy z zebrania”); opis w ADR-010
+- **Dokumentacja (Obsidian + repo):** [[ADR-010-voting-system]], [[ADR-002-rls-bezpieczenstwo]] (edge case), `docs/architecture/feature-map.md` (mapa + uzupełnienie roadmapy), `docs/architecture/system-overview.md`, `docs/instrukcja-admina.md`, `docs/KARTA_PRODUKTU.md`, `docs/operations/02-utrzymanie.md`, `docs/security/pentest-2026-03-27.md` (uwaga o nowych endpointach), `memory/postep.md`, **CLAUDE.md** / **.cursorrules** — opis workflow i endpointów; testy: `api/tests/test_resolutions.py`, `ResolutionsPage.test.tsx`
+
 ### 2026-03-29 — UI: finanse, sidebary, ogłoszenia → uchwała, podgląd wpłat (Lokale)
 - **Finanse mieszkańca** (`FinancesPage`) — stała kolejność wierszy „Naliczenia miesięczne”: Eksploatacja → Fundusz remontowy → Śmieci; historia wpłat: ujednolicony tytuł „Wpłata z dnia” **bez** znaczników źródła importu (bank/arkusz/podział) — tylko tekst + data + kwota
 - **`site/src/lib/paymentDisplay.ts`** — etykiety dla wpłat (Z banku / Z arkusza / Podział + źródło z wpłaty nadrzędnej przy rozbiciu); użycie w **`ApartmentPaymentsModal`**; mieszkańiec nie renderuje znaczników
