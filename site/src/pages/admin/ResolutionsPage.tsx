@@ -93,7 +93,7 @@ export default function AdminResolutionsPage() {
         }
       }
       setResults(resultsMap)
-    } catch (e) {
+    } catch {
       toast('Błąd ładowania uchwał', 'error')
     } finally {
       setLoading(false)

@@ -54,11 +54,6 @@ export default function FinancesPage() {
   // Active tab for multi-apartment view
   const [activeAptId, setActiveAptId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) return
-    fetchData()
-  }, [user])
-
   const fetchData = async () => {
     setLoading(true)
     setError(null)
@@ -172,6 +167,12 @@ export default function FinancesPage() {
     setActiveAptId(data[0]?.apartment.id || null)
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!user) return
+    fetchData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const hasGroup = apartmentsData.some(d => d.apartment.billing_group_id)
   const combinedBalance = apartmentsData.reduce((sum, d) => sum + d.balance, 0)
