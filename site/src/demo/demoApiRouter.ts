@@ -450,6 +450,9 @@ export async function routeDemoApi(
         apartment_id: a.id,
         amount: share,
         confirmed_by_admin: true,
+        payment_date: String(b.payment_date ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+        title: (b.title as string) || 'Wpłata grupowa (demo)',
+        parent_payment_id: parent_payment_id,
       })
       children.push({
         apartment_id: a.id,
