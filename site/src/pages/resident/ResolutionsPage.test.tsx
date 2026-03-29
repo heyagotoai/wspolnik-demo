@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
@@ -52,13 +53,15 @@ const mockResolutions = [
   },
 ]
 
-function renderPage() {
+function renderPage(initialPath = '/panel/glosowania') {
   return render(
-    <ToastProvider>
-      <ConfirmProvider>
-        <ResidentResolutionsPage />
-      </ConfirmProvider>
-    </ToastProvider>,
+    <MemoryRouter initialEntries={[initialPath]}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <ResidentResolutionsPage />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   )
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useToast } from '../../components/ui/Toast'
 import { formatCaughtError } from '../../lib/userFacingErrors'
@@ -59,6 +60,7 @@ const voteOptions = [
 ] as const
 
 export default function ResidentResolutionsPage() {
+  const location = useLocation()
   const [resolutions, setResolutions] = useState<Resolution[]>([])
   const [results, setResults] = useState<Record<string, VoteResults>>({})
   const [myVotes, setMyVotes] = useState<Record<string, MyVote>>({})
@@ -107,6 +109,17 @@ export default function ResidentResolutionsPage() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  useEffect(() => {
+    if (loading) return
+    const raw = location.hash.replace(/^#/, '')
+    if (!raw.startsWith('resolution-')) return
+    const id = raw.slice('resolution-'.length)
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(`resolution-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [loading, location.hash, resolutions])
 
   const handleVote = async (resolutionId: string, vote: string) => {
     setVoting(resolutionId)
@@ -177,7 +190,11 @@ export default function ResidentResolutionsPage() {
             const pFrek = voteData ? pctDisplayParticipation(voteData) : null
 
             return (
-              <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
+              <div
+                key={r.id}
+                id={`resolution-${r.id}`}
+                className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6 scroll-mt-24"
+              >
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>

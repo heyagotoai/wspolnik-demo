@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon, WalletIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
@@ -10,6 +10,7 @@ import { communityInfo, saldoPrintCopy } from '../../data/mockData'
 import ImportInitialStateModal from '../../components/admin/ImportInitialStateModal'
 import ImportPaymentsModal from '../../components/admin/ImportPaymentsModal'
 import ImportBankStatementModal from '../../components/admin/ImportBankStatementModal'
+import ApartmentPaymentsModal from '../../components/admin/ApartmentPaymentsModal'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 import { roundMoney2 } from '../../lib/money'
 
@@ -75,10 +76,11 @@ export default function ApartmentsPage() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [showImportPaymentsModal, setShowImportPaymentsModal] = useState(false)
   const [showBankStatementModal, setShowBankStatementModal] = useState(false)
+  const [paymentsModalApt, setPaymentsModalApt] = useState<Apartment | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
-  const { isAdmin } = useRole()
+  const { isAdmin, isAdminOrManager } = useRole()
 
   const fetchData = async () => {
     const [aptsRes, resRes, chargesRes, paymentsRes, groupsRes] = await Promise.all([
@@ -802,6 +804,16 @@ export default function ApartmentsPage() {
                         >
                           <PrinterIcon className="w-4 h-4" />
                         </button>
+                        {isAdminOrManager && (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentsModalApt(apt)}
+                            className="p-1.5 text-outline hover:text-sage transition-colors"
+                            title="Podgląd wpłat lokalu"
+                          >
+                            <WalletIcon className="w-4 h-4" />
+                          </button>
+                        )}
                         {isAdmin && (
                           <>
                             <button
@@ -955,6 +967,15 @@ export default function ApartmentsPage() {
           </div>,
           document.body
         )}
+
+      {paymentsModalApt && (
+        <ApartmentPaymentsModal
+          apartmentId={paymentsModalApt.id}
+          apartmentNumber={paymentsModalApt.number}
+          tablePaymentsTotal={balances[paymentsModalApt.id]?.payments ?? 0}
+          onClose={() => setPaymentsModalApt(null)}
+        />
+      )}
 
       {showImportModal && (
         <ImportInitialStateModal

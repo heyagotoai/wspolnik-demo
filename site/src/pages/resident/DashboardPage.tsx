@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds } from '../../lib/readAnnouncements'
+import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
 import { roundMoney2 } from '../../lib/money'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 
@@ -232,7 +233,10 @@ export default function DashboardPage() {
           <p className="text-slate text-sm">Brak ogłoszeń.</p>
         ) : (
           <div className="space-y-4">
-            {announcements.map((a) => (
+            {announcements.map((a) => {
+              const votingTitle = resolutionTitleFromVotingAnnouncement(a.title)
+              const votingResId = votingTitle ? findResolutionIdByTitle(votingTitle, resolutions) : null
+              return (
               <div key={a.id} className="border-b border-cream-medium pb-4 last:border-0 last:pb-0">
                 <div className="flex items-start gap-2">
                   {a.is_pinned && (
@@ -243,8 +247,13 @@ export default function DashboardPage() {
                   <div>
                     {a.title.startsWith('Nowe głosowanie:') ? (
                       <>
-                        <Link to="/panel/glosowania" className="text-sm font-medium text-sage hover:text-sage-light">{a.title}</Link>
-                        {votedResolutionTitles.has(a.title.replace('Nowe głosowanie: ', '')) ? (
+                        <Link
+                          to={votingResId ? `/panel/glosowania#resolution-${votingResId}` : '/panel/glosowania'}
+                          className="text-sm font-medium text-sage hover:text-sage-light"
+                        >
+                          {a.title}
+                        </Link>
+                        {votingTitle && votedResolutionTitles.has(votingTitle) ? (
                           <p className="text-xs text-sage mt-1">Oddałeś już głos w tej uchwale.</p>
                         ) : (
                           <p className="text-xs text-error mt-1">Czeka na Twój głos</p>
@@ -265,7 +274,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

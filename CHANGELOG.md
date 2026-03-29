@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — UI: finanse, sidebary, ogłoszenia → uchwała, podgląd wpłat (Lokale)
+- **Finanse mieszkańca** (`FinancesPage`) — stała kolejność wierszy „Naliczenia miesięczne”: Eksploatacja → Fundusz remontowy → Śmieci; historia wpłat: ujednolicony tytuł „Wpłata z dnia” **bez** znaczników źródła importu (bank/arkusz/podział) — tylko tekst + data + kwota
+- **`site/src/lib/paymentDisplay.ts`** — etykiety dla wpłat (Z banku / Z arkusza / Podział + źródło z wpłaty nadrzędnej przy rozbiciu); użycie w **`ApartmentPaymentsModal`**; mieszkańiec nie renderuje znaczników
+- **`ApartmentPaymentsModal`** — z panelu **Lokale** (`/admin/lokale`) dla **admin** i **zarządcy**: podgląd wpłat lokalu, suma vs kolumna salda, lista z tymi samymi etykietami co weryfikacja
+- **`ResidentLayout`**, **`AdminLayout`** — pasek boczny `sticky top-0 h-screen shrink-0`; grupa „Panel mieszkańca / Wyloguj” (oraz odpowiednie w panelu admina) **bezpośrednio pod** linkami głównymi, z separatorem — nie „zjeżdża” na dół przy długiej treści strony
+- **Ogłoszenia** (`/panel/ogloszenia`) — tytuły auto-tworzone przy starcie głosowania (`Nowe głosowanie: …`) jako link do **`/panel/glosowania#resolution-{id}`**; dopasowanie `resolution_id` po tytule uchwały z tabeli `resolutions`; **`ResolutionsPage`** — `id` na karcie uchwały + `scrollIntoView` przy haśle; **`votingAnnouncement.ts`** + testy; pulpit (`DashboardPage`) — ten sam link głęboki
+- Testy: `paymentDisplay.test.ts`, `votingAnnouncement.test.ts`, `ResolutionsPage.test.tsx` owinięty w `MemoryRouter`
+
 ### 2026-03-29 — Saldo bez „-0,00 zł”; komunikaty błędów; klient API (401)
 - **`site/src/lib/money.ts`** — `roundMoney2()` (zaokrąglenie do groszy); usuwa artefakty float przy sumowaniu salda (`initial + wpłaty − naliczenia`), które dawały **-0,00 zł** i czerwony kolor przy teoretycznym zerze — użycie w **Lokale** (`ApartmentsPage`), **Finanse**, **Dashboard**; test `money.test.ts`
 - **`site/src/lib/userFacingErrors.ts`** — `formatCaughtError`, `mapSupabaseError` (sieć, duplicate key, FK, RLS, JWT); import z wielu stron i modali zamiast duplikatów; **`userFacingErrors.test.ts`**

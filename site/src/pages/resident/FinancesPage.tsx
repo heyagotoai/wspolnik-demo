@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { roundMoney2 } from '../../lib/money'
 import { useAuth } from '../../hooks/useAuth'
 import { WalletIcon } from '../../components/ui/Icons'
+import { paymentHistoryDisplay } from '../../lib/paymentDisplay'
 
 interface Charge {
   id: string
@@ -41,6 +42,19 @@ const CHARGE_TYPE_LABELS: Record<string, string> = {
   fundusz_remontowy: 'Fundusz remontowy',
   smieci: 'Śmieci',
   inne: 'Inne',
+}
+
+/** Kolejność wierszy w „Naliczenia miesięczne”; nieznane typy na końcu, potem tie-break po id. */
+const CHARGE_TYPE_DISPLAY_ORDER: readonly string[] = [
+  'eksploatacja',
+  'fundusz_remontowy',
+  'smieci',
+  'inne',
+]
+
+function chargeTypeDisplayIndex(type: string): number {
+  const i = CHARGE_TYPE_DISPLAY_ORDER.indexOf(type)
+  return i === -1 ? CHARGE_TYPE_DISPLAY_ORDER.length : i
 }
 
 export default function FinancesPage() {
@@ -342,7 +356,13 @@ function ApartmentFinanceSection({
 }) {
   const { apartment, charges, payments, balance, totalCharges, totalPayments } = data
 
-  const monthCharges = charges.filter(c => c.month.startsWith(selectedMonth))
+  const monthCharges = charges
+    .filter(c => c.month.startsWith(selectedMonth))
+    .sort((a, b) => {
+      const d = chargeTypeDisplayIndex(a.type) - chargeTypeDisplayIndex(b.type)
+      if (d !== 0) return d
+      return a.id.localeCompare(b.id)
+    })
   const monthTotal = monthCharges.reduce((sum, c) => sum + Number(c.amount), 0)
   const availableMonths = [...new Set(charges.map(c => c.month.substring(0, 7)))].sort().reverse()
 
@@ -420,32 +440,33 @@ function ApartmentFinanceSection({
           <p className="text-slate text-sm py-4">Brak zarejestrowanych wpłat.</p>
         ) : (
           <div className="space-y-3">
-            {payments.map(payment => (
-              <div
-                key={payment.id}
-                className="flex items-center justify-between py-2 border-b border-cream-medium last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[var(--radius-input)] bg-sage-pale/30 flex items-center justify-center shrink-0">
-                    <WalletIcon className="w-5 h-5 text-sage" />
+            {payments.map(payment => {
+              const { primaryLine } = paymentHistoryDisplay(payment.title)
+              return (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between py-2 border-b border-cream-medium last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[var(--radius-input)] bg-sage-pale/30 flex items-center justify-center shrink-0">
+                      <WalletIcon className="w-5 h-5 text-sage" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{primaryLine}</p>
+                      <p className="text-xs text-slate mt-0.5">{formatDate(payment.payment_date)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-charcoal">
-                      {payment.title || 'Wpłata'}
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-sage">
+                      +{formatCurrency(Number(payment.amount))}
                     </p>
-                    <p className="text-xs text-slate">{formatDate(payment.payment_date)}</p>
+                    {!payment.confirmed_by_admin && (
+                      <p className="text-[10px] text-amber font-medium">Oczekuje potwierdzenia</p>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-sage">
-                    +{formatCurrency(Number(payment.amount))}
-                  </p>
-                  {!payment.confirmed_by_admin && (
-                    <p className="text-[10px] text-amber font-medium">Oczekuje potwierdzenia</p>
-                  )}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
