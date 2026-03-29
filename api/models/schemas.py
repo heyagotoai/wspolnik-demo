@@ -335,3 +335,32 @@ class ImportPaymentsResult(BaseModel):
     skipped: int
     errors: int
     rows: list[ImportRowResult]
+
+
+# ── Import z zestawienia bankowego ──
+
+
+class BankStatementMatchedRow(BaseModel):
+    apartment_number: str
+    payment_date: str  # ISO
+    amount: str  # Decimal as string
+    confidence: float
+    match_details: str
+
+
+class BankStatementUnmatchedRow(BaseModel):
+    row_index: int
+    payment_date: str | None
+    amount: str | None
+    sender_name: str
+    description: str
+    reason: str
+
+
+class ImportBankStatementResult(BaseModel):
+    dry_run: bool
+    total_rows: int
+    matched_count: int
+    unmatched_count: int
+    matched: list[BankStatementMatchedRow]
+    unmatched: list[BankStatementUnmatchedRow]

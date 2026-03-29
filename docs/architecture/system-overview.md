@@ -17,7 +17,7 @@
 
 ### Frontend (React)
 - Panel mieszkańca: salda (w tym wiele lokali / grupa rozliczeniowa), dokumenty, głosowania
-- Panel admina: zarządzanie, naliczenia, grupy rozliczeniowe, import Excel (saldo początkowe); import wyciągów bankowych — backend w przygotowaniu po ustaleniu formatu
+- Panel admina: zarządzanie, naliczenia, grupy rozliczeniowe, import Excel (saldo początkowe, wpłaty z dopasowań), import zestawienia bankowego `.xls` (deduplikacja wpłat — [[ADR-014-payment-import-deduplication|ADR-014]]); opcjonalnie MT940 — osobna ścieżka, gdy bank udostępni
 - Strona publiczna: ogłoszenia, ważne daty
 
 ### Auth (Supabase)
@@ -26,8 +26,8 @@
 
 ### Backend (FastAPI)
 - Operacje uprzywilejowane (service_role)
-- Import Excel — stan początkowy lokali (`/api/import`)
-- Import wyciągów bankowych — format do ustalenia (osobna ścieżka niż Excel)
+- Import Excel — stan początkowy lokali (`/api/import`), wpłaty z arkusza dopasowań (`/api/import/payments`)
+- Import zestawienia bankowego `.xls` — `POST /api/import/payments-bank-statement` (xlrd); deduplikacja jak przy wpłatach z Excela — [[ADR-014-payment-import-deduplication|ADR-014]]
 - Przyszłe: n8n webhooks, mailing
 
 ### Baza danych (PostgreSQL via Supabase)

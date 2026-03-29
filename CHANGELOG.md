@@ -2,7 +2,41 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-28 — CI: Vitest nie uruchamia Playwright (e2e)
+- **`vite.config.ts`:** `test.include` = tylko `src/**/*.test.ts(x)`
+- **`package.json`:** `npm test` → `vitest run src` (oraz `test:watch` / `test:coverage` z katalogiem `src`) — na CI nie polegamy wyłącznie na `include` z Vite; jawna ścieżka wyklucza `e2e/*.spec.ts` nawet przy innej wersji Vitest
+
+### 2026-03-28 — CI: zależność `xlwt` dla testów .xls
+- **`xlwt==1.3.0`** w `api/requirements.txt` — generowanie plików `.xls` w `test_bank_statement_parser.py` (wcześniej na CI brak modułu `xlwt`)
+
+### 2026-03-28 — CI: stabilny import `api.core.config` w pytest
+- Na początku `api/tests/conftest.py`: `os.environ.setdefault` dla `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` — brak masowego `KeyError`, gdy job nie ustawi zmiennych lub lokalnie odpala się `pytest` bez `.env`
+
+### 2026-03-28 — Audyt zależności (npm + pip)
+- **npm:** `npm audit fix` — usunięte podatności w `brace-expansion` / `picomatch` (transitive); `npm audit` → 0
+- **Python:** `fastapi` 0.115.12 → **0.135.2**, jawny **`starlette==0.49.1`** (CVE w łańcuchu ASGI), **`PyJWT==2.12.1`** (CVE); `pip-audit` — pozostaje znacznik **pygments** (CVE-2026-4539, brak nowszej wersji na PyPI — śledzić wydania)
+- Instrukcja okresowego audytu: `docs/operations/02-utrzymanie.md` § Zależności
+
+### 2026-03-28 — Przypięte wersje zależności
+- **`api/requirements.txt`** — wszystkie pakiety z `==` (m.in. `openpyxl`, `xlrd`, `reportlab`, `locust`, `tzdata`), bez `>=`, żeby buildy Vercel/CI nie „pływały” przy nowych wydaniach
+- **`site/package.json`** — `dependencies` / `devDependencies` bez prefiksów `^` / `~`, zgodnie z aktualnym `package-lock.json` (np. `typescript-eslint` 8.57.1)
+
+### 2026-03-28 — Import z zestawienia bankowego (.xls)
+- **Nowy endpoint:** `POST /api/import/payments-bank-statement` — import wpłat bezpośrednio z pliku .xls pobranego z banku
+- **Automatyczne dopasowanie transakcji** do lokali na podstawie: numeru lokalu w opisie/adresie przelewu, nazwiska rozliczeniowego z rejestru (`billing_surname`)
+- **Deduplikacja** przed zapisem: para (lokal, data) — opis decyzji: `docs/decisions/ADR-014-payment-import-deduplication.md`
+- **Nowa kolumna:** `apartments.billing_surname` (migracja 019) — nazwisko rozliczeniowe edytowalne w panelu Lokale
+- Logika dopasowania przeniesiona z `clean_data.py`: normalizacja tekstu (polskie znaki, warianty nazwisk SKI/SKA), heurystyki adresu (Gdańska 58/X), ekstrakcja lokalu z opisu, głosowanie wagowe
+- Tylko wpłaty (kwota > 0) importowane; niedopasowane transakcje w raporcie podglądu (dry_run)
+- Frontend: `ImportBankStatementModal` z podglądem dopasowań i niedopasowań, przycisk „Import z banku (.xls)" w panelu Lokale
+- Zależność: `xlrd>=2.0.1` do odczytu starych plików Excel
+- Testy: `api/tests/test_bank_statement_parser.py` (38 testów: parser, dopasowanie, endpoint)
+
+### 2026-03-28 — Inter self-host (CSP / Google Fonts)
+- Font **Inter** z `@fontsource/inter` (subsety `latin` + `latin-ext`, wagi 400–700) — pliki z bundla Vite, bez żądań do `fonts.googleapis.com` / `fonts.gstatic.com`, zgodne z obecnym CSP `font-src 'self'` w `vercel.json`
+
 ### 2026-03-28 — Import wpłat z Excela (dopasowania)
+- **Deduplikacja** jak przy imporcie zestawienia bankowego: para (lokal, data) — jeśli wpłata już jest w bazie lub pojawiła się wcześniej w tym samym pliku, wiersz (lub pojedyncza data w wielu datach) jest pomijany ze statusem „Pominięty” i komunikatem o duplikacie; import zbiorczy wielu lokali jest pomijany, gdy **którykolwiek** lokal ma już wpłatę w tym dniu — `docs/decisions/ADR-014-payment-import-deduplication.md`
 - Arkusz **Dopasowania**: kolumny **Lokal**, **Data wpłaty**, **Kwota** (np. nazwisko — ignorowane)
 - **Wiele dat** w komórce (`10.02.2026; 27.02.2026`): jedna kwota bez średnika → **ta sama kwota** na każdą datę (osobne wpłaty); **różne kwoty** → `341,20; 450,00` w tej samej kolejności co daty
 - Wiele dat **+ wiele lokali** w jednym wierszu: błąd — podziel na wiersze lub jedna data

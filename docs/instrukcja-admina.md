@@ -87,7 +87,13 @@ Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) 
 - Z listy lokali: **Importuj wpłaty** — szablon lub własny arkusz **Dopasowania** z kolumnami **Lokal**, **Data wpłaty**, **Kwota** (inne kolumny, np. nazwisko, są ignorowane)
 - **Kilka dni księgowania** w jednym wierszu: daty oddziel średnikiem (`10.02.2026; 27.02.2026`). Jedna kwota w komórce = osobna wpłata o tej kwocie na każdą datę; **różne kwoty** — ten sam układ po średniku w Kwota (`341,20; 450,00`)
 - **Wiele lokali** w jednym wierszu z **wieloma datami** w tym samym wierszu nie jest obsługiwane — użyj osobnych wierszy lub jednej daty
-- To **nie** jest automatyczny import MT940 — osobna ścieżka niż przyszły import wyciągów bankowych
+- **Duplikaty:** jeśli w systemie jest już wpłata dla tego lokalu i tej samej **daty** (albo ta para pojawiła się wcześniej w tym samym pliku), wiersz trafia do **Pominiętych** z komunikatem — ponowne zastosowanie tego samego arkusza **nie** podwaja wpłat. Przy wpłacie **zbiorczej** na kilka lokali cały wiersz jest pomijany, gdy **którykolwiek** z tych lokali ma już wpłatę w tym dniu.
+- To **nie** jest automatyczny import MT940 — osobna ścieżka niż import `.xls` z banku
+
+**Import zestawienia bankowego (.xls):**
+- Z listy lokali: **Import z banku (.xls)** — plik w starym formacie Excel (`.xls`), zwykle „zestawienie” pobrane z banku (nie myl z arkuszem `.xlsx` „Dopasowania”).
+- Przed pierwszym importem uzupełnij przy każdym lokalu **nazwisko rozliczeniowe** (pole w edycji lokalu) — system dopasowuje przelewy po tym nazwisku i po numerze lokalu z treści przelewu.
+- Najpierw **podgląd** (symulacja), potem **zastosuj**. **Duplikaty** działają tak samo jak przy imporcie wpłat z Excela (lokal + data).
 
 ---
 

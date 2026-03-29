@@ -1,4 +1,4 @@
-"""Import z Excel: stan początkowy (saldo) oraz wpłaty z arkusza dopasowań."""
+"""Import z Excel: stan początkowy (saldo), wpłaty z arkusza dopasowań, zestawienia bankowe."""
 
 import io
 import logging
@@ -13,7 +13,19 @@ from fastapi.responses import StreamingResponse
 from api.core.payment_split import compute_split_amounts
 from api.core.security import require_admin
 from api.core.supabase_client import get_supabase
-from api.models.schemas import ImportInitialStateResult, ImportPaymentsResult, ImportRowResult
+from api.models.schemas import (
+    ImportInitialStateResult,
+    ImportPaymentsResult,
+    ImportRowResult,
+    ImportBankStatementResult,
+    BankStatementMatchedRow,
+    BankStatementUnmatchedRow,
+)
+from api.services.bank_statement_parser import (
+    ApartmentRecord,
+    UnmatchedTransaction,
+    parse_bank_statement,
+)
 
 router = APIRouter(prefix="/import", tags=["import"])
 logger = logging.getLogger(__name__)
@@ -629,6 +641,12 @@ async def import_payments(
     Import wpłat z arkusza (np. „Dopasowania”).
 
     Wymagane kolumny: Lokal, Data wpłaty, Kwota. Inne kolumny (np. Nazwisko) są ignorowane.
+
+    Deduplikacja (jak import zestawienia bankowego): jeśli dla lokalu istnieje już wpłata
+    z tą samą datą księgowania, nowa jest pomijana. Przy imporcie zbiorczym (wiele lokali)
+    pominięty jest cały wiersz, gdy którykolwiek z lokali ma już wpłatę w tym dniu.
+    Zbiór (lokal, data) jest też aktualizowany w trakcie przetwarzania pliku (podgląd
+    i zapis są spójne z kolejnością wierszy).
     """
     sb = get_supabase()
 
@@ -647,6 +665,20 @@ async def import_payments(
         a["number"]: {"id": a["id"], "number": a["number"], "billing_group_id": a.get("billing_group_id")}
         for a in (apts_res.data or [])
     }
+
+    all_apt_ids = [a["id"] for a in apartments_by_number.values()]
+    existing_apt_dates: set[tuple[str, str]] = set()
+    if all_apt_ids:
+        existing_res = (
+            sb.table("payments")
+            .select("apartment_id, payment_date")
+            .in_("apartment_id", all_apt_ids)
+            .execute()
+        )
+        for p in (existing_res.data or []):
+            aid = p.get("apartment_id")
+            if aid is not None:
+                existing_apt_dates.add((str(aid), str(p["payment_date"])))
 
     idx_lokal = col_map["lokal"]
 
@@ -751,18 +783,30 @@ async def import_payments(
             a0 = resolved[0]
             n_pay = len(pay_dates)
             for pi, (pay_date, amount) in enumerate(zip(pay_dates, amounts)):
+                date_str = pay_date.isoformat()
+                key = (str(a0["id"]), date_str)
+                if key in existing_apt_dates:
+                    dup_msg = f"Duplikat — wpłata na lokal {nr_cell} z dnia {date_str} już istnieje"
+                    if n_pay > 1:
+                        dup_msg += f" ({pi + 1}/{n_pay})"
+                    row_results.append(ImportRowResult(
+                        row=row_num, apartment_number=nr_cell, status="skipped",
+                        message=dup_msg,
+                    ))
+                    continue
                 if not dry_run:
                     sb.table("payments").insert({
                         "apartment_id": a0["id"],
                         "billing_group_id": a0.get("billing_group_id"),
                         "amount": str(amount.quantize(Decimal("0.01"))),
-                        "payment_date": pay_date.isoformat(),
-                        "title": "Import wpłaty",
+                        "payment_date": date_str,
+                        "title": "Wpłata z dnia",
                         "confirmed_by_admin": True,
                         "matched_automatically": False,
                     }).execute()
+                existing_apt_dates.add(key)
                 msg = (
-                    f"Import wpłaty — {pay_date.isoformat()} ({pi + 1}/{n_pay})"
+                    f"Wpłata z dnia — {date_str} ({pi + 1}/{n_pay})"
                     if n_pay > 1
                     else None
                 )
@@ -774,6 +818,21 @@ async def import_payments(
 
         pay_date = pay_dates[0]
         amount = sum(amounts)
+        date_str = pay_date.isoformat()
+
+        has_existing = any(
+            (str(r["id"]), date_str) in existing_apt_dates
+            for r in resolved
+        )
+        if has_existing:
+            row_results.append(ImportRowResult(
+                row=row_num, apartment_number=nr_cell, status="skipped",
+                message=(
+                    f"Duplikat — wpłata zbiorcza z dnia {date_str} koliduje z istniejącą "
+                    "wpłatą na jednym z lokali"
+                ),
+            ))
+            continue
 
         g0 = resolved[0].get("billing_group_id")
         common_group = (
@@ -797,7 +856,7 @@ async def import_payments(
                 "apartment_id": None,
                 "billing_group_id": common_group,
                 "amount": str(amount.quantize(Decimal("0.01"))),
-                "payment_date": pay_date.isoformat(),
+                "payment_date": date_str,
                 "title": "Import zbiorczy",
                 "confirmed_by_admin": True,
                 "matched_automatically": False,
@@ -815,11 +874,16 @@ async def import_payments(
                     ),
                     "parent_payment_id": parent_id,
                     "amount": str(amt.quantize(Decimal("0.01"))),
-                    "payment_date": pay_date.isoformat(),
+                    "payment_date": date_str,
                     "title": f"Rozbicie wpłaty - lokal {apt_number_map[aid]}",
                     "confirmed_by_admin": True,
                     "matched_automatically": True,
                 }).execute()
+
+        for aid, amt in split_map.items():
+            if amt == 0:
+                continue
+            existing_apt_dates.add((str(aid), date_str))
 
         row_results.append(ImportRowResult(
             row=row_num, apartment_number=nr_cell, status="updated",
@@ -833,4 +897,260 @@ async def import_payments(
         skipped=sum(1 for r in row_results if r.status == "skipped"),
         errors=sum(1 for r in row_results if r.status == "error"),
         rows=row_results,
+    )
+
+
+# ──────────────────────────────────────────────
+# Import z zestawienia bankowego (.xls)
+# ──────────────────────────────────────────────
+
+
+def _build_registry(sb) -> list[ApartmentRecord]:
+    """Pobiera rejestr lokali z bazy do dopasowania transakcji."""
+    res = sb.table("apartments").select(
+        "id, number, billing_surname, billing_group_id"
+    ).execute()
+    registry: list[ApartmentRecord] = []
+    for apt in (res.data or []):
+        registry.append(ApartmentRecord(
+            apartment_id=apt["id"],
+            number=apt["number"],
+            billing_surname=apt.get("billing_surname"),
+            billing_group_id=apt.get("billing_group_id"),
+        ))
+    return registry
+
+
+@router.post("/payments-bank-statement", response_model=ImportBankStatementResult)
+async def import_bank_statement(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(default=True, description="true = tylko podgląd (bez zapisu wpłat)"),
+    _admin: dict = Depends(require_admin),
+):
+    """
+    Import wpłat z zestawienia bankowego (.xls).
+
+    Automatycznie dopasowuje transakcje do lokali na podstawie:
+    - numeru lokalu w opisie/adresie przelewu
+    - nazwiska rozliczeniowego (billing_surname) z rejestru lokali
+
+    Tylko wpłaty (kwota > 0) są importowane. Transakcje bez jednoznacznego
+    dopasowania trafiają na listę „niedopasowanych" w odpowiedzi.
+    """
+    sb = get_supabase()
+
+    filename = file.filename or ""
+    if not filename.lower().endswith(".xls"):
+        raise HTTPException(
+            status_code=422,
+            detail="Plik musi być w formacie .xls (stary format Excel). Dla plików .xlsx użyj importu wpłat z arkusza Dopasowania.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Plik zbyt duży (maks. 5 MB)")
+
+    registry = _build_registry(sb)
+    if not registry:
+        raise HTTPException(
+            status_code=422,
+            detail="Brak lokali w systemie. Dodaj lokale przed importem zestawienia.",
+        )
+
+    surnames_configured = sum(1 for r in registry if r.billing_surname)
+    if surnames_configured == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Żaden lokal nie ma uzupełnionego nazwiska rozliczeniowego (billing_surname). "
+                   "Uzupełnij nazwiska w panelu Lokale przed importem zestawienia bankowego.",
+        )
+
+    try:
+        parse_result = parse_bank_statement(content, registry)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    BANK_TITLE = "Wpłata z zestawienia bankowego"
+
+    # Lookup lokali po numerze (do rozwiązywania splitów)
+    apts_res = sb.table("apartments").select("id, number, billing_group_id").execute()
+    apt_by_number: dict[str, dict] = {
+        a["number"]: {"id": a["id"], "number": a["number"], "billing_group_id": a.get("billing_group_id")}
+        for a in (apts_res.data or [])
+    }
+
+    # Rozwiąż każde dopasowanie na listę lokali:
+    # 1. Parser zwrócił group_records (wiele lokali w jednej grupie rozliczeniowej) → split
+    # 2. Numer zbiorczy "25,26" → rozbij na składowe i sprawdź w bazie
+    # 3. Pojedynczy lokal → bez splitu
+    resolved_matches: list[tuple] = []  # (MatchedPayment, list[dict])
+    all_apt_ids: set[str] = set()
+
+    for m in parse_result.matched:
+        resolved: list[dict] = []
+
+        # Priorytet 1: parser wykrył grupę rozliczeniową
+        if m.group_records and len(m.group_records) > 1:
+            resolved = [
+                {"id": gr.apartment_id, "number": gr.number,
+                 "billing_group_id": gr.billing_group_id}
+                for gr in m.group_records
+            ]
+        else:
+            # Priorytet 2: rozbij numer zbiorczy na składowe
+            if m.apartment_number in apt_by_number:
+                individual_numbers = [m.apartment_number]
+            else:
+                individual_numbers = _parse_apartment_numbers(m.apartment_number)
+
+            resolved = [apt_by_number[n] for n in individual_numbers if n in apt_by_number]
+
+        if not resolved:
+            # Fallback: użyj dopasowanego rekordu
+            resolved = [{"id": m.apartment_id, "number": m.apartment_number,
+                         "billing_group_id": m.billing_group_id}]
+
+        resolved_matches.append((m, resolved))
+        for r in resolved:
+            all_apt_ids.add(r["id"])
+
+    # Deduplikacja: sprawdź istniejące wpłaty po (apartment_id, date)
+    existing_apt_dates: set[tuple[str, str]] = set()
+    if all_apt_ids:
+        existing_res = (
+            sb.table("payments")
+            .select("apartment_id, payment_date")
+            .in_("apartment_id", list(all_apt_ids))
+            .execute()
+        )
+        for p in (existing_res.data or []):
+            existing_apt_dates.add(
+                (p["apartment_id"], str(p["payment_date"]))
+            )
+
+    # Podział na nowe vs duplikaty
+    # Sprawdzanie po (apartment_id, date) — bez kwoty, bo kwoty rozbite
+    # różnią się od kwoty głównej, a dwie wpłaty na ten sam lokal w tym
+    # samym dniu to rzadkość (lepiej oznaczyć jako duplikat niż zaksięgować podwójnie)
+    new_matched: list[tuple] = []
+    skipped_duplicates: list = []
+    for m, resolved in resolved_matches:
+        date_str = m.payment_date.isoformat()
+        has_existing = any(
+            (r["id"], date_str) in existing_apt_dates
+            for r in resolved
+        )
+        if has_existing:
+            skipped_duplicates.append(m)
+            continue
+
+        new_matched.append((m, resolved))
+
+    # Zapis — single lub parent + children (split)
+    if not dry_run:
+        for m, resolved in new_matched:
+            resolved.sort(key=lambda a: a["number"])
+            apt_ids = [a["id"] for a in resolved]
+
+            if len(resolved) == 1:
+                # Pojedynczy lokal
+                a0 = resolved[0]
+                sb.table("payments").insert({
+                    "apartment_id": a0["id"],
+                    "billing_group_id": a0.get("billing_group_id"),
+                    "amount": str(m.amount),
+                    "payment_date": m.payment_date.isoformat(),
+                    "title": BANK_TITLE,
+                    "confirmed_by_admin": True,
+                    "matched_automatically": True,
+                }).execute()
+            else:
+                # Wiele lokali — parent + rozbicie (jak w import_payments)
+                g0 = resolved[0].get("billing_group_id")
+                common_group = (
+                    g0
+                    if g0 is not None and all(a.get("billing_group_id") == g0 for a in resolved)
+                    else None
+                )
+
+                apt_charges = _charges_for_split_month(sb, apt_ids, m.payment_date)
+                if common_group is not None:
+                    split_map = compute_split_amounts(apt_ids, apt_charges, m.amount)
+                else:
+                    split_map = compute_split_amounts(
+                        apt_ids, {aid: Decimal("0") for aid in apt_ids}, m.amount
+                    )
+
+                parent_data = {
+                    "apartment_id": None,
+                    "billing_group_id": common_group,
+                    "amount": str(m.amount),
+                    "payment_date": m.payment_date.isoformat(),
+                    "title": BANK_TITLE,
+                    "confirmed_by_admin": True,
+                    "matched_automatically": True,
+                }
+                parent_res = sb.table("payments").insert(parent_data).execute()
+                parent_id = parent_res.data[0]["id"]
+
+                apt_number_map = {a["id"]: a["number"] for a in resolved}
+                for aid, amt in split_map.items():
+                    if amt == 0:
+                        continue
+                    sb.table("payments").insert({
+                        "apartment_id": aid,
+                        "billing_group_id": next(
+                            (x.get("billing_group_id") for x in resolved if x["id"] == aid), None
+                        ),
+                        "parent_payment_id": parent_id,
+                        "amount": str(amt.quantize(Decimal("0.01"))),
+                        "payment_date": m.payment_date.isoformat(),
+                        "title": f"Rozbicie wpłaty - lokal {apt_number_map[aid]}",
+                        "confirmed_by_admin": True,
+                        "matched_automatically": True,
+                    }).execute()
+
+    # Budowanie odpowiedzi
+    matched_rows = [
+        BankStatementMatchedRow(
+            apartment_number=m.apartment_number,
+            payment_date=m.payment_date.isoformat(),
+            amount=str(m.amount),
+            confidence=round(m.match_confidence, 2),
+            match_details=m.match_details
+            + (f" → rozbicie na {len(resolved)} lokali" if len(resolved) > 1 else ""),
+        )
+        for m, resolved in new_matched
+    ]
+
+    # Duplikaty jako dodatkowe unmatched z jasnym powodem
+    for m in skipped_duplicates:
+        parse_result.unmatched.append(UnmatchedTransaction(
+            row_index=0,
+            payment_date=m.payment_date,
+            amount=m.amount,
+            sender_name="",
+            description="",
+            reason=f"Duplikat — wpłata {m.amount} zł na lokal {m.apartment_number} z dnia {m.payment_date.isoformat()} już istnieje",
+        ))
+
+    unmatched_rows = [
+        BankStatementUnmatchedRow(
+            row_index=u.row_index,
+            payment_date=u.payment_date.isoformat() if u.payment_date else None,
+            amount=str(u.amount) if u.amount else None,
+            sender_name=u.sender_name[:100],  # RODO: obcinamy długie ciągi
+            description=u.description[:100],
+            reason=u.reason,
+        )
+        for u in parse_result.unmatched
+    ]
+
+    return ImportBankStatementResult(
+        dry_run=dry_run,
+        total_rows=parse_result.total_rows,
+        matched_count=len(matched_rows),
+        unmatched_count=len(unmatched_rows),
+        matched=matched_rows,
+        unmatched=unmatched_rows,
     )

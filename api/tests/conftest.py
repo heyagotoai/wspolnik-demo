@@ -4,6 +4,14 @@ Patches get_supabase where it's imported (security + routes),
 so all Supabase calls go through FakeSupabase.
 """
 
+import os
+
+# Zanim załaduje się api.core.config (wymaga kluczy), ustaw placeholdery.
+# Dzięki temu `pytest` bez pliku .env oraz CI z pełnym `env:` w workflow
+# nie kończą się masowym KeyError. Wartości z środowiska (GitHub, Vercel, .env) mają pierwszeństwo.
+os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "placeholder")
+
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -52,6 +60,9 @@ class FakeSupabaseBuilder:
         return self
 
     def in_(self, *_a, **_kw):
+        return self
+
+    def is_(self, *_a, **_kw):
         return self
 
     def order(self, *_a, **_kw):

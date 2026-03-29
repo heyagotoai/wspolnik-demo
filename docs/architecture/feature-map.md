@@ -25,7 +25,7 @@
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
 | Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge), pole **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy. Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie; **deduplikacja** `(lokal, data)` względem bazy i w obrębie pliku — [[ADR-014-payment-import-deduplication|ADR-014]]. **Import z banku (.xls)** (`POST /payments-bank-statement`): zestawienie bankowe, dopasowanie po nazwisku rozliczeniowym i numerze z opisu; ta sama deduplikacja; modal `ImportBankStatementModal`. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
 | Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
@@ -55,16 +55,17 @@
 |---------|--------|-----------|------|
 | Instrukcja wdrożeniowa | ✅ done | WYSOKI | `docs/operations/01-wdrozenie.md` — Supabase, Vercel, DNS, env vars, migracje |
 | Instrukcja utrzymania | ✅ done | WYSOKI | `docs/operations/02-utrzymanie.md` — monitoring, debugowanie, backup, cron, limity |
-| Instrukcja dla admina | ⬜ todo | ŚREDNI | Jak używać panelu admina (dla zarządcy wspólnoty, nie-technicznego) |
+| Instrukcja dla admina | ✅ done | ŚREDNI | `docs/instrukcja-admina.md` — obsługa panelu (Lokale, importy Excel/.xls, deduplikacja, grupy, naliczenia itd.) |
 | Procedury awaryjne | ✅ done | ŚREDNI | `docs/operations/03-procedury-awaryjne.md` — awarie, rollback, utrata danych |
 
 ### Faza: Brakujące funkcjonalności
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
 | SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
-| Import bankowy (MT940) | ⏸ czeka | WYSOKI | Czeka na format eksportu z banku (~koniec marca 2026) |
+| Import z zestawienia bankowego (.xls) | ✅ done | WYSOKI | `POST /api/import/payments-bank-statement`; dopasowanie po `billing_surname` i numerach lokali z opisu/adresu; deduplikacja `(lokal, data)` — [[ADR-014-payment-import-deduplication|ADR-014]]; parser: `api/services/bank_statement_parser.py` |
+| Import bankowy (MT940) | ⏸ czeka | ŚREDNI | Czeka na format eksportu z banku (opcjonalnie, jeśli .xls nie wystarczy) |
 | Import Excel — saldo / stan początkowy lokali | ✅ done | WYSOKI | Szablon + upload z panelu Lokale; `GET/POST /api/import/*`; nie zastępuje importu wyciągów bankowych |
-| Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; inne kolumny ignorowane |
+| Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; deduplikacja `(lokal, data)` jak w imporcie bankowym — [[ADR-014-payment-import-deduplication|ADR-014]] |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
 
@@ -85,4 +86,5 @@
 - [[ADR-010-voting-system]] — system głosowania nad uchwałami
 - [[ADR-012-charge-generation]] — automatyczne generowanie naliczeń
 - [[ADR-013-billing-groups]] — grupy rozliczeniowe
+- [[ADR-014-payment-import-deduplication]] — deduplikacja importów wpłat (Excel + bank)
 - [[system-overview]] — architektura techniczna
