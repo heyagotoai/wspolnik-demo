@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds, markRead } from '../../lib/readAnnouncements'
+import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
 
 interface Announcement {
   id: string
@@ -12,20 +14,31 @@ interface Announcement {
   created_at: string
 }
 
+interface ResolutionRow {
+  id: string
+  title: string
+}
+
 export default function AnnouncementsPage() {
   const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [resolutions, setResolutions] = useState<ResolutionRow[]>([])
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from('announcements')
-        .select('id, title, content, excerpt, is_pinned, created_at')
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
+      const [{ data }, { data: resData }] = await Promise.all([
+        supabase
+          .from('announcements')
+          .select('id, title, content, excerpt, is_pinned, created_at')
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase.from('resolutions').select('id, title'),
+      ])
+
+      if (resData) setResolutions(resData as ResolutionRow[])
 
       if (data && user) {
         const readIds = getReadIds(user.id)
@@ -107,7 +120,23 @@ export default function AnnouncementsPage() {
                     )}
                     <span className="text-xs text-outline">{formatDate(a.created_at)}</span>
                   </div>
-                  <h2 className="text-base font-semibold text-charcoal">{a.title}</h2>
+                  {(() => {
+                    const resTitle = resolutionTitleFromVotingAnnouncement(a.title)
+                    const resId = resTitle ? findResolutionIdByTitle(resTitle, resolutions) : null
+                    if (resId) {
+                      return (
+                        <h2 className="text-base font-semibold">
+                          <Link
+                            to={`/panel/glosowania#resolution-${resId}`}
+                            className="text-sage hover:text-sage-light"
+                          >
+                            {a.title}
+                          </Link>
+                        </h2>
+                      )
+                    }
+                    return <h2 className="text-base font-semibold text-charcoal">{a.title}</h2>
+                  })()}
                 </div>
               </div>
 

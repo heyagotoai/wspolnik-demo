@@ -2,7 +2,7 @@
 
 Pokryte scenariusze:
 - POST /api/charges/generate     — generowanie naliczeń (admin)
-- GET  /api/charges/rates        — lista stawek
+- GET  /api/charges/rates        — lista stawek (admin lub manager)
 - POST /api/charges/rates        — dodawanie stawki (admin)
 - DELETE /api/charges/rates/:id  — usuwanie stawki (admin)
 """
@@ -228,13 +228,26 @@ class TestGenerateCharges:
 
 
 class TestListRates:
-    def test_lista_stawek(self, resident_client, fake_sb):
+    def test_lista_stawek(self, admin_client, fake_sb):
         fake_sb.set_table_data("charge_rates", ALL_RATES)
 
-        response = resident_client.get("/api/charges/rates")
+        response = admin_client.get("/api/charges/rates")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
+
+    def test_zarzadca_moze_pobrac_stawki(self, manager_client, fake_sb):
+        fake_sb.set_table_data("charge_rates", ALL_RATES)
+
+        response = manager_client.get("/api/charges/rates")
+        assert response.status_code == 200
+        assert len(response.json()) == 3
+
+    def test_mieszkaniec_dostaje_403(self, resident_client, fake_sb):
+        fake_sb.set_table_data("charge_rates", ALL_RATES)
+
+        response = resident_client.get("/api/charges/rates")
+        assert response.status_code == 403
 
     def test_niedostepne_bez_logowania(self, client):
         response = client.get("/api/charges/rates")
@@ -293,14 +306,29 @@ AUTO_CONFIG_DATA = [
 
 
 class TestAutoConfig:
-    def test_odczyt_konfiguracji(self, resident_client, fake_sb):
+    def test_odczyt_konfiguracji(self, admin_client, fake_sb):
         fake_sb.set_table_data("system_settings", AUTO_CONFIG_DATA)
 
-        response = resident_client.get("/api/charges/auto-config")
+        response = admin_client.get("/api/charges/auto-config")
         assert response.status_code == 200
         data = response.json()
         assert data["enabled"] is False
         assert data["day"] == 5
+
+    def test_zarzadca_moze_odczytac_auto_config(self, manager_client, fake_sb):
+        fake_sb.set_table_data("system_settings", AUTO_CONFIG_DATA)
+
+        response = manager_client.get("/api/charges/auto-config")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["enabled"] is False
+        assert data["day"] == 5
+
+    def test_mieszkaniec_dostaje_403(self, resident_client, fake_sb):
+        fake_sb.set_table_data("system_settings", AUTO_CONFIG_DATA)
+
+        response = resident_client.get("/api/charges/auto-config")
+        assert response.status_code == 403
 
     def test_aktualizacja_wlaczenie(self, admin_client, fake_sb):
         fake_sb.set_table_data("system_settings", AUTO_CONFIG_DATA)

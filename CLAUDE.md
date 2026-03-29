@@ -12,27 +12,24 @@ Komunikuj się po polsku.
 - **Domena:** wmgabi.pl (DNS: az.pl, hosting: Vercel)
 - **Poczta:** az.pl (powiadomienia@wmgabi.pl → SMTP relay przez Edge Function)
 
-## Repo wspolnik-demo (wersja demonstracyjna)
-- Domyślnie **brak zapisu do prawdziwej bazy** — dopóki `VITE_DEMO_ALLOW_REAL_BACKEND` nie jest `'true'` (`isDemoApp()` zawsze mocki). Vitest ustawia `true` + sztuczne Supabase, żeby testować ścieżki `fetch`.
-- Szczegóły: `docs/operations/demo-wdrozenie-wspolnik.md`.
-
 ## Struktura projektu
 ```
 site/           — frontend React (Vite)
   src/
-    demo/       — tylko w repo wspolnik-demo: mocki (DemoStore, demoApiRouter, demoSupabase, isDemoApp, DemoGate…)
     components/ — komponenty UI (auth/, layout/, ui/)
     hooks/      — useAuth, useRole
-    lib/        — supabase.ts (klient), api.ts (FastAPI klient)
+    lib/        — supabase.ts, api.ts (401 + retry sesji), voteResultsDisplay.ts, money.ts (saldo PLN), userFacingErrors.ts, authLoginErrors.ts
     pages/      — publiczne + resident/ + admin/
 api/            — backend FastAPI
-  core/         — config, security, supabase_client
+  core/         — config, security, supabase_client, voting_eligibility (kto może głosować w uchwałach)
   models/       — Pydantic schemas
-  routes/       — residents.py, contact.py, resolutions.py, profile.py
+  routes/       — residents, contact, resolutions, profile, charges, audit, backup, billing_groups, import_routes, …
 supabase/
   migrations/   — SQL migracje (uruchamiane przez Supabase SQL Editor)
 docs/           — Obsidian vault (ADR-y, koncepty, architektura)
 ```
+
+**Panel Uchwały (`site/src/pages/admin/ResolutionsPage.tsx`):** głosy z zebrania (modal), eksport PDF; pasek akcji — «Głosy z zebrania», potem ikony (reset głosów, PDF, edycja, usuń). Szczegóły: `docs/decisions/ADR-010-voting-system.md`.
 
 ## Komendy deweloperskie
 ```bash
@@ -49,6 +46,8 @@ dev.bat
 cd site && npm test
 cd api && pytest
 ```
+
+**Python (venv, Windows):** interpreter projektu to **`D:\_AI\gabi_site\.venv\Scripts\python.exe`** (katalog venv: `.venv` w katalogu głównym repo). Gdy w terminalu brak `python`/`pytest` w PATH, użyj tej ścieżki lub `.\.venv\Scripts\Activate.ps1` przed komendami w `api/`.
 
 ## Zasady implementacji
 
@@ -67,11 +66,14 @@ cd api && pytest
 - **Retencja danych finansowych** — max 5 lat
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
 
-### Import bankowy
-- Format importu z banku **NIE jest jeszcze potwierdzony** — nie buduj parsera dopóki format nie będzie znany
-- Schemat bazy (payments, bank_statements) jest przygotowany, logika parsowania czeka
+### Import danych finansowych
+- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`.
+- **Stan początkowy i wpłaty z Excel (.xlsx)** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale.
+- **Deduplikacja wpłat** (import `.xls` i import wpłat `.xlsx`) — para `(apartment_id, payment_date)`; ponowny import tego samego pliku nie dubluje zapisów; szczegóły: `docs/decisions/ADR-014-payment-import-deduplication.md`.
+- **MT940** — format eksportu z banku **nie jest jeszcze potwierdzony**; schemat (`payments`, `bank_statements`) jest przygotowany.
 
 ### Testy (WYMAGANE)
+- **Wersje bibliotek** — `api/requirements.txt` używa `==` dla wszystkich pakietów; `site/package.json` ma przypięte wersje bez `^`/`~` (spójnie z `package-lock.json`). Podbicie wersji: świadomie, po testach (`pytest`, `npm test`).
 - **Po zakończeniu pracy nad nową funkcjonalnością** — dodaj odpowiednie testy (backend pytest i/lub frontend vitest, zależnie od zakresu zmian)
 - **Po zmianie istniejącej funkcjonalności** — zaktualizuj powiązane testy, aby odzwierciedlały nowe zachowanie
 - **Przed uznaniem zadania za ukończone** — uruchom pełny zestaw testów (`npm test` + `pytest`) i upewnij się, że wszystkie przechodzą
@@ -104,22 +106,26 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Różnice techniczne (np. pamięć Claude, format subagentów) dostosuj do możliwości danego narzędzia.
 
 ## Role użytkowników
-- **admin** — pełny administrator (CRUD tam, gdzie UI wymaga `isAdmin`, m.in. tworzenie/usuwanie mieszkańców przez FastAPI, edycja krytycznych modułów)
-- **manager** (zarządca) — dostęp do panelu administracyjnego (`AdminRoute`), podgląd i moduły wspólne; operacje destrukcyjne / pełny CRUD tam, gdzie komponenty sprawdzają `isAdmin` (np. mieszkańcy, naliczenia, dokumenty) — wyłącznie dla admina
-- **resident** (mieszkaniec) — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
+- **admin** — pełny dostęp (CRUD: lokale, mieszkańcy, ogłoszenia, dokumenty, terminy, naliczenia, uchwały, wiadomości kontaktowe)
+- **manager** (zarządca) — podgląd read-only (mieszkańcy, lokale, finanse, dokumenty, uchwały, wiadomości, audit log) + pełny CRUD ogłoszeń i terminów. BEZ: zarządzania kontami, stawek, generowania naliczeń, wysyłki email
+- **mieszkaniec** — dashboard z saldem, finanse (naliczenia/wpłaty), ogłoszenia, dokumenty, terminy, głosowania, profil
 
 ## Supabase
 - Region: EU (Frankfurt)
 - Auth: email whitelist (publiczna rejestracja wyłączona, admin dodaje mieszkańców)
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
-- Migracje 001-015 uruchomione przez SQL Editor w dashboardzie Supabase
+- Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
+- Migracje 001-019 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
-- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów (8 endpointów)
-- `/api/profile` — profil mieszkańca
-- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej)
-- `GET /api/audit` — dziennik operacji (admin only, filtry: tabela/akcja/daty, paginacja)
+- `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `POST :id/votes/register` (głosy z zebrania, tylko szkic) + `DELETE :id/votes/:resident_id` (pojedynczy głos, tylko szkic); `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu)
+- `/api/profile` — profil mieszkańca + pole `can_vote_resolutions` (spójne z głosowaniem)
+- `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej); **GET** `/charges/rates` i `/charges/auto-config` — tylko admin lub manager (mieszkaniec nie pobiera przez API)
+- `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
+- `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
+- `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
+- `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, `POST /payments-bank-statement`, admin)
 - `GET /api/health` — health check

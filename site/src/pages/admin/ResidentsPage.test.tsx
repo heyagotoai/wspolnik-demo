@@ -36,10 +36,6 @@ vi.mock('../../hooks/useRole', () => ({
   useRole: () => mockUseRole(),
 }))
 
-vi.mock('../../demo/useDemoBasePath', () => ({
-  useDemoBasePath: () => '',
-}))
-
 // Mock icons (nie potrzebujemy SVG w testach)
 vi.mock('../../components/ui/Icons', () => ({
   PlusIcon: ({ className }: { className?: string }) => <span data-testid="plus-icon" className={className}>+</span>,

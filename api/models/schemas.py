@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 # --- Shared types ---
 
-RoleType = Literal["admin", "resident"]
+RoleType = Literal["admin", "resident", "manager"]
 ResolutionStatus = Literal["draft", "voting", "closed"]
 VoteValue = Literal["za", "przeciw", "wstrzymuje"]
 ChargeRateType = Literal["eksploatacja", "fundusz_remontowy", "smieci"]
@@ -139,6 +139,13 @@ class VoteCreate(BaseModel):
     vote: VoteValue
 
 
+class VoteRegisterAdmin(BaseModel):
+    """Rejestracja głosu oddanego na zebraniu (tylko admin, uchwała w szkicu)."""
+
+    resident_id: str
+    vote: VoteValue
+
+
 class VoteOut(BaseModel):
     id: str
     resolution_id: str
@@ -152,6 +159,11 @@ class VoteResults(BaseModel):
     przeciw: int = 0
     wstrzymuje: int = 0
     total: int = 0
+    # Wagi wg pól apartments.share (suma udziałów wspólnoty = 1.0 przy pełnej dokumentacji)
+    share_za: float = 0.0
+    share_przeciw: float = 0.0
+    share_wstrzymuje: float = 0.0
+    total_share_community: float = 0.0
 
 
 class VoteDetail(BaseModel):
@@ -172,6 +184,7 @@ class ProfileOut(BaseModel):
     role: str
     is_active: bool
     created_at: str
+    can_vote_resolutions: bool = False
 
 
 class ProfileUpdate(BaseModel):
@@ -257,3 +270,110 @@ class ZawiadomienieConfig(BaseModel):
 
 class ZawiadomienieConfigUpdate(BaseModel):
     legal_basis: str | None = None
+
+
+# --- Billing Groups (Grupy rozliczeniowe) ---
+
+class BillingGroupCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Nazwa grupy nie może być pusta")
+        return v.strip()
+
+
+class BillingGroupUpdate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Nazwa grupy nie może być pusta")
+        return v.strip()
+
+
+class BillingGroupOut(BaseModel):
+    id: str
+    name: str
+    apartments: list[dict]
+    created_at: str
+
+
+class BillingGroupAssignApartments(BaseModel):
+    apartment_ids: list[str] = Field(..., min_length=1)
+
+
+class BillingGroupPaymentSplit(BaseModel):
+    amount: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
+    payment_date: str  # YYYY-MM-DD
+    title: str | None = None
+    split_month: str | None = None  # YYYY-MM-01, defaults to payment_date month
+
+
+class BillingGroupBalanceOut(BaseModel):
+    group_id: str
+    group_name: str
+    combined_balance: str
+    apartments: list[dict]
+
+
+# --- Import stanu początkowego ---
+
+class ImportRowResult(BaseModel):
+    row: int
+    apartment_number: str
+    status: str  # "updated" | "skipped" | "error"
+    message: str | None = None
+
+
+class ImportInitialStateResult(BaseModel):
+    dry_run: bool
+    rows_total: int
+    updated: int
+    skipped: int
+    errors: int
+    rows: list[ImportRowResult]
+
+
+class ImportPaymentsResult(BaseModel):
+    """Wynik importu wpłat z Excela (ten sam kształt co ImportInitialStateResult)."""
+
+    dry_run: bool
+    rows_total: int
+    updated: int
+    skipped: int
+    errors: int
+    rows: list[ImportRowResult]
+
+
+# ── Import z zestawienia bankowego ──
+
+
+class BankStatementMatchedRow(BaseModel):
+    apartment_number: str
+    payment_date: str  # ISO
+    amount: str  # Decimal as string
+    confidence: float
+    match_details: str
+
+
+class BankStatementUnmatchedRow(BaseModel):
+    row_index: int
+    payment_date: str | None
+    amount: str | None
+    sender_name: str
+    description: str
+    reason: str
+
+
+class ImportBankStatementResult(BaseModel):
+    dry_run: bool
+    total_rows: int
+    matched_count: int
+    unmatched_count: int
+    matched: list[BankStatementMatchedRow]
+    unmatched: list[BankStatementUnmatchedRow]

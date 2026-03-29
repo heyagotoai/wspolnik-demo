@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from api.core.security import require_admin
+from api.core.security import require_admin_or_manager
 from api.core.supabase_client import get_supabase
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 
 @router.get("")
 def list_audit_log(
-    _admin: dict = Depends(require_admin),
+    _user: dict = Depends(require_admin_or_manager),
     table_name: str | None = Query(default=None),
     action: str | None = Query(default=None),
     date_from: str | None = Query(default=None, description="YYYY-MM-DD"),
@@ -16,7 +16,7 @@ def list_audit_log(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
 ):
-    """List audit log entries with filters and pagination (admin only)."""
+    """List audit log entries with filters and pagination (admin or manager)."""
     sb = get_supabase()
 
     query = sb.table("audit_log").select(

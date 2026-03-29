@@ -22,8 +22,8 @@ Po wejściu do panelu widzisz **Dashboard** z podsumowaniem:
 - najbliższe ważne terminy
 - ostatnie 5 ogłoszeń
 
-Z lewej strony znajduje się **pasek nawigacji** z sekcjami:
-Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uchwały · Wiadomości
+Z lewej strony znajduje się **pasek nawigacji** z sekcjami (kolejność jak w systemie):
+Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) · Mieszkańcy · Uchwały · Dokumenty · Terminy · Ogłoszenia · Wiadomości · Dziennik operacji
 
 ---
 
@@ -32,7 +32,7 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 **Dodawanie nowego mieszkańca:**
 1. Kliknij **Dodaj mieszkańca**
 2. Wpisz imię i nazwisko, adres email, numer lokalu
-3. Ustaw rolę: `mieszkaniec` (domyślnie) lub `admin`
+3. Ustaw rolę: `mieszkaniec` (domyślnie), `zarządca` lub `admin`
 4. Kliknij **Zapisz** — system automatycznie tworzy konto i wysyła link aktywacyjny na podany email
 
 **Edycja / dezaktywacja:**
@@ -43,6 +43,19 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 - Użyj ikony kosza — uwaga, operacja jest nieodwracalna
 
 > Mieszkaniec może zalogować się dopiero po aktywacji konta przez link z emaila.
+
+**Rola zarządcy vs administrator:**
+
+| Funkcja | Administrator | Zarządca |
+|---------|:---:|:---:|
+| Podgląd mieszkańców, lokali, finansów | ✅ | ✅ (read-only) |
+| Ogłoszenia i terminy (CRUD) | ✅ | ✅ |
+| Dokumenty, uchwały, wiadomości | ✅ pełny dostęp | ✅ podgląd |
+| Dziennik operacji | ✅ | ✅ |
+| Zarządzanie kontami (dodaj/edytuj/usuń) | ✅ | ❌ |
+| Stawki i generowanie naliczeń | ✅ | ❌ |
+| Wysyłka powiadomień email | ✅ | ❌ |
+| Grupy rozliczeniowe (wspólne rozliczenie wielu lokali) | ✅ | ❌ |
 
 ---
 
@@ -63,6 +76,34 @@ Mieszkańcy · Lokale · Ogłoszenia · Dokumenty · Terminy · Naliczenia · Uc
 
 **Powiadomienie emailem:**
 - Kliknij **Wyślij email** przy lokalu — na skrzynkę właściciela trafia **ta sama treść** co przy **Drukuj saldo** (pismo SALDO w wersji tekstowej)
+
+**Import stanu z pliku Excel (hurtowe ustawienie salda):**
+- Z listy lokali: pobierz **szablon .xlsx** (wiersz `data_salda`, nagłówki `numer_lokalu` / `saldo_poczatkowe`), wypełnij, **podgląd (dry-run)**, potem zastosuj
+- **Wiele lokali w jednym wierszu** (to samo saldo): rozdziel numery przecinkiem lub średnikiem; możesz też użyć zapisu z kropką, który Excel traktuje jak liczbę (np. dwa lokale obok siebie) — opis w oknie importu
+- **Jeden lokal o numerze z przecinkiem** (np. `3,4A` albo `25,26` — jedna pozycja na liście lokali): numer w pliku musi **dokładnie** odpowiadać polu „numer” w bazie; system dopasowuje najpierw cały tekst komórki, dopiero gdy go nie ma — traktuje wpis jako listę osobnych lokali
+- To **nie** jest import wyciągu bankowego — tylko pomoc przy wdrożeniu lub korekcie sald początkowych
+
+**Import wpłat z pliku Excel (zestawienie dopasowań):**
+- Z listy lokali: **Importuj wpłaty** — szablon lub własny arkusz **Dopasowania** z kolumnami **Lokal**, **Data wpłaty**, **Kwota** (inne kolumny, np. nazwisko, są ignorowane)
+- **Kilka dni księgowania** w jednym wierszu: daty oddziel średnikiem (`10.02.2026; 27.02.2026`). Jedna kwota w komórce = osobna wpłata o tej kwocie na każdą datę; **różne kwoty** — ten sam układ po średniku w Kwota (`341,20; 450,00`)
+- **Wiele lokali** w jednym wierszu z **wieloma datami** w tym samym wierszu nie jest obsługiwane — użyj osobnych wierszy lub jednej daty
+- **Duplikaty:** jeśli w systemie jest już wpłata dla tego lokalu i tej samej **daty** (albo ta para pojawiła się wcześniej w tym samym pliku), wiersz trafia do **Pominiętych** z komunikatem — ponowne zastosowanie tego samego arkusza **nie** podwaja wpłat. Przy wpłacie **zbiorczej** na kilka lokali cały wiersz jest pomijany, gdy **którykolwiek** z tych lokali ma już wpłatę w tym dniu.
+- To **nie** jest automatyczny import MT940 — osobna ścieżka niż import `.xls` z banku
+
+**Import zestawienia bankowego (.xls):**
+- Z listy lokali: **Import z banku (.xls)** — plik w starym formacie Excel (`.xls`), zwykle „zestawienie” pobrane z banku (nie myl z arkuszem `.xlsx` „Dopasowania”).
+- Przed pierwszym importem uzupełnij przy każdym lokalu **nazwisko rozliczeniowe** (pole w edycji lokalu) — system dopasowuje przelewy po tym nazwisku i po numerze lokalu z treści przelewu.
+- Najpierw **podgląd** (symulacja), potem **zastosuj**. **Duplikaty** działają tak samo jak przy imporcie wpłat z Excela (lokal + data).
+
+---
+
+## Grupy rozliczeniowe (tylko administrator)
+
+Gdy jeden właściciel ma kilka lokali i płaci jedną wpłatą na wszystkie:
+1. Utwórz **grupę rozliczeniową** i nadaj nazwę (np. nazwisko właściciela)
+2. Przypisz do grupy wybrane lokale na liście w tej sekcji (lub z edycji lokalu — pole grupy)
+3. Rejestruj **wpłatę grupową** — system rozdzieli ją proporcjonalnie do naliczeń na poszczególne lokale
+4. Mieszkaniec w panelu **Finanse** widzi saldo łączne oraz rozbicie per lokal
 
 ---
 
@@ -155,11 +196,19 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 3. Status domyślnie: `Szkic` — uchwała niewidoczna dla mieszkańców
 4. Kliknij **Zapisz**
 
+**Głosy z zebrania (osobiście przed głosowaniem online):**
+- Jeśli część mieszkańców oddała głos na zebraniu wspólnoty, zanim włączysz głosowanie w systemie: przy uchwale w statusie **Szkic** kliknij **Głosy z zebrania**
+- Wybierz mieszkańca i opcję (Za / Przeciw / Wstrzymuje się). W systemie obowiązuje **jeden głos na mieszkańca** przy danej uchwale — osoba wpisana tutaj **nie zagłosuje ponownie** w panelu po uruchomieniu głosowania
+- Możesz **usunąć** pojedynczy wpis przed publikacją (korekta). **Resetuj głosy** usuwa wszystkie głosy naraz (także po starcie głosowania — z podwójnym potwierdzeniem)
+- **Uwaga:** cofnięcie uchwały do szkicu z etapu głosowania **usuwa wszystkie głosy** (także z zebrania) — patrz komunikat przy zapisie uchwały
+
 **Uruchomienie głosowania:**
 - Zmień status na **Głosowanie** — mieszkańcy zobaczyją uchwałę i będą mogli głosować
 
+**Kto może głosować:** mieszkaniec (aktywne konto). Administrator lub zarządca — tylko jeśli w Lokale jest przypisany jako właściciel lokalu (inaczej brak przycisków głosowania).
+
 **Podgląd wyników:**
-- Kliknij na uchwałę, aby zobaczyć bieżące wyniki: Za / Przeciw / Wstrzymuję się
+- Kliknij na uchwałę, aby zobaczyć bieżące wyniki: Za / Przeciw / Wstrzymuję się (procenty wg udziałów wspólnoty lub — gdy u głosujących brak przypisanych udziałów — wg liczby głosów)
 - Lista głosów z imionami i datami
 
 **Zamknięcie głosowania:**
@@ -170,7 +219,28 @@ Stawki są wersjonowane — zmiana stawki nie nadpisuje historycznych naliczeń.
 - Wymagane jest wpisanie potwierdzenia tekstowego — operacja jest nieodwracalna
 
 **Eksport do PDF:**
-- Kliknij **Eksportuj PDF**, aby pobrać protokół głosowania z wynikami
+- Kliknij ikonę pobrania (**Eksportuj wyniki głosowania (PDF)**) w prawym górnym rogu karty uchwały — ta sama grupa co reset głosów, edycja i usunięcie (obok przycisku «Głosy z zebrania», gdy jest widoczny)
+- Otwiera się podgląd wydruku do zapisu/druku jako PDF
+
+---
+
+## Dziennik operacji
+
+Dziennik rejestruje wszystkie ważne operacje w systemie: zmiany naliczeń, wpłat, stawek, lokali, głosów i uchwał. Dostępny tylko dla administratora.
+
+**Przeglądanie:**
+- W lewym menu kliknij **Dziennik operacji**
+- Tabela pokazuje: datę i godzinę, kto wykonał operację, typ akcji, obszar systemu i opis zmiany
+- Kliknij strzałkę (▾) przy wpisie, aby zobaczyć szczegóły — poprzednie i nowe dane
+
+**Filtrowanie:**
+- **Tabela** — np. Naliczenia, Wpłaty, Lokale, Głosy
+- **Akcja** — Utworzenie, Zmiana, Usunięcie, Generowanie, Reset głosów, Konfiguracja
+- **Od daty / Do daty** — zakres czasowy
+
+Wyniki paginowane po 50 wpisów.
+
+> Dziennik jest tylko do odczytu — nie można edytować ani usuwać wpisów.
 
 ---
 
@@ -187,6 +257,26 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 
 ---
 
+## Kopie zapasowe
+
+System automatycznie tworzy kopię zapasową danych **co niedzielę o 02:00 UTC** (04:00 polskiego czasu). Nie wymaga żadnej akcji ze strony administratora.
+
+**Co jest zapisywane:**
+- Wszystkie dane z bazy (lokale, mieszkańcy, naliczenia, wpłaty, stawki, uchwały, głosy, ustawienia)
+- Lista plików z dokumentów
+
+**Przechowywanie:**
+- Ostatnie 12 kopii (ok. 3 miesiące)
+- Starsze kopie są automatycznie usuwane
+
+**Powiadomienia:**
+- Po wykonaniu kopii system wysyła email potwierdzający do administratora
+- W razie błędu wysyłany jest email z informacją o problemie
+
+> Kopie przechowywane są w Supabase Storage (bucket `backups`). Dostęp do plików możliwy przez panel Supabase — w razie potrzeby odtworzenia danych skontaktuj się z administratorem systemu.
+
+---
+
 ## Typowe zadania — ściągawka
 
 | Zadanie | Gdzie |
@@ -200,6 +290,8 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 | Głosowanie nad uchwałą | Uchwały → zmień status na Głosowanie |
 | Sprawdź saldo lokalu | Lokale → wiersz lokalu |
 | Odpowiedź na wiadomość | Wiadomości → odczyt emaila nadawcy, odpowiedz ręcznie |
+| Sprawdź historię zmian | Dziennik operacji → filtry |
+| Kopia zapasowa | Automatyczna (co niedzielę) — brak akcji wymagany |
 
 ---
 
@@ -219,4 +311,4 @@ Wiadomości przychodzą z formularza kontaktowego na stronie wmgabi.pl.
 
 ---
 
-*Dokument wygenerowany: 2026-03-24. W razie pytań: administrator systemu.*
+*Dokument zaktualizowany: 2026-03-28. W razie pytań: administrator systemu.*

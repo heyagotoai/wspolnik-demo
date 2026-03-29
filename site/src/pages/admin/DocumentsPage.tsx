@@ -5,6 +5,7 @@ import { useRole } from '../../hooks/useRole'
 import { UploadIcon, TrashIcon, FileIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
+import { mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Document {
   id: string
@@ -94,7 +95,7 @@ export default function AdminDocumentsPage() {
       .upload(filePath, file)
 
     if (uploadError) {
-      setError(uploadError.message)
+      setError(mapSupabaseError(uploadError))
       setUploading(false)
       return
     }
@@ -115,7 +116,7 @@ export default function AdminDocumentsPage() {
     })
 
     if (insertError) {
-      setError(insertError.message)
+      setError(mapSupabaseError(insertError))
       setUploading(false)
       return
     }

@@ -33,5 +33,6 @@ describe('demoApiRouter', () => {
   it('GET /billing-groups zwraca listę (grupy rozliczeniowe)', async () => {
     const list = (await routeDemoApi('GET', '/billing-groups')) as unknown[]
     expect(Array.isArray(list)).toBe(true)
+    expect(list.length).toBeGreaterThanOrEqual(2)
   })
 })

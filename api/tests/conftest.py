@@ -4,6 +4,14 @@ Patches get_supabase where it's imported (security + routes),
 so all Supabase calls go through FakeSupabase.
 """
 
+import os
+
+# Zanim załaduje się api.core.config (wymaga kluczy), ustaw placeholdery.
+# Dzięki temu `pytest` bez pliku .env oraz CI z pełnym `env:` w workflow
+# nie kończą się masowym KeyError. Wartości z środowiska (GitHub, Vercel, .env) mają pierwszeństwo.
+os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "placeholder")
+
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -31,7 +39,12 @@ class FakeSupabaseBuilder:
         # Keep pre-set data (from set_table_data) so response validates.
         # Only use inserted data if no pre-set data exists.
         if isinstance(data, dict) and not self._data:
-            self._data = [data]
+            row = dict(data)
+            # Głosy (POST /resolutions/:id/vote) — VoteOut wymaga id i voted_at
+            if "vote" in row and "resolution_id" in row:
+                row.setdefault("id", "vote-gen-1")
+                row.setdefault("voted_at", "2026-03-21T12:00:00Z")
+            self._data = [row]
         return self
 
     def upsert(self, data):
@@ -54,11 +67,19 @@ class FakeSupabaseBuilder:
     def in_(self, *_a, **_kw):
         return self
 
+    def is_(self, *_a, **_kw):
+        return self
+
     def order(self, *_a, **_kw):
         return self
 
     def single(self):
         """Mark this query as single-row (returns dict, not list)."""
+        self._is_single = True
+        return self
+
+    def maybe_single(self):
+        """Like single(), but returns None instead of error when no data."""
         self._is_single = True
         return self
 
@@ -111,7 +132,10 @@ def fake_sb():
          patch("api.routes.announcements.get_supabase", return_value=sb), \
          patch("api.routes.charges.get_supabase", return_value=sb), \
          patch("api.routes.contact.get_supabase", return_value=sb), \
-         patch("api.routes.audit.get_supabase", return_value=sb):
+         patch("api.routes.audit.get_supabase", return_value=sb), \
+         patch("api.routes.backup.get_supabase", return_value=sb), \
+         patch("api.routes.billing_groups.get_supabase", return_value=sb), \
+         patch("api.routes.import_routes.get_supabase", return_value=sb):
         yield sb
 
 
@@ -131,14 +155,25 @@ def client(fake_sb, app):
 
 @pytest.fixture()
 def admin_client(fake_sb, app):
-    """Return a TestClient where require_admin is overridden.
-
-    Skips JWT + role check entirely — for testing endpoint logic only.
-    """
-    from api.core.security import require_admin
+    """Return a TestClient where require_admin and require_admin_or_manager are overridden."""
+    from api.core.security import require_admin, require_admin_or_manager
 
     app.dependency_overrides[require_admin] = lambda: {
-        "sub": "admin-1", "email": "admin@gabi.pl",
+        "sub": "admin-1", "email": "admin@gabi.pl", "role": "admin",
+    }
+    app.dependency_overrides[require_admin_or_manager] = lambda: {
+        "sub": "admin-1", "email": "admin@gabi.pl", "role": "admin",
+    }
+    return TestClient(app)
+
+
+@pytest.fixture()
+def manager_client(fake_sb, app):
+    """Return a TestClient where require_admin_or_manager is overridden with manager role."""
+    from api.core.security import require_admin_or_manager
+
+    app.dependency_overrides[require_admin_or_manager] = lambda: {
+        "sub": "manager-1", "email": "manager@gabi.pl", "role": "manager",
     }
     return TestClient(app)
 

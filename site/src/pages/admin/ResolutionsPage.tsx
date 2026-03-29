@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
+import { formatCaughtError } from '../../lib/userFacingErrors'
+import {
+  hasWeightedVoteShares,
+  pctDisplayPrzeciw,
+  pctDisplayWstrzymuje,
+  pctDisplayZa,
+} from '../../lib/voteResultsDisplay'
 
 /** Escape HTML special characters to prevent XSS in generated HTML strings */
 function escapeHtml(str: string): string {
@@ -31,6 +39,10 @@ interface VoteResults {
   przeciw: number
   wstrzymuje: number
   total: number
+  share_za: number
+  share_przeciw: number
+  share_wstrzymuje: number
+  total_share_community: number
 }
 
 interface VoteDetail {
@@ -39,6 +51,13 @@ interface VoteDetail {
   apartment_number: string | null
   vote: string
   voted_at: string
+}
+
+interface ResidentOption {
+  id: string
+  full_name: string
+  apartment_number: string | null
+  is_active: boolean
 }
 
 interface ResolutionForm {
@@ -74,6 +93,11 @@ export default function AdminResolutionsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [meetingModal, setMeetingModal] = useState<Resolution | null>(null)
+  const [meetingResidents, setMeetingResidents] = useState<ResidentOption[]>([])
+  const [meetingVoteRows, setMeetingVoteRows] = useState<VoteDetail[]>([])
+  const [meetingLoading, setMeetingLoading] = useState(false)
+  const [meetingResidentId, setMeetingResidentId] = useState('')
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { isAdmin } = useRole()
@@ -86,14 +110,14 @@ export default function AdminResolutionsPage() {
       // Fetch results for voting/closed resolutions
       const resultsMap: Record<string, VoteResults> = {}
       for (const r of data) {
-        if (r.status === 'voting' || r.status === 'closed') {
+        if (r.status === 'voting' || r.status === 'closed' || r.status === 'draft') {
           try {
             resultsMap[r.id] = await api.get<VoteResults>(`/resolutions/${r.id}/results`)
           } catch { /* ignore */ }
         }
       }
       setResults(resultsMap)
-    } catch (e) {
+    } catch {
       toast('Błąd ładowania uchwał', 'error')
     } finally {
       setLoading(false)
@@ -192,7 +216,7 @@ export default function AdminResolutionsPage() {
       await fetchResolutions()
       closeForm()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd')
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setSaving(false)
     }
@@ -260,6 +284,77 @@ export default function AdminResolutionsPage() {
       year: 'numeric',
     })
 
+  const voteLabel = (v: string) =>
+    v === 'za' ? 'Za' : v === 'przeciw' ? 'Przeciw' : 'Wstrzymuje się'
+
+  const openMeetingVotesModal = async (r: Resolution) => {
+    setMeetingModal(r)
+    setMeetingResidentId('')
+    setMeetingLoading(true)
+    try {
+      const [resList, votes] = await Promise.all([
+        api.get<ResidentOption[]>('/residents'),
+        api.get<VoteDetail[]>(`/resolutions/${r.id}/votes`),
+      ])
+      setMeetingResidents(resList)
+      setMeetingVoteRows(votes)
+    } catch {
+      toast('Nie udało się załadować listy mieszkańców lub głosów', 'error')
+      setMeetingModal(null)
+    } finally {
+      setMeetingLoading(false)
+    }
+  }
+
+  const closeMeetingModal = () => {
+    setMeetingModal(null)
+    setMeetingResidents([])
+    setMeetingVoteRows([])
+    setMeetingResidentId('')
+  }
+
+  const submitMeetingVote = async (vote: 'za' | 'przeciw' | 'wstrzymuje') => {
+    if (!meetingModal) return
+    if (!meetingResidentId) {
+      toast('Wybierz mieszkańca z listy', 'error')
+      return
+    }
+    try {
+      await api.post(`/resolutions/${meetingModal.id}/votes/register`, {
+        resident_id: meetingResidentId,
+        vote,
+      })
+      toast('Zapisano głos z zebrania', 'success')
+      const votes = await api.get<VoteDetail[]>(`/resolutions/${meetingModal.id}/votes`)
+      setMeetingVoteRows(votes)
+      setMeetingResidentId('')
+      await fetchResolutions()
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Nie udało się zapisać głosu'), 'error')
+    }
+  }
+
+  const removeMeetingVote = async (residentId: string) => {
+    if (!meetingModal) return
+    const ok = await confirm({
+      title: 'Usunąć głos?',
+      message:
+        'Usunięcie pozwala poprawić wpis przed otwarciem głosowania online. Tej operacji nie wykonuje się po publikacji uchwały.',
+      confirmLabel: 'Usuń głos',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await api.delete(`/resolutions/${meetingModal.id}/votes/${residentId}`)
+      toast('Głos usunięty', 'success')
+      const votes = await api.get<VoteDetail[]>(`/resolutions/${meetingModal.id}/votes`)
+      setMeetingVoteRows(votes)
+      await fetchResolutions()
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Nie udało się usunąć głosu'), 'error')
+    }
+  }
+
   const exportVotingPdf = async (r: Resolution) => {
     let voteDetails: VoteDetail[] = []
     try {
@@ -273,8 +368,32 @@ export default function AdminResolutionsPage() {
     const status = statusLabels[r.status] || statusLabels.draft
     const generated = new Date().toLocaleString('pl-PL')
 
-    const percentOf = (n: number) =>
-      voteData && voteData.total > 0 ? ((n / voteData.total) * 100).toFixed(1) + '%' : '—'
+    const weighted =
+      voteData && voteData.total > 0 && hasWeightedVoteShares(voteData)
+    const pctCol = (shareSum: number, headCount: number) => {
+      if (!voteData || voteData.total <= 0) return '—'
+      if (weighted) {
+        return (
+          ((shareSum / voteData.total_share_community) * 100).toFixed(1).replace('.', ',') + '%'
+        )
+      }
+      return ((headCount / voteData.total) * 100).toFixed(1).replace('.', ',') + '%'
+    }
+    const participationShare = voteData
+      ? voteData.share_za + voteData.share_przeciw + voteData.share_wstrzymuje
+      : 0
+    const pctParticipation = () => {
+      if (!voteData || voteData.total <= 0) return '—'
+      if (weighted) {
+        return (
+          ((participationShare / voteData.total_share_community) * 100).toFixed(1).replace('.', ',') + '%'
+        )
+      }
+      return '100,0%'
+    }
+    const pctColumnTitle = weighted
+      ? '% udziałów (wg ogółu lokali)'
+      : '% (wg liczby głosów — brak udziałów u głosujących)'
 
     const html = `<!DOCTYPE html>
 <html lang="pl">
@@ -333,32 +452,33 @@ export default function AdminResolutionsPage() {
         <tr>
           <th>Opcja</th>
           <th>Liczba głosów</th>
-          <th>Udział</th>
+          <th>${pctColumnTitle}</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="vote-za">Za</td>
           <td>${voteData.za}</td>
-          <td>${percentOf(voteData.za)}</td>
+          <td>${pctCol(voteData.share_za, voteData.za)}</td>
         </tr>
         <tr>
           <td class="vote-przeciw">Przeciw</td>
           <td>${voteData.przeciw}</td>
-          <td>${percentOf(voteData.przeciw)}</td>
+          <td>${pctCol(voteData.share_przeciw, voteData.przeciw)}</td>
         </tr>
         <tr>
           <td class="vote-wstrzymuje">Wstrzymuje się</td>
           <td>${voteData.wstrzymuje}</td>
-          <td>${percentOf(voteData.wstrzymuje)}</td>
+          <td>${pctCol(voteData.share_wstrzymuje, voteData.wstrzymuje)}</td>
         </tr>
         <tr>
-          <td class="vote-total">Łącznie</td>
+          <td class="vote-total">Łącznie (frekwencja)</td>
           <td class="vote-total">${voteData.total}</td>
-          <td>100%</td>
+          <td>${weighted ? pctParticipation() : '100,0% (wszyscy głosujący w podziale)'}</td>
         </tr>
       </tbody>
-    </table>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
+    </table>
+    <p style="font-size:11px;color:#64748b;margin-top:8px">${weighted ? 'Kolumna procentowa: suma udziałów lokali (apartments.share) przypisanych do głosujących względem sumy udziałów wszystkich lokali. Brak udziału przy lokalu = waga głosu 0.' : 'Głosujący nie mają przypisanych udziałów jako właściciele lokali — procenty jak udział w liczbie oddanych głosów.'}</p>` : '<p style="color:#94a3b8">Brak oddanych głosów.</p>'}
   </section>
 
   <section>
@@ -532,6 +652,10 @@ export default function AdminResolutionsPage() {
           {resolutions.map((r) => {
             const status = statusLabels[r.status] || statusLabels.draft
             const voteData = results[r.id]
+            const adminPctSuf =
+              voteData && voteData.total > 0 && hasWeightedVoteShares(voteData)
+                ? 'udz.'
+                : 'głos.'
 
             return (
               <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
@@ -555,22 +679,35 @@ export default function AdminResolutionsPage() {
                       </p>
                     )}
                     {voteData && voteData.total > 0 && (
-                      <div className="flex items-center gap-4 mt-3 text-xs">
-                        <span className="text-sage font-medium">Za: {voteData.za}</span>
-                        <span className="text-error font-medium">Przeciw: {voteData.przeciw}</span>
-                        <span className="text-slate font-medium">Wstrzymuje: {voteData.wstrzymuje}</span>
-                        <span className="text-outline">Razem: {voteData.total}</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs">
+                        <span className="text-sage font-medium">
+                          Za: {voteData.za}
+                          {pctDisplayZa(voteData) != null &&
+                            ` (${pctDisplayZa(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-error font-medium">
+                          Przeciw: {voteData.przeciw}
+                          {pctDisplayPrzeciw(voteData) != null &&
+                            ` (${pctDisplayPrzeciw(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-slate font-medium">
+                          Wstrzymuje: {voteData.wstrzymuje}
+                          {pctDisplayWstrzymuje(voteData) != null &&
+                            ` (${pctDisplayWstrzymuje(voteData)}% ${adminPctSuf})`}
+                        </span>
+                        <span className="text-outline">Razem głosów: {voteData.total}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {(r.status === 'voting' || r.status === 'closed') && (
+                  <div className="flex flex-wrap items-center gap-1 shrink-0 justify-end">
+                    {isAdmin && r.status === 'draft' && (
                       <button
-                        onClick={() => exportVotingPdf(r)}
-                        className="p-2 text-outline hover:text-sage transition-colors"
-                        title="Eksportuj wyniki głosowania (PDF)"
+                        type="button"
+                        onClick={() => openMeetingVotesModal(r)}
+                        className="px-2 py-1.5 text-xs font-medium text-sage border border-sage/40 rounded-[var(--radius-input)] hover:bg-sage-pale/40 transition-colors"
+                        title="Zarejestruj głosy oddane osobiście na zebraniu — przed uruchomieniem głosowania online"
                       >
-                        <DownloadIcon className="w-4 h-4" />
+                        Głosy z zebrania
                       </button>
                     )}
                     {isAdmin && voteData && voteData.total > 0 && (
@@ -580,6 +717,17 @@ export default function AdminResolutionsPage() {
                         title="Resetuj głosy (usuń wszystkie oddane głosy)"
                       >
                         <XIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    {(r.status === 'voting' ||
+                      r.status === 'closed' ||
+                      (r.status === 'draft' && voteData && voteData.total > 0)) && (
+                      <button
+                        onClick={() => exportVotingPdf(r)}
+                        className="p-2 text-outline hover:text-sage transition-colors"
+                        title="Eksportuj wyniki głosowania (PDF)"
+                      >
+                        <DownloadIcon className="w-4 h-4" />
                       </button>
                     )}
                     {isAdmin && (
@@ -608,6 +756,146 @@ export default function AdminResolutionsPage() {
           })}
         </div>
       )}
+
+      {meetingModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-charcoal/40"
+              onClick={closeMeetingModal}
+              aria-hidden
+            />
+            <div
+              role="dialog"
+              aria-modal
+              aria-labelledby="meeting-votes-title"
+              className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-cream-deep shrink-0">
+                <h2 id="meeting-votes-title" className="text-lg font-semibold text-charcoal pr-2">
+                  Głosy z zebrania
+                </h2>
+                <button
+                  type="button"
+                  onClick={closeMeetingModal}
+                  className="text-outline hover:text-charcoal shrink-0"
+                  aria-label="Zamknij"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-5 py-4 space-y-4 text-sm">
+                <p className="text-slate leading-relaxed">
+                  Zapisz tutaj głosy oddane <strong className="text-charcoal">osobiście na zebraniu</strong>, zanim
+                  zmienisz status uchwały na „Głosowanie otwarte”. Mieszkaniec z już zarejestrowanym głosem nie
+                  odda drugiego głosu w panelu — system traktuje oba tryby tak samo.
+                </p>
+                <p className="text-xs text-outline">
+                  Uwaga: cofnięcie uchwały do szkicu z etapu głosowania usuwa wszystkie głosy (także z zebrania).
+                </p>
+
+                {meetingLoading ? (
+                  <p className="text-slate py-6 text-center">Ładowanie...</p>
+                ) : (
+                  <>
+                    {meetingVoteRows.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-outline uppercase tracking-wide mb-2">
+                          Zarejestrowane głosy
+                        </h3>
+                        <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)]">
+                          {meetingVoteRows
+                            .slice()
+                            .sort((a, b) =>
+                              (a.apartment_number ?? '').localeCompare(
+                                b.apartment_number ?? '',
+                                'pl',
+                              ),
+                            )
+                            .map(row => (
+                              <li
+                                key={row.resident_id}
+                                className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                              >
+                                <span className="min-w-0">
+                                  <span className="font-medium text-charcoal block truncate">
+                                    {row.full_name}
+                                  </span>
+                                  <span className="text-xs text-outline">
+                                    lokal {row.apartment_number ?? '—'} · {voteLabel(row.vote)}
+                                  </span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeMeetingVote(row.resident_id)}
+                                  className="text-xs text-error hover:underline shrink-0"
+                                >
+                                  Usuń
+                                </button>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="text-xs font-semibold text-outline uppercase tracking-wide mb-2">
+                        Dodaj głos
+                      </h3>
+                      <label className="block text-xs font-medium text-charcoal mb-1">Mieszkaniec</label>
+                      <select
+                        value={meetingResidentId}
+                        onChange={e => setMeetingResidentId(e.target.value)}
+                        className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage mb-3"
+                      >
+                        <option value="">— wybierz —</option>
+                        {meetingResidents
+                          .filter(
+                            r =>
+                              r.is_active &&
+                              !meetingVoteRows.some(v => v.resident_id === r.id),
+                          )
+                          .slice()
+                          .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
+                          .map(r => (
+                            <option key={r.id} value={r.id}>
+                              {r.full_name}
+                              {r.apartment_number ? ` · lokal ${r.apartment_number}` : ''}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => submitMeetingVote('za')}
+                          className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-sage text-white hover:bg-sage-light"
+                        >
+                          Za
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => submitMeetingVote('przeciw')}
+                          className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-error-container text-error hover:opacity-90"
+                        >
+                          Przeciw
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => submitMeetingVote('wstrzymuje')}
+                          className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] border border-cream-deep text-slate hover:bg-cream-deep/50"
+                        >
+                          Wstrzymuje się
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

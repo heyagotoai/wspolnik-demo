@@ -6,7 +6,7 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
-import { useDemoBasePath } from '../../demo/useDemoBasePath'
+import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Resident {
   id: string
@@ -29,7 +29,6 @@ interface ResidentForm {
 const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartment_number: '', role: 'resident' }
 
 export default function ResidentsPage() {
-  const prefix = useDemoBasePath()
   const { isAdmin, isAdminOrManager, loading: roleLoading } = useRole()
   const [residents, setResidents] = useState<Resident[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +115,7 @@ export default function ResidentsPage() {
           .eq('id', editingId)
 
         if (updateError) {
-          setError(updateError.message)
+          setError(mapSupabaseError(updateError))
           setSaving(false)
           return
         }
@@ -140,7 +139,7 @@ export default function ResidentsPage() {
       await fetchResidents()
       closeForm()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wystąpił błąd')
+      setError(formatCaughtError(err, 'Wystąpił błąd'))
     }
 
     setSaving(false)
@@ -161,7 +160,7 @@ export default function ResidentsPage() {
       await fetchResidents()
       toast('Mieszkaniec został usunięty', 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Błąd usuwania', 'error')
+      toast(formatCaughtError(err, 'Błąd usuwania'), 'error')
     }
     setDeleting(null)
   }
@@ -184,7 +183,7 @@ export default function ResidentsPage() {
   }
 
   if (!isAdminOrManager) {
-    return <Navigate to={prefix ? `${prefix}/panel` : '/panel'} replace />
+    return <Navigate to="/admin" replace />
   }
 
   if (loading) {

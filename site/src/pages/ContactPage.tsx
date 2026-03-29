@@ -3,7 +3,7 @@ import { communityInfo, emergencyContacts, contactSubjects } from '../data/mockD
 import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
 import { useToast } from '../components/ui/Toast'
 import { parseApiError } from '../lib/api'
-import { isDemoApp } from '../demo/isDemoApp'
+import { formatCaughtError } from '../lib/userFacingErrors'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -23,12 +23,6 @@ export default function ContactPage() {
     setSending(true)
 
     try {
-      if (isDemoApp()) {
-        toast('Wiadomość została „wysłana” (tryb demo — bez sieci).', 'success')
-        setFormData({ name: '', email: '', apartment_number: '', subject: contactSubjects[0], message: '' })
-        return
-      }
-
       const res = await fetch(`${API_BASE}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,7 +37,7 @@ export default function ContactPage() {
       toast('Wiadomość została wysłana. Dziękujemy!', 'success')
       setFormData({ name: '', email: '', apartment_number: '', subject: contactSubjects[0], message: '' })
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Nie udało się wysłać wiadomości.', 'error')
+      toast(formatCaughtError(err, 'Nie udało się wysłać wiadomości.'), 'error')
     } finally {
       setSending(false)
     }

@@ -25,19 +25,40 @@ function parsePath(path: string): { pathname: string; search: URLSearchParams } 
 
 function voteResults(resId: string) {
   const votes = demoStore.votes.filter((v) => v.resolution_id === resId)
+  const residentShare: Record<string, number> = {}
+  let total_share_community = 0
+  for (const a of demoStore.apartments) {
+    const sh = a.share
+    if (sh == null) continue
+    const fv = Number(sh)
+    total_share_community += fv
+    const oid = a.owner_resident_id
+    if (oid) residentShare[oid] = (residentShare[oid] ?? 0) + fv
+  }
   let za = 0
   let przeciw = 0
   let wstrzymuje = 0
+  let share_za = 0
+  let share_przeciw = 0
+  let share_wstrzymuje = 0
   for (const v of votes) {
     if (v.vote === 'za') za++
     else if (v.vote === 'przeciw') przeciw++
     else if (v.vote === 'wstrzymuje') wstrzymuje++
+    const w = residentShare[v.resident_id] ?? 0
+    if (v.vote === 'za') share_za += w
+    else if (v.vote === 'przeciw') share_przeciw += w
+    else if (v.vote === 'wstrzymuje') share_wstrzymuje += w
   }
   return {
     za,
     przeciw,
     wstrzymuje,
     total: votes.length,
+    share_za: Math.round(share_za * 1e8) / 1e8,
+    share_przeciw: Math.round(share_przeciw * 1e8) / 1e8,
+    share_wstrzymuje: Math.round(share_wstrzymuje * 1e8) / 1e8,
+    total_share_community: Math.round(total_share_community * 1e8) / 1e8,
   }
 }
 
@@ -156,6 +177,55 @@ export async function routeDemoApi(
       vote: row.vote,
       voted_at: row.voted_at,
     }
+  }
+
+  const registerMeetingMatch = pathname.match(/^\/resolutions\/([^/]+)\/votes\/register$/)
+  if (registerMeetingMatch && method === 'POST') {
+    const rid = registerMeetingMatch[1]
+    const r = demoStore.resolutions.find((x) => x.id === rid)
+    if (!r) throw new Error('Nie znaleziono uchwały')
+    if (r.status !== 'draft') {
+      throw new Error('Głosy z zebrania można nanosić tylko dla uchwały w statusie szkic')
+    }
+    const b = body as { resident_id?: string; vote?: string }
+    const residentId = String(b.resident_id ?? '')
+    const vote = String(b.vote ?? 'wstrzymuje')
+    if (!residentId) throw new Error('Brak mieszkańca')
+    if (demoStore.votes.some((v) => v.resolution_id === rid && v.resident_id === residentId)) {
+      throw new Error('Ten mieszkaniec ma już zarejestrowany głos przy tej uchwale')
+    }
+    const row: DemoVote = {
+      id: crypto.randomUUID(),
+      resolution_id: rid,
+      resident_id: residentId,
+      vote,
+      voted_at: new Date().toISOString(),
+    }
+    demoStore.votes.push(row)
+    return {
+      id: row.id,
+      resolution_id: row.resolution_id,
+      resident_id: row.resident_id,
+      vote: row.vote,
+      voted_at: row.voted_at,
+    }
+  }
+
+  const deleteOneVoteMatch = pathname.match(/^\/resolutions\/([^/]+)\/votes\/([^/]+)$/)
+  if (deleteOneVoteMatch && method === 'DELETE') {
+    const rid = deleteOneVoteMatch[1]
+    const residentId = deleteOneVoteMatch[2]
+    const r = demoStore.resolutions.find((x) => x.id === rid)
+    if (!r) throw new Error('Nie znaleziono uchwały')
+    if (r.status !== 'draft') {
+      throw new Error('Usuwanie pojedynczego głosu jest możliwe tylko przy uchwale w szkicu')
+    }
+    const ix = demoStore.votes.findIndex(
+      (v) => v.resolution_id === rid && v.resident_id === residentId,
+    )
+    if (ix === -1) throw new Error('Brak głosu do usunięcia')
+    demoStore.votes.splice(ix, 1)
+    return { detail: 'Usunięto głos' }
   }
 
   const votesListMatch = pathname.match(/^\/resolutions\/([^/]+)\/votes$/)

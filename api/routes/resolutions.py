@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.core.security import get_current_user, require_admin
+from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
+from api.core.voting_eligibility import check_resolution_vote_eligibility
 from api.models.schemas import (
     ResolutionCreate,
     ResolutionUpdate,
     ResolutionOut,
     VoteCreate,
+    VoteRegisterAdmin,
     VoteOut,
     VoteResults,
     VoteDetail,
@@ -160,6 +162,97 @@ def reset_votes(resolution_id: str, _admin: dict = Depends(require_admin)):
     return {"detail": f"Usunięto {count} głosów"}
 
 
+@router.post("/{resolution_id}/votes/register", response_model=VoteOut, status_code=201)
+def register_vote_meeting(
+    resolution_id: str,
+    body: VoteRegisterAdmin,
+    _admin: dict = Depends(require_admin),
+):
+    """Zarejestruj głos z zebrania wspólnoty (osobiście), zanim uchwała będzie w głosowaniu online.
+
+    Dozwolone tylko gdy status uchwały = draft. Ten sam zapis co głos online — mieszkaniec nie
+    odda drugiego głosu po otwarciu głosowania (UNIQUE + walidacja POST /vote).
+    """
+    sb = get_supabase()
+
+    resolution = sb.table("resolutions").select("id, status").eq("id", resolution_id).execute()
+    if not resolution.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+    if resolution.data[0]["status"] != "draft":
+        raise HTTPException(
+            status_code=400,
+            detail="Głosy z zebrania można nanosić tylko dla uchwały w statusie szkic",
+        )
+
+    ok, denial = check_resolution_vote_eligibility(sb, body.resident_id)
+    if not ok:
+        raise HTTPException(status_code=403, detail=denial)
+
+    existing = (
+        sb.table("votes")
+        .select("id")
+        .eq("resolution_id", resolution_id)
+        .eq("resident_id", body.resident_id)
+        .execute()
+    )
+    if existing.data:
+        raise HTTPException(
+            status_code=409,
+            detail="Ten mieszkaniec ma już zarejestrowany głos przy tej uchwale",
+        )
+
+    try:
+        result = sb.table("votes").insert({
+            "resolution_id": resolution_id,
+            "resident_id": body.resident_id,
+            "vote": body.vote,
+        }).execute()
+    except Exception as e:
+        if "23505" in str(e) or "unique" in str(e).lower():
+            raise HTTPException(
+                status_code=409,
+                detail="Ten mieszkaniec ma już zarejestrowany głos przy tej uchwale",
+            )
+        raise HTTPException(status_code=500, detail="Nie udało się zapisać głosu")
+
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Nie udało się zapisać głosu")
+
+    return result.data[0]
+
+
+@router.delete("/{resolution_id}/votes/{resident_id}", response_model=MessageOut)
+def delete_single_vote_draft(
+    resolution_id: str,
+    resident_id: str,
+    _admin: dict = Depends(require_admin),
+):
+    """Usuń pojedynczy głos — tylko dla uchwały w szkicu (korekta przed publikacją)."""
+    sb = get_supabase()
+
+    resolution = sb.table("resolutions").select("id, status").eq("id", resolution_id).execute()
+    if not resolution.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+    if resolution.data[0]["status"] != "draft":
+        raise HTTPException(
+            status_code=400,
+            detail="Usuwanie pojedynczego głosu jest możliwe tylko przy uchwale w szkicu",
+        )
+
+    existing = (
+        sb.table("votes")
+        .select("id")
+        .eq("resolution_id", resolution_id)
+        .eq("resident_id", resident_id)
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Brak głosu do usunięcia")
+
+    sb.table("votes").delete().eq("resolution_id", resolution_id).eq("resident_id", resident_id).execute()
+    return {"detail": "Głos usunięty"}
+
+
 # ── Voting ──────────────────────────────────────────────────
 
 
@@ -173,25 +266,47 @@ def get_vote_results(resolution_id: str, _user: dict = Depends(get_current_user)
     if not check.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
-    votes = sb.table("votes").select("vote").eq("resolution_id", resolution_id).execute()
+    votes = sb.table("votes").select("vote, resident_id").eq("resolution_id", resolution_id).execute()
+    apartments = sb.table("apartments").select("owner_resident_id, share").execute()
+
+    resident_share: dict[str, float] = {}
+    total_share_community = 0.0
+    for a in apartments.data or []:
+        sh = a.get("share")
+        if sh is None:
+            continue
+        fv = float(sh)
+        total_share_community += fv
+        oid = a.get("owner_resident_id")
+        if oid:
+            resident_share[oid] = resident_share.get(oid, 0.0) + fv
 
     counts = {"za": 0, "przeciw": 0, "wstrzymuje": 0}
-    for v in votes.data:
+    shares = {"za": 0.0, "przeciw": 0.0, "wstrzymuje": 0.0}
+    for v in votes.data or []:
         vote_val = v["vote"]
-        if vote_val in counts:
-            counts[vote_val] += 1
+        if vote_val not in counts:
+            continue
+        counts[vote_val] += 1
+        rid = v.get("resident_id")
+        w = resident_share.get(rid, 0.0) if rid else 0.0
+        shares[vote_val] += w
 
     return VoteResults(
         za=counts["za"],
         przeciw=counts["przeciw"],
         wstrzymuje=counts["wstrzymuje"],
         total=sum(counts.values()),
+        share_za=round(shares["za"], 8),
+        share_przeciw=round(shares["przeciw"], 8),
+        share_wstrzymuje=round(shares["wstrzymuje"], 8),
+        total_share_community=round(total_share_community, 8),
     )
 
 
 @router.get("/{resolution_id}/votes", response_model=list[VoteDetail])
-def get_resolution_vote_details(resolution_id: str, _admin: dict = Depends(require_admin)):
-    """Get all individual votes with resident details for a resolution (admin only)."""
+def get_resolution_vote_details(resolution_id: str, _user: dict = Depends(require_admin_or_manager)):
+    """Get all individual votes with resident details for a resolution (admin or manager)."""
     sb = get_supabase()
 
     check = sb.table("resolutions").select("id").eq("id", resolution_id).execute()
@@ -265,6 +380,10 @@ def cast_vote(
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
     if resolution.data[0]["status"] != "voting":
         raise HTTPException(status_code=400, detail="Głosowanie nie jest aktywne dla tej uchwały")
+
+    ok, denial = check_resolution_vote_eligibility(sb, user["sub"])
+    if not ok:
+        raise HTTPException(status_code=403, detail=denial)
 
     # Check if user already voted
     existing = (

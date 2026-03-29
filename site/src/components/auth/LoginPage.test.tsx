@@ -82,7 +82,11 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Zaloguj się' }))
 
     await waitFor(() => {
-      expect(screen.getByText(/Invalid login credentials/)).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Nieprawidłowy adres e-mail lub hasło. Sprawdź dane i spróbuj ponownie.',
+        ),
+      ).toBeInTheDocument()
     })
   })
 

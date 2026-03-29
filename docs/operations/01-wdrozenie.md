@@ -12,7 +12,8 @@ Dokument opisuje jak wdrożyć system od zera na nowym środowisku.
 - Domena z dostępem do DNS (np. az.pl, OVH, Cloudflare)
 - Konto pocztowe SMTP do powiadomień (np. hosting az.pl)
 - Node.js 18+ i Python 3.12+ (do developmentu)
-- Backend: `api/requirements.txt` (m.in. **`tzdata`** — na Windowsie bez systemowej bazy IANA wymagany do `Europe/Warsaw` w treści maila o saldzie)
+- Backend: `api/requirements.txt` — **wersje przypięte na sztywno** (`==`), powtarzalne instalacje na Vercelu i lokalnie; m.in. **`tzdata`** (Windows / `Europe/Warsaw` w mailach), **`openpyxl`** (import `.xlsx`), **`xlrd`** (zestawienie `.xls` / `payments-bank-statement`)
+- Frontend: `site/package.json` — przypięte wersje bez `^` (spójnie z `package-lock.json`); po klonowania repozytorium: `cd site && npm ci`
 
 ---
 

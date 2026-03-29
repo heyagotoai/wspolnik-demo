@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -24,5 +23,8 @@ export default defineConfig({
       VITE_SUPABASE_ANON_KEY: 'test-anon-key',
       VITE_DEMO_ALLOW_REAL_BACKEND: 'true',
     },
+    // Tylko unit testy w src/ — Playwright ma osobny katalog e2e/*.spec.ts i `npm run test:e2e`
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],
   },
 })

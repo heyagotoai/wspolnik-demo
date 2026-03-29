@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
-import { useDemoBasePath } from '../../demo/useDemoBasePath'
 import { UsersIcon, MegaphoneIcon, FolderIcon, CalendarIcon, WalletIcon, ArrowRightIcon } from '../../components/ui/Icons'
 
 interface Stats {
@@ -24,8 +23,6 @@ interface RecentAnnouncement {
 export default function AdminDashboardPage() {
   const { user } = useAuth()
   const { isAdmin } = useRole()
-  const prefix = useDemoBasePath()
-  const to = (path: string) => (prefix ? `${prefix}${path}` : path)
   const [stats, setStats] = useState<Stats>({ residents: 0, apartments: 0, announcements: 0, documents: 0, upcomingDates: 0 })
   const [recentAnnouncements, setRecentAnnouncements] = useState<RecentAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
@@ -89,19 +86,19 @@ export default function AdminDashboardPage() {
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {isAdmin && (
-          <StatCard icon={<UsersIcon className="w-6 h-6" />} label="Mieszkańcy" value={String(stats.residents)} to={to('/admin/mieszkancy')} />
+          <StatCard icon={<UsersIcon className="w-6 h-6" />} label="Mieszkańcy" value={String(stats.residents)} to="/admin/mieszkancy" />
         )}
-        <StatCard icon={<MegaphoneIcon className="w-6 h-6" />} label="Ogłoszenia" value={String(stats.announcements)} to={to('/admin/ogloszenia')} />
-        <StatCard icon={<FolderIcon className="w-6 h-6" />} label="Dokumenty" value={String(stats.documents)} to={to('/admin/dokumenty')} />
-        <StatCard icon={<CalendarIcon className="w-6 h-6" />} label="Nadchodzące terminy" value={String(stats.upcomingDates)} to={to('/admin/terminy')} />
-        <StatCard icon={<WalletIcon className="w-6 h-6" />} label="Lokale" value={String(stats.apartments)} to={to('/admin/naliczenia')} />
+        <StatCard icon={<MegaphoneIcon className="w-6 h-6" />} label="Ogłoszenia" value={String(stats.announcements)} to="/admin/ogloszenia" />
+        <StatCard icon={<FolderIcon className="w-6 h-6" />} label="Dokumenty" value={String(stats.documents)} to="/admin/dokumenty" />
+        <StatCard icon={<CalendarIcon className="w-6 h-6" />} label="Nadchodzące terminy" value={String(stats.upcomingDates)} to="/admin/terminy" />
+        <StatCard icon={<WalletIcon className="w-6 h-6" />} label="Lokale" value={String(stats.apartments)} to="/admin/naliczenia" />
       </div>
 
       {/* Recent announcements */}
       <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-charcoal">Ostatnie ogłoszenia</h2>
-          <Link to={to('/admin/ogloszenia')} className="text-sm text-sage hover:text-sage-light flex items-center gap-1">
+          <Link to="/admin/ogloszenia" className="text-sm text-sage hover:text-sage-light flex items-center gap-1">
             Zarządzaj <ArrowRightIcon className="w-3.5 h-3.5" />
           </Link>
         </div>

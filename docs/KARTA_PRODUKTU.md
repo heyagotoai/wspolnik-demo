@@ -38,7 +38,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 
 - **Dashboard** — aktualne saldo (nadpłata/zaległość), ostatnie ogłoszenia, nadchodzące terminy, aktywne głosowania
 - **Finanse**
-  - Saldo bieżące = saldo początkowe + suma wpłat − suma naliczeń
+  - Saldo bieżące = saldo początkowe + suma wpłat − suma naliczeń (przy grupie rozliczeniowej: saldo łączne + rozbicie per lokal)
   - Lista naliczeń miesięcznych z wyborem miesiąca
   - Historia wpłat
   - Wizualne rozróżnienie: nadpłata (zielone), zaległość (czerwone), rozliczone
@@ -53,6 +53,9 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Dashboard** — statystyki: liczba mieszkańców, lokali, ogłoszeń, dokumentów
 - **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem
 - **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, saldo początkowe + data obowiązywania salda. Możliwość hurtowego ustawiania daty salda
+- **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
+- **Import wpłat z Excela** — arkusz Dopasowania: kolumny Lokal, Data wpłaty, Kwota (inne ignorowane); wiele dat/kwot po średniku; wpłata zbiorcza = parent + automatyczne rozbicie per lokal; **deduplikacja** po parze (lokal, data) względem bazy i w obrębie tego samego pliku (ponowny import nie dubluje wpłat)
+- **Grupy rozliczeniowe** — łączenie lokali w grupę, wpłaty grupowe z podziałem, saldo łączne u mieszkańca
 - **Ogłoszenia** — CRUD + przypinanie na górze + wysyłka emailem do wszystkich aktywnych mieszkańców
 - **Dokumenty** — upload plików PDF (max 10MB), przełącznik publiczny/prywatny
 - **Terminy** — CRUD ważnych dat z opisami
@@ -66,13 +69,16 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
   - Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym (ochrona przed podwójnym naliczeniem)
 - **Uchwały i głosowania**
   - Workflow statusów: szkic → głosowanie → zamknięte
+  - Rejestracja **głosów z zebrania** (osobiście) w szkicu przed publikacją — ten sam zapis co głos online, brak podwójnego głosu w panelu
+  - Panel admina: logiczny układ akcji — przycisk «Głosy z zebrania», potem ikony (reset głosów, eksport PDF, edycja, usunięcie)
   - Automatyczne ogłoszenie do mieszkańców przy otwarciu głosowania
   - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
-  - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec)
+  - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec), także dla szkicu z już wprowadzonymi głosami
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
+- **Dziennik operacji** — historia wszystkich operacji finansowych i głosowań (kto, co, kiedy), filtrowanie po obszarze systemu i zakresie dat, podgląd szczegółów zmian
 - **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona
 - **Powiadomienie email o saldzie** — wysyłka informacji o saldzie na email mieszkańca jednym kliknięciem
-- **Import wyciągów bankowych** — import pliku z banku (format do ustalenia), automatyczne dopasowanie wpłat do lokali, panel weryfikacji przez admina
+- **Import zestawienia bankowego (.xls)** — plik zestawienia z banku (stary Excel); automatyczne dopasowanie przelewów do lokali po **nazwisku rozliczeniowym** (`billing_surname`) i numerze lokalu z opisu/adresu; podgląd (dry-run) i zapis; **deduplikacja** po parze (lokal, data) jak przy imporcie z Excela; niedopasowane pozycje w raporcie. Format **MT940** — opcjonalnie, gdy bank go dostarczy (osobna ścieżka)
 
 ### 3.4 Powiadomienia email
 

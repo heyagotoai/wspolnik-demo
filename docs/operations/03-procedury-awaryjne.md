@@ -97,17 +97,30 @@ GROUP BY a.id;
 **Scenariusz:** przypadkowe usunięcie danych, błędna migracja
 
 **Kroki:**
-1. **NIE PANIKUJ.** Supabase ma automatyczne backupy (7 dni wstecz na free tier)
-2. Dashboard → Project Settings → Backups → wybierz datę → Restore
-3. Jeśli potrzebujesz selektywnego przywracania (np. tylko tabela `charges`) → skontaktuj się z supportem Supabase
-4. **Zapobieganie:** Przed destrukcyjnymi operacjami (DROP, DELETE, ALTER) — zrób manualny eksport danych finansowych (patrz: [02-utrzymanie.md § Backup](02-utrzymanie.md))
+1. **NIE PANIKUJ.** Masz dwa źródła backupów:
+   - **Supabase auto-backup:** 7 dni wstecz (free tier) — pełne przywracanie bazy + Storage
+   - **Tygodniowy cron backup:** 12 tygodni wstecz — JSON w Storage bucket `backups` (tabele + auth.users + PDF-y)
+2. **Jeśli < 7 dni:** Dashboard → Project Settings → Backups → wybierz datę → Restore
+3. **Jeśli > 7 dni:** Supabase Dashboard → Storage → bucket `backups` → pobierz odpowiedni plik JSON → zaimportuj dane ręcznie (patrz: [02-utrzymanie.md § Przywracanie z backup cron](02-utrzymanie.md))
+4. Selektywne przywracanie (np. tylko tabela `charges`) → kontakt z supportem Supabase lub import z pliku JSON
+5. **Zapobieganie:** Przed destrukcyjnymi operacjami (DROP, DELETE, ALTER) — zrób manualny eksport danych finansowych (patrz: [02-utrzymanie.md § Backup](02-utrzymanie.md))
 
-**Co obejmuje automatyczny backup Supabase:**
+**Co obejmuje automatyczny backup Supabase (7 dni):**
 - Całą bazę danych łącznie z `auth.users` (konta mieszkańców)
 - Storage bucket z plikami PDF
 - Wszystkie tabele aplikacji
 
-**Czego NIE zastąpi backup Supabase:**
+**Co obejmuje tygodniowy cron backup (12 tygodni):**
+- 9 tabel aplikacji (apartments, residents, charges, payments, charge_rates, bank_statements, resolutions, votes, system_settings)
+- Lista `auth.users` (id, email, metadata)
+- Pliki PDF z bucketu `documents` (base64)
+
+**Monitoring backupu:**
+- Admini otrzymują email `[WM GABI] Backup OK` co niedzielę
+- Brak emaila = problem → sprawdź logi w Vercel Dashboard → Functions → `/api/backup/cron`
+- Email `[WM GABI] Backup NIEUDANY` = natychmiastowe sprawdzenie logów
+
+**Czego NIE zastąpi żaden backup:**
 - Utracone sekrety SMTP/API (przechowywane tylko w Supabase Secrets / Vercel Env) — patrz niżej
 
 ---

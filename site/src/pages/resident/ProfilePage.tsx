@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
+import { formatCaughtError } from '../../lib/userFacingErrors'
 import { useToast } from '../../components/ui/Toast'
 import { UserIcon } from '../../components/ui/Icons'
 
@@ -11,6 +12,7 @@ interface Profile {
   role: string
   is_active: boolean
   created_at: string
+  can_vote_resolutions?: boolean
 }
 
 export default function ProfilePage() {
@@ -63,7 +65,7 @@ export default function ProfilePage() {
       setEditingName(false)
       toast('Dane zostały zaktualizowane', 'success')
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd zapisu', 'error')
+      toast(formatCaughtError(e, 'Błąd zapisu'), 'error')
     } finally {
       setSavingName(false)
     }
@@ -92,7 +94,7 @@ export default function ProfilePage() {
       setConfirmPassword('')
       toast('Hasło zostało zmienione', 'success')
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Błąd zmiany hasła', 'error')
+      toast(formatCaughtError(e, 'Błąd zmiany hasła'), 'error')
     } finally {
       setSavingPassword(false)
     }

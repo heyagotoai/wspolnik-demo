@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds } from '../../lib/readAnnouncements'
+import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
+import { roundMoney2 } from '../../lib/money'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 import { communityInfo } from '../../data/mockData'
 
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const [resolutions, setResolutions] = useState<Resolution[]>([])
   const [votedResolutionTitles, setVotedResolutionTitles] = useState<Set<string>>(new Set())
   const [balance, setBalance] = useState<number | null>(null)
+  const [apartmentCount, setApartmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -91,20 +94,19 @@ export default function DashboardPage() {
       allDates.sort()
       if (allDates.length > 0) setNextDate(allDates[0])
 
-      // Fetch balance: payments - charges for user's apartment
-      // Try owner_resident_id first, fallback to apartment_number
+      // Fetch balance: payments - charges for user's apartments (including billing groups)
       if (user) {
-        let apt: { id: string; initial_balance: number } | null = null
+        let apartments: { id: string; initial_balance: number; billing_group_id: string | null }[] = []
 
-        const { data: aptByOwner } = await supabase
+        const { data: ownedApts } = await supabase
           .from('apartments')
-          .select('id, initial_balance')
+          .select('id, initial_balance, billing_group_id')
           .eq('owner_resident_id', user.id)
-          .maybeSingle()
 
-        if (aptByOwner) {
-          apt = aptByOwner
-        } else {
+        apartments = ownedApts || []
+
+        // Fallback via apartment_number if no owned apartments
+        if (apartments.length === 0) {
           const { data: resident } = await supabase
             .from('residents')
             .select('apartment_number')
@@ -114,25 +116,45 @@ export default function DashboardPage() {
           if (resident?.apartment_number) {
             const { data: aptByNumber } = await supabase
               .from('apartments')
-              .select('id, initial_balance')
+              .select('id, initial_balance, billing_group_id')
               .eq('number', resident.apartment_number)
               .maybeSingle()
-            apt = aptByNumber ?? null
+            if (aptByNumber) apartments = [aptByNumber]
           }
         }
 
-        if (apt) {
-          const [chargesRes, paymentsRes] = await Promise.all([
-            supabase.from('charges').select('amount').eq('apartment_id', apt.id),
-            supabase.from('payments').select('amount, confirmed_by_admin').eq('apartment_id', apt.id),
+        // Include billing group members
+        const groupIds = [...new Set(
+          apartments.filter(a => a.billing_group_id).map(a => a.billing_group_id!)
+        )]
+        if (groupIds.length > 0) {
+          const { data: groupApts } = await supabase
+            .from('apartments')
+            .select('id, initial_balance, billing_group_id')
+            .in('billing_group_id', groupIds)
+          if (groupApts) {
+            const existingIds = new Set(apartments.map(a => a.id))
+            for (const ga of groupApts) {
+              if (!existingIds.has(ga.id)) apartments.push(ga)
+            }
+          }
+        }
+
+        setApartmentCount(apartments.length)
+
+        if (apartments.length > 0) {
+          const aptIds = apartments.map(a => a.id)
+          const [chargesRes2, paymentsRes2] = await Promise.all([
+            supabase.from('charges').select('amount').in('apartment_id', aptIds),
+            supabase.from('payments').select('amount, confirmed_by_admin').in('apartment_id', aptIds),
           ])
 
-          const totalCharges = (chargesRes.data || []).reduce((s, c) => s + Number(c.amount), 0)
-          const totalPayments = (paymentsRes.data || [])
-            .filter((p) => p.confirmed_by_admin)
+          const totalCharges = (chargesRes2.data || []).reduce((s, c) => s + Number(c.amount), 0)
+          const totalPayments = (paymentsRes2.data || [])
+            .filter((p: { confirmed_by_admin: boolean }) => p.confirmed_by_admin)
             .reduce((s, p) => s + Number(p.amount), 0)
-          const initialBalance = Number(apt.initial_balance) || 0
-          setBalance(initialBalance + totalPayments - totalCharges)
+          const initialBalanceSum = apartments.reduce((s, a) => s + (Number(a.initial_balance) || 0), 0)
+          setBalance(roundMoney2(initialBalanceSum + totalPayments - totalCharges))
         }
       }
 
@@ -186,7 +208,7 @@ export default function DashboardPage() {
         />
         <DashboardCard
           icon={<WalletIcon className="w-6 h-6" />}
-          label="Finanse"
+          label={apartmentCount > 1 ? `Finanse (${apartmentCount} lokale)` : 'Finanse'}
           value={balance !== null
             ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(balance)
             : 'Brak lokalu'}
@@ -212,7 +234,10 @@ export default function DashboardPage() {
           <p className="text-slate text-sm">Brak ogłoszeń.</p>
         ) : (
           <div className="space-y-4">
-            {announcements.map((a) => (
+            {announcements.map((a) => {
+              const votingTitle = resolutionTitleFromVotingAnnouncement(a.title)
+              const votingResId = votingTitle ? findResolutionIdByTitle(votingTitle, resolutions) : null
+              return (
               <div key={a.id} className="border-b border-cream-medium pb-4 last:border-0 last:pb-0">
                 <div className="flex items-start gap-2">
                   {a.is_pinned && (
@@ -223,8 +248,13 @@ export default function DashboardPage() {
                   <div>
                     {a.title.startsWith('Nowe głosowanie:') ? (
                       <>
-                        <Link to="/panel/glosowania" className="text-sm font-medium text-sage hover:text-sage-light">{a.title}</Link>
-                        {votedResolutionTitles.has(a.title.replace('Nowe głosowanie: ', '')) ? (
+                        <Link
+                          to={votingResId ? `/panel/glosowania#resolution-${votingResId}` : '/panel/glosowania'}
+                          className="text-sm font-medium text-sage hover:text-sage-light"
+                        >
+                          {a.title}
+                        </Link>
+                        {votingTitle && votedResolutionTitles.has(votingTitle) ? (
                           <p className="text-xs text-sage mt-1">Oddałeś już głos w tej uchwale.</p>
                         ) : (
                           <p className="text-xs text-error mt-1">Czeka na Twój głos</p>
@@ -245,7 +275,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

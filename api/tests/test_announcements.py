@@ -60,7 +60,8 @@ def test_send_email_no_residents(fake_sb, admin_client):
     assert "mieszkańców" in r.json()["detail"].lower()
 
 
-def test_send_email_requires_admin(fake_sb, client):
+def test_send_email_requires_auth(fake_sb, client):
+    """Unauthenticated request should be rejected."""
     r = client.post("/api/announcements/ann-1/send-email")
     assert r.status_code == 401
 

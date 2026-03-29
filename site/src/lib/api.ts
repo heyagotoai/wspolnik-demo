@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase'
+import { supabase } from './supabase'
 import { isDemoApp } from '../demo/isDemoApp'
 import { routeDemoApi, routeDemoBlob } from '../demo/demoApiRouter'
 
@@ -6,10 +6,13 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 let _headersPromise: Promise<Record<string, string>> | null = null
 
+/** Równoległe 401 z jednego burstu — jedno odświeżenie tokenu zamiast wielu wywołań. */
+let _refreshInFlight: ReturnType<typeof supabase.auth.refreshSession> | null = null
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (_headersPromise) return _headersPromise
   _headersPromise = (async () => {
-    const { data } = await getSupabase().auth.getSession()
+    const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
     if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
     return {
@@ -24,6 +27,28 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return _headersPromise
 }
 
+async function refreshSessionDeduped() {
+  if (!_refreshInFlight) {
+    _refreshInFlight = supabase.auth.refreshSession().finally(() => {
+      _refreshInFlight = null
+    })
+  }
+  return _refreshInFlight
+}
+
+/** Po 401: odśwież sesję i powtórz raz (wygasły access_token vs natychmiastowe wylogowanie). */
+async function fetchWithAuthRetry(execute: () => Promise<Response>): Promise<Response> {
+  let res = await execute()
+  if (res.status !== 401) return res
+
+  _headersPromise = null
+  const { data, error } = await refreshSessionDeduped()
+  if (data.session?.access_token && !error) {
+    res = await execute()
+  }
+  return res
+}
+
 export function parseApiError(body: unknown, status?: number): string {
   if (typeof body === 'object' && body !== null) {
     const { detail } = body as Record<string, unknown>
@@ -35,7 +60,13 @@ export function parseApiError(body: unknown, status?: number): string {
       return 'Sprawdź poprawność wypełnionych pól.'
     }
   }
-  return `Błąd serwera${status ? ` (${status})` : ''}`
+  if (status === 503 || status === 502) {
+    return 'Serwis jest chwilowo niedostępny. Spróbuj ponownie za chwilę.'
+  }
+  if (status === 429) {
+    return 'Zbyt wiele żądań. Odczekaj chwilę i spróbuj ponownie.'
+  }
+  return 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie za chwilę.'
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -43,7 +74,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
       _headersPromise = null
       sessionStorage.setItem('session_expired', '1')
-      getSupabase().auth.signOut()
+      supabase.auth.signOut()
     }
     const body = await response.json().catch(() => ({}))
     throw new Error(parseApiError(body, response.status))
@@ -56,8 +87,10 @@ export const api = {
     if (isDemoApp()) {
       return routeDemoApi('GET', path) as Promise<T>
     }
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, { headers })
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, { headers })
+    })
     return handleResponse<T>(res)
   },
 
@@ -65,11 +98,13 @@ export const api = {
     if (isDemoApp()) {
       return routeDemoApi('POST', path, body) as Promise<T>
     }
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
     })
     return handleResponse<T>(res)
   },
@@ -78,11 +113,13 @@ export const api = {
     if (isDemoApp()) {
       return routeDemoApi('PATCH', path, body) as Promise<T>
     }
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify(body),
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body),
+      })
     })
     return handleResponse<T>(res)
   },
@@ -91,10 +128,12 @@ export const api = {
     if (isDemoApp()) {
       return routeDemoApi('DELETE', path) as Promise<T>
     }
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'DELETE',
-      headers,
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, {
+        method: 'DELETE',
+        headers,
+      })
     })
     return handleResponse<T>(res)
   },
@@ -103,13 +142,15 @@ export const api = {
     if (isDemoApp()) {
       return routeDemoBlob(path)
     }
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${API_BASE}${path}`, { headers })
+    const res = await fetchWithAuthRetry(async () => {
+      const headers = await getAuthHeaders()
+      return fetch(`${API_BASE}${path}`, { headers })
+    })
     if (!res.ok) {
       if (res.status === 401) {
         _headersPromise = null
         sessionStorage.setItem('session_expired', '1')
-        getSupabase().auth.signOut()
+        supabase.auth.signOut()
       }
       const body = await res.json().catch(() => ({}))
       throw new Error(parseApiError(body, res.status))

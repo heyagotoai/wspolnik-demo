@@ -2,39 +2,136 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
-### 2026-03-29 — ADR-003: `AdminRoute` dla admin + manager
-- Dokumentacja: `docs/decisions/ADR-003-auth-pattern.md` — `AdminRoute` opiera się na `isAdminOrManager`; szczegółowe CRUD nadal przez `isAdmin` w komponentach.
+### 2026-03-29 — Uchwały: głosy z zebrania przed publikacją
+- **`POST /api/resolutions/:id/votes/register`** (admin, tylko `status=draft`) — rejestracja głosu mieszkańca oddanego osobiście na zebraniu; te same reguły co `POST /vote` (`voting_eligibility`); **`DELETE /api/resolutions/:id/votes/:resident_id`** — pojedyncze usunięcie w szkicu
+- **Panel admina Uchwały** — przycisk „Głosy z zebrania” przy szkicu; podgląd wyników także dla szkicu z głosami; eksport PDF gdy są głosy
+- **UI (ten sam dzień):** `ResolutionsPage` — ikona eksportu PDF przeniesiona do **jednej grupy** z resetem głosów, edycją i usunięciem (po przycisku „Głosy z zebrania”); opis w ADR-010
+- **Dokumentacja (Obsidian + repo):** [[ADR-010-voting-system]], [[ADR-002-rls-bezpieczenstwo]] (edge case), `docs/architecture/feature-map.md` (mapa + uzupełnienie roadmapy), `docs/architecture/system-overview.md`, `docs/instrukcja-admina.md`, `docs/KARTA_PRODUKTU.md`, `docs/operations/02-utrzymanie.md`, `docs/security/pentest-2026-03-27.md` (uwaga o nowych endpointach), `memory/postep.md`, **CLAUDE.md** / **.cursorrules** — opis workflow i endpointów; testy: `api/tests/test_resolutions.py`, `ResolutionsPage.test.tsx`
 
-### 2026-03-29 — wspolnik-demo: sync z gabi_site (grupy rozliczeniowe, import stanu początkowego)
-- **Naliczenia:** zakładka „Grupy rozliczeniowe” (`BillingGroupsPanel` / `BillingGroupsPage`), przekierowanie `/admin/grupy-rozliczeniowe` → `/admin/naliczenia?tab=grupy` (także pod `/demo/...`).
-- **Lokale:** przycisk „Importuj stan początkowy” (`ImportInitialStateModal`), odznaki grup przy numerze lokalu; `fetch` tabeli `billing_groups` jak w gabi_site.
-- **Tryb demo:** mock API `/billing-groups` w `demoApiRouter`, `billing_groups` + `billing_group_id` w `demoStore`; `ImportInitialStateModal` w `isDemoApp()` — podgląd bez zapisu, szablon .xlsx z komunikatem zamiast pobrania; Vitest: `GET /billing-groups`.
+### 2026-03-29 — UI: finanse, sidebary, ogłoszenia → uchwała, podgląd wpłat (Lokale)
+- **Finanse mieszkańca** (`FinancesPage`) — stała kolejność wierszy „Naliczenia miesięczne”: Eksploatacja → Fundusz remontowy → Śmieci; historia wpłat: ujednolicony tytuł „Wpłata z dnia” **bez** znaczników źródła importu (bank/arkusz/podział) — tylko tekst + data + kwota
+- **`site/src/lib/paymentDisplay.ts`** — etykiety dla wpłat (Z banku / Z arkusza / Podział + źródło z wpłaty nadrzędnej przy rozbiciu); użycie w **`ApartmentPaymentsModal`**; mieszkańiec nie renderuje znaczników
+- **`ApartmentPaymentsModal`** — z panelu **Lokale** (`/admin/lokale`) dla **admin** i **zarządcy**: podgląd wpłat lokalu, suma vs kolumna salda, lista z tymi samymi etykietami co weryfikacja
+- **`ResidentLayout`**, **`AdminLayout`** — pasek boczny `sticky top-0 h-screen shrink-0`; grupa „Panel mieszkańca / Wyloguj” (oraz odpowiednie w panelu admina) **bezpośrednio pod** linkami głównymi, z separatorem — nie „zjeżdża” na dół przy długiej treści strony
+- **Ogłoszenia** (`/panel/ogloszenia`) — tytuły auto-tworzone przy starcie głosowania (`Nowe głosowanie: …`) jako link do **`/panel/glosowania#resolution-{id}`**; dopasowanie `resolution_id` po tytule uchwały z tabeli `resolutions`; **`ResolutionsPage`** — `id` na karcie uchwały + `scrollIntoView` przy haśle; **`votingAnnouncement.ts`** + testy; pulpit (`DashboardPage`) — ten sam link głęboki
+- Testy: `paymentDisplay.test.ts`, `votingAnnouncement.test.ts`, `ResolutionsPage.test.tsx` owinięty w `MemoryRouter`
 
-### 2026-03-28 — wspolnik-demo: rola zarządcy, sync UI z gabi_site
-- **`useRole`:** `admin` | `manager` | `resident`; `isAdminOrManager` dla `AdminRoute` i linków do panelu administracyjnego.
-- **Panel administracyjny:** zsynchronizowane strony z gabi_site (m.in. mieszkańcy z rolą `manager` w formularzu, dashboard z tytułem admin/zarządca, ograniczenia `isAdmin` dla operacji CRUD).
-- **Tryb demo:** przełącznik widoku Mieszkaniec / Zarządca / Administrator; `DemoRoleContext` i `demoStore` obsługują `manager`.
-- **Ogłoszenia i terminy (admin):** przyciski dodawania/edycji/usuwania tylko dla `isAdmin` — zarządca ma podgląd.
-- **Routing:** `AdminRoute` z prefiksem `/demo` (`useDemoBasePath`); `ResidentsPage` — redirect przy braku uprawnień na `/panel`.
+### 2026-03-29 — Saldo bez „-0,00 zł”; komunikaty błędów; klient API (401)
+- **`site/src/lib/money.ts`** — `roundMoney2()` (zaokrąglenie do groszy); usuwa artefakty float przy sumowaniu salda (`initial + wpłaty − naliczenia`), które dawały **-0,00 zł** i czerwony kolor przy teoretycznym zerze — użycie w **Lokale** (`ApartmentsPage`), **Finanse**, **Dashboard**; test `money.test.ts`
+- **`site/src/lib/userFacingErrors.ts`** — `formatCaughtError`, `mapSupabaseError` (sieć, duplicate key, FK, RLS, JWT); import z wielu stron i modali zamiast duplikatów; **`userFacingErrors.test.ts`**
+- **`site/src/lib/api.ts`** — po **401**: deduplikacja `refreshSession()`, jedno ponowne żądanie (wygasły access token); testy w `api.test.ts`
 
-### 2026-03-26 — Izolacja demo: domyślnie brak zapisu do prawdziwej bazy
-- **`VITE_DEMO_ALLOW_REAL_BACKEND`:** dopóki nie jest ustawione na `'true'`, `isDemoApp()` zwraca zawsze `true` — wyłącznie mocki (`getSupabase`, `api`, kontakt). Ochrona przed przypadkowymi kluczami Supabase na Vercelu.
-- Vitest: `VITE_DEMO_ALLOW_REAL_BACKEND=true` + sztuczne `VITE_SUPABASE_*` — testy api/Contact bez zmian.
-- `useAuth`, `DemoGate`, `useDemoBasePath` — ujednolicone z `isDemoApp()`; usunięty martwy fallback `allowMockWithoutEnv` w `getSupabase`.
+### 2026-03-29 — Import z banku: kilka lokali w opisie; logowanie: błędy po polsku
+- **`api/services/bank_statement_parser.py`** — ekstrakcja wielu numerów z opisu (`lokal nr 11,16`, `11 i 16` itd.); gdy trafienia należą do jednej grupy rozliczeniowej, ustawiane jest `group_records` (rozbicie wpłaty jak przy dopasowaniu po nazwisku); testy w `api/tests/test_bank_statement_parser.py`
+- **`site/src/lib/authLoginErrors.ts`** — mapowanie komunikatów Supabase Auth na zrozumiałe teksty po polsku; **`LoginPage`** używa `getLoginErrorMessage`; testy jednostkowe modułu
 
-### 2026-03-26 — Vercel: naprawa `npm run build` (tsc / zależności)
-- `site/package.json`: `build` = `tsc -b && vite build` (bez `npx tsc` — uniknięcie błędnego pakietu `tsc` z npm gdy brak lokalnego TypeScript).
-- `typescript`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite` w **dependencies** — instalacja na Vercel przy `NODE_ENV=production` i tak obejmuje narzędzia builda.
-- `vercel.json`: `installCommand`: `cd site && npm ci`.
-- `demoSupabase.ts`: dopasowanie sygnatury `.then()` do `execute()` (TS2345 przy `tsc -b`).
+### 2026-03-29 — Dokumentacja feature-map; zaostrzenie GET stawek i auto-config
+- **`docs/architecture/feature-map.md`** — usunięty nieistniejący route `/o-nas`; sekcja panelu: **admin lub manager** (`AdminRoute`) + krótki opis różnic uprawnień
+- **`GET /api/charges/rates`**, **`GET /api/charges/auto-config`** — tylko **admin** lub **manager** (`require_admin_or_manager`); mieszkaniec nie pobiera stawek ani konfiguracji auto-naliczeń przez API (backend ze `service_role`); **`PATCH /auto-config`** bez zmian (wyłącznie admin)
+- **Testy:** `api/tests/test_charges.py`, `api/tests/test_rls_isolation.py`
 
-### 2026-03-26 — Repo **wspolnik-demo**: tryb demo (mocki) + branding + dane fikcyjne
-- **Tryb demo:** `site/src/demo/` — `DemoStore`, `demoApiRouter`, `demoSupabase`, `DemoGate` / `DemoRoleContext` / `DemoBanner`, trasy `/demo/*`; `isDemoApp()` włącza mocki przy `VITE_DEMO_ONLY`, `VITE_PUBLIC_DEMO_ROUTES`, braku `VITE_SUPABASE_*` lub ścieżce `/demo`.
-- **API / Supabase:** `api.ts` i `getSupabase()` kierują do mocków w trybie demo; kontakt nie wywołuje backendu w demo (`ContactPage`).
-- **Assety demo:** `public/demo-logo.png`, `public/demo-hero.png`; `demoAssets.ts` (`logoSrc`, `heroBuildingSrc`, `logoAlt`); favicon podmieniany w demo (`DemoFaviconEffect`).
-- **Dane wspólnoty (fikcyjne):** `mockData.communityInfo` — m.in. „Zielone Tarasy”, `shortName: Wspólnik`, adres w Warszawie, e-mail `demo.wspolnik.example`; wydruki i stopki PDF z `communityInfo`.
-- **Konfiguracja:** `site/.env.example` — `VITE_PUBLIC_DEMO_ROUTES`; `vite.config.ts` — `test.env` z sztucznym Supabase dla Vitest; `@testing-library/dom` w devDependencies; `site/.npmrc` (`legacy-peer-deps`).
-- **Dokumentacja:** `docs/roadmap-demo.md`, `docs/operations/demo-wdrozenie-wspolnik.md` (deploy Vercel — tylko frontend demo).
+### 2026-03-29 — Głosowanie: udziały, uprawnienia, UI wyników
+- **`GET /api/resolutions/:id/results`** — agregacja **wag wg udziałów** (`apartments.share` × właściciel lokalu `owner_resident_id`); pola `share_*`, `total_share_community`; liczby głosów bez zmian
+- **`api/core/voting_eligibility.py`** — kto może głosować: rola `resident` (konto aktywne); **admin** i **manager** tylko jeśli mają przypisany lokal jako właściciel w Lokale
+- **`POST /api/resolutions/:id/vote`** — walidacja przez `check_resolution_vote_eligibility`
+- **`GET/PATCH /api/profile`** — pole `can_vote_resolutions` (spójna reguła z głosowaniem)
+- **Frontend:** `site/src/lib/voteResultsDisplay.ts` — pasek i procenty: **udziały** gdy są niezerowe wagi głosów; w przeciwnym razie **fallback na liczbę głosów** (uniknięcie „pustego” wykresu przy braku `owner_resident_id` u głosujących); PDF z trybem ważonym / wg głosów
+- **Panel Głosowania** — równoległe ładowanie `/resolutions` + `/profile`; przyciski głosu wg `can_vote_resolutions`
+- **Testy:** pytest (profile, głosowanie admin/właściciel, conftest: insert głosu z `id`/`voted_at`); vitest dopasowania tekstu wyników
+
+### 2026-03-28 — CI: Vitest nie uruchamia Playwright (e2e)
+- **`vite.config.ts`:** `test.include` = tylko `src/**/*.test.ts(x)`
+- **`package.json`:** `npm test` → `vitest run src` (oraz `test:watch` / `test:coverage` z katalogiem `src`) — na CI nie polegamy wyłącznie na `include` z Vite; jawna ścieżka wyklucza `e2e/*.spec.ts` nawet przy innej wersji Vitest
+
+### 2026-03-28 — CI: zależność `xlwt` dla testów .xls
+- **`xlwt==1.3.0`** w `api/requirements.txt` — generowanie plików `.xls` w `test_bank_statement_parser.py` (wcześniej na CI brak modułu `xlwt`)
+
+### 2026-03-28 — CI: stabilny import `api.core.config` w pytest
+- Na początku `api/tests/conftest.py`: `os.environ.setdefault` dla `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` — brak masowego `KeyError`, gdy job nie ustawi zmiennych lub lokalnie odpala się `pytest` bez `.env`
+
+### 2026-03-28 — Audyt zależności (npm + pip)
+- **npm:** `npm audit fix` — usunięte podatności w `brace-expansion` / `picomatch` (transitive); `npm audit` → 0
+- **Python:** `fastapi` 0.115.12 → **0.135.2**, jawny **`starlette==0.49.1`** (CVE w łańcuchu ASGI), **`PyJWT==2.12.1`** (CVE); `pip-audit` — pozostaje znacznik **pygments** (CVE-2026-4539, brak nowszej wersji na PyPI — śledzić wydania)
+- Instrukcja okresowego audytu: `docs/operations/02-utrzymanie.md` § Zależności
+
+### 2026-03-28 — Przypięte wersje zależności
+- **`api/requirements.txt`** — wszystkie pakiety z `==` (m.in. `openpyxl`, `xlrd`, `reportlab`, `locust`, `tzdata`), bez `>=`, żeby buildy Vercel/CI nie „pływały” przy nowych wydaniach
+- **`site/package.json`** — `dependencies` / `devDependencies` bez prefiksów `^` / `~`, zgodnie z aktualnym `package-lock.json` (np. `typescript-eslint` 8.57.1)
+
+### 2026-03-28 — Import z zestawienia bankowego (.xls)
+- **Nowy endpoint:** `POST /api/import/payments-bank-statement` — import wpłat bezpośrednio z pliku .xls pobranego z banku
+- **Automatyczne dopasowanie transakcji** do lokali na podstawie: numeru lokalu w opisie/adresie przelewu, nazwiska rozliczeniowego z rejestru (`billing_surname`)
+- **Deduplikacja** przed zapisem: para (lokal, data) — opis decyzji: `docs/decisions/ADR-014-payment-import-deduplication.md`
+- **Nowa kolumna:** `apartments.billing_surname` (migracja 019) — nazwisko rozliczeniowe edytowalne w panelu Lokale
+- Logika dopasowania przeniesiona z `clean_data.py`: normalizacja tekstu (polskie znaki, warianty nazwisk SKI/SKA), heurystyki adresu (Gdańska 58/X), ekstrakcja lokalu z opisu, głosowanie wagowe
+- Tylko wpłaty (kwota > 0) importowane; niedopasowane transakcje w raporcie podglądu (dry_run)
+- Frontend: `ImportBankStatementModal` z podglądem dopasowań i niedopasowań, przycisk „Import z banku (.xls)" w panelu Lokale
+- Zależność: `xlrd>=2.0.1` do odczytu starych plików Excel
+- Testy: `api/tests/test_bank_statement_parser.py` (38 testów: parser, dopasowanie, endpoint)
+
+### 2026-03-28 — Inter self-host (CSP / Google Fonts)
+- Font **Inter** z `@fontsource/inter` (subsety `latin` + `latin-ext`, wagi 400–700) — pliki z bundla Vite, bez żądań do `fonts.googleapis.com` / `fonts.gstatic.com`, zgodne z obecnym CSP `font-src 'self'` w `vercel.json`
+
+### 2026-03-28 — Import wpłat z Excela (dopasowania)
+- **Deduplikacja** jak przy imporcie zestawienia bankowego: para (lokal, data) — jeśli wpłata już jest w bazie lub pojawiła się wcześniej w tym samym pliku, wiersz (lub pojedyncza data w wielu datach) jest pomijany ze statusem „Pominięty” i komunikatem o duplikacie; import zbiorczy wielu lokali jest pomijany, gdy **którykolwiek** lokal ma już wpłatę w tym dniu — `docs/decisions/ADR-014-payment-import-deduplication.md`
+- Arkusz **Dopasowania**: kolumny **Lokal**, **Data wpłaty**, **Kwota** (np. nazwisko — ignorowane)
+- **Wiele dat** w komórce (`10.02.2026; 27.02.2026`): jedna kwota bez średnika → **ta sama kwota** na każdą datę (osobne wpłaty); **różne kwoty** → `341,20; 450,00` w tej samej kolejności co daty
+- Wiele dat **+ wiele lokali** w jednym wierszu: błąd — podziel na wiersze lub jedna data
+- `GET /api/import/payments-template`, `POST /api/import/payments?dry_run=`; wpłata na wielu lokalach: parent + dzieci (`api/core/payment_split.py`, proporcje z naliczeń lub równo)
+- Frontend: `ImportPaymentsModal`; testy: `api/tests/test_import_payments.py`, `api/tests/test_payment_split.py`
+
+### 2026-03-28 — Import Excel: stan początkowy (grupy + lokale zbiorcze)
+- **`numer_lokalu`**: najpierw dopasowanie **dokładnego** numeru z bazy (np. `3,4A`, `25,26` — jeden rekord „zbiorczy”); jeśli brak takiego klucza — rozbicie listy (przecinek, średnik, `|`, tab) oraz wzorce `25.26` / `3.4A` (float lub tekst z kropką z Excela)
+- Normalizacja separatorów Unicode (wide comma/dot), `openpyxl` `load_workbook(..., read_only=False)` dla stabilniejszego odczytu tekstu
+- Frontend: `ImportInitialStateModal` — krótki opis przecinka w Excelu PL (saldo vs lista numerów)
+- Testy: `api/tests/test_import.py` (grupy, float, lokale zbiorcze jednym rekordem)
+
+### 2026-03-28 — Panel Terminy + kolejność sidebara
+- Panel Terminy: scalone widoki ręcznych terminów (`important_dates`) i dat głosowań z uchwał
+- Daty głosowań pobierane bezpośrednio z Supabase (bez zależności od backendu)
+- `voting_start`: tylko dla uchwał `status='voting'`; `voting_end`: dla `voting` i `closed` (wyszarzone)
+- Sortowanie malejące (najnowsze na górze), link "Uchwały →" do panelu uchwał
+- Sidebar admina: nowa kolejność (Pulpit > Lokale > Naliczenia > Mieszkańcy > Uchwały > Dokumenty > Terminy > Ogłoszenia > Wiadomości > Dziennik operacji)
+
+### 2026-03-28 — Rola zarządcy (manager)
+- Nowa rola `manager` — podgląd read-only wszystkich danych + pełny CRUD ogłoszeń i terminów
+- Migracja 017: rozszerzenie CHECK constraint, helper functions (`is_manager()`, `is_admin_or_manager()`), 20+ RLS policies
+- Backend: `require_admin_or_manager` guard (FastAPI), aktualizacja endpointów (announcements, audit)
+- Frontend: `useRole` hook z `isManager`/`isAdminOrManager`, warunkowe ukrywanie akcji w 8 stronach admin
+- Sidebar: link "Panel zarządcy" dla managera w panelu mieszkańca, filtrowanie pozycji w panelu admin
+- Mieszkańcy: podgląd read-only dla zarządcy (bez Dodaj/Edytuj/Usuń/Aktywuj)
+- Badge zarządcy: niebieski (`sky-100/sky-700`), odróżnia się od admina (amber) i mieszkańca (sage)
+- Testy: 7 testów frontend (ResidentsPage, AdminRoute), fixture `manager_client` (pytest)
+
+### 2026-03-28 — Tygodniowy backup cron
+- Nowy endpoint `POST /api/backup/cron` — Vercel Cron co niedzielę 2:00 UTC
+- Eksport 9 tabel + `auth.users` (Admin API) + pliki PDF z bucketu `documents` (base64)
+- Zapis do Supabase Storage (bucket `backups`), retencja 12 tygodni
+- Email notification do adminów: `[WM GABI] Backup OK` / `Backup NIEUDANY`
+- Migracja 016: bucket `backups` (prywatny, 50MB, JSON only)
+- 9 testów pytest (auth, eksport, cleanup, notification, dokumenty)
+
+### 2026-03-27 — Testy E2E (Playwright)
+- 13 testów Playwright (Chromium) na produkcji (wmgabi.pl): **13/13 passed**
+- Logowanie (4): mieszkaniec, admin, błędne hasło, puste pola
+- Głosowanie (4): lista uchwał, oddanie głosu, weryfikacja po głosowaniu, wyniki
+- Finanse (5): saldo + badge, karty podsumowania, naliczenia miesięczne, historia wpłat
+- Konta testowe: `e2e_admin@wmgabi.pl`, `e2e_resident@wmgabi.pl` (lokal 99)
+- Helper `waitForLoaded()` — czeka aż Supabase/Vercel załaduje dane
+- Skrypty: `npm run test:e2e` / `npm run test:e2e:headed`
+
+### 2026-03-27 — Testy obciążeniowe (Locust)
+- Dodano infrastrukturę testów obciążeniowych: `api/tests/load/locustfile.py` (Locust) + `api/tests/test_concurrency.py` (4 testy race condition)
+- Scenariusze: ResidentUser (przeglądanie + głosowanie, waga 10) + AdminUser (residents/audit/rates, waga 1)
+- Wynik testu na produkcji (wmgabi.pl): **0 błędów aplikacji**, median 460-630ms, p99 do 3500ms (cold starty Vercel)
+- Współbieżne głosowanie działa poprawnie — brak race conditions
+- `locust` dodany do `requirements.txt`
+
+### 2026-03-27 — Pentest bezpieczeństwa (19/19 testów)
+- Przeprowadzono pełny pentest na środowisku produkcyjnym: RLS (6 tabel), IDOR API (5 endpointów), autentykacja (3 scenariusze), IDOR głosowania, XSS (statyczny), Storage (3 testy)
+- Wynik: **19/19 testów zaliczonych, brak luk bezpieczeństwa**
+- Raport: `docs/security/pentest-2026-03-27.md`
+- Feature map: Pentest RLS i IDOR oznaczone jako ✅ done
 
 ### 2026-03-26 — Obsługa wygasłych sesji (session expiry)
 - Fix: wygasły refresh token powodował kaskadę błędów (401, CSS MIME error) zamiast przekierowania na logowanie

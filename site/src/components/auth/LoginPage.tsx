@@ -7,6 +7,7 @@ import { logoAlt, logoSrc } from '../../demo/demoAssets'
 import { useDemoBasePath } from '../../demo/useDemoBasePath'
 import { MailIcon } from '../ui/Icons'
 import { useToast } from '../ui/Toast'
+import { getLoginErrorMessage } from '../../lib/authLoginErrors'
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth()
@@ -47,7 +48,7 @@ export default function LoginPage() {
 
     if (error) {
       console.error('Supabase auth error:', error)
-      setError(`${error.message} (${'status' in error ? error.status : 'brak statusu'})`)
+      setError(getLoginErrorMessage(error))
     }
 
     setSubmitting(false)

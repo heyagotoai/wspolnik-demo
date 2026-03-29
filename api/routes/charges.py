@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from api.core.config import CRON_SECRET
 from api.core.saldo_letter import COMMUNITY_NAME
 from api.core.saldo_pdf import build_saldo_pdf
-from api.core.security import get_current_user, require_admin
+from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
 from api.core.zawiadomienie_pdf import (
     ZAWIADOMIENIE_TYPE_LABELS,
@@ -200,8 +200,8 @@ def generate_charges(body: ChargeGenerateRequest, admin: dict = Depends(require_
 
 
 @router.get("/rates", response_model=list[ChargeRateOut])
-def list_rates(_user: dict = Depends(get_current_user)):
-    """List all charge rates (any logged-in user)."""
+def list_rates(_user: dict = Depends(require_admin_or_manager)):
+    """List all charge rates (admin or manager)."""
     sb = get_supabase()
     result = (
         sb.table("charge_rates")
@@ -293,8 +293,8 @@ def _get_auto_config(sb) -> AutoChargesConfig:
 
 
 @router.get("/auto-config", response_model=AutoChargesConfig)
-def get_auto_config(_user: dict = Depends(get_current_user)):
-    """Get auto-charge generation config."""
+def get_auto_config(_user: dict = Depends(require_admin_or_manager)):
+    """Get auto-charge generation config (admin or manager)."""
     sb = get_supabase()
     return _get_auto_config(sb)
 

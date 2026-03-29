@@ -65,3 +65,4 @@ Odrzucony — vitest jest natywnie zintegrowany z Vite, zero dodatkowej konfigur
 - Każda nowa funkcjonalność powinna mieć odpowiadające testy
 - CI/CD powinno uruchamiać testy przed deploy (do skonfigurowania)
 - FakeSupabase wymaga aktualizacji gdy dodamy nowe operacje bazodanowe
+- **Reprodukowalność:** zależności produkcyjne i deweloperskie są przypięte (`api/requirements.txt` z `==`; `site/package.json` bez `^`/`~`), żeby ten sam kod nie łapał przypadkowo nowszej wersji biblioteki na innym środowisku
