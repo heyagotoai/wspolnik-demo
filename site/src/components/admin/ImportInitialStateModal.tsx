@@ -42,17 +42,17 @@ async function callImportApi(file: File, dryRun: boolean): Promise<ImportResult>
       rows: [
         {
           row: 2,
-          apartment_number: '?',
+          apartment_number: '—',
           status: 'skipped',
           message:
-            'Tryb demo ? import nie zapisuje zmian. Na produkcji (gabi-site) plik aktualizuje istniej?ce lokale.',
+            'Tryb demo — import nie zapisuje zmian. Na produkcji (gabi-site) plik aktualizuje istniejące lokale.',
         },
       ],
     }
   }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
-  if (!token) throw new Error('Brak sesji ? zaloguj si? ponownie')
+  if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
 
   const formData = new FormData()
   formData.append('file', file)
@@ -72,7 +72,7 @@ async function callImportApi(file: File, dryRun: boolean): Promise<ImportResult>
 
 async function downloadTemplate() {
   if (isDemoApp()) {
-    throw new Error('W trybie demo szablon nie jest pobierany ? u?yj ?rodowiska produkcyjnego.')
+    throw new Error('W trybie demo szablon nie jest pobierany — użyj środowiska produkcyjnego.')
   }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
@@ -81,7 +81,7 @@ async function downloadTemplate() {
   const res = await fetch(`${API_BASE}/import/template`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) throw new Error('Nie uda?o si? pobra? szablonu')
+  if (!res.ok) throw new Error('Nie udało się pobrać szablonu')
 
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
@@ -94,8 +94,8 @@ async function downloadTemplate() {
 
 const STATUS_LABEL: Record<string, string> = {
   updated: 'Zaktualizowany',
-  skipped: 'Pomini?ty',
-  error: 'B??d',
+  skipped: 'Pominięty',
+  error: 'Błąd',
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -128,7 +128,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
       setPreview(res)
       setStep('preview')
     } catch (e) {
-      setError(formatCaughtError(e, 'Wyst??pi?? b????d'))
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setLoading(false)
     }
@@ -144,7 +144,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
       setStep('done')
       onSuccess()
     } catch (e) {
-      setError(formatCaughtError(e, 'Wyst??pi?? b????d'))
+      setError(formatCaughtError(e, 'Wystąpił błąd'))
     } finally {
       setLoading(false)
     }
@@ -154,7 +154,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
     try {
       await downloadTemplate()
     } catch (e) {
-      setError(formatCaughtError(e, 'Nie uda??o si?? pobra?? szablonu'))
+      setError(formatCaughtError(e, 'Nie udało się pobrać szablonu'))
     }
   }
 
@@ -165,7 +165,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cream-deep shrink-0">
-          <h2 className="text-lg font-semibold text-charcoal">Import stanu pocz??tkowego</h2>
+          <h2 className="text-lg font-semibold text-charcoal">Import stanu początkowego</h2>
           <button onClick={onClose} className="text-outline hover:text-charcoal">
             <XIcon className="w-5 h-5" />
           </button>
@@ -174,18 +174,18 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
         {/* Body */}
         <div className="overflow-y-auto px-6 py-5 space-y-5 flex-1">
 
-          {/* ?????? Krok 1: Upload ?????? */}
+          {/* ── Krok 1: Upload ── */}
           {step === 'upload' && (
             <>
               <p className="text-sm text-slate">
-                Wczytaj plik Excel (.xlsx) ze stanem pocz??tkowym lokali.
-                Zostan?? zaktualizowane tylko <strong>istniej??ce lokale</strong> ??? po numerze.
+                Wczytaj plik Excel (.xlsx) ze stanem początkowym lokali.
+                Zostaną zaktualizowane tylko <strong>istniejące lokale</strong> — po numerze.
               </p>
               <p className="text-sm text-slate bg-cream/80 rounded-[var(--radius-input)] px-3 py-2 border border-cream-deep">
-                <strong>Przecinek i kropka w Excelu (PL):</strong> w kolumnie <span className="font-mono">saldo_poczatkowe</span> przecinek to separator dziesi??tny (np.{' '}
-                <span className="font-mono">-781,13</span>) ??? import akceptuje go tak jak kropk??. W kolumnie{' '}
+                <strong>Przecinek i kropka w Excelu (PL):</strong> w kolumnie <span className="font-mono">saldo_poczatkowe</span> przecinek to separator dziesiętny (np.{' '}
+                <span className="font-mono">-781,13</span>) — import akceptuje go tak jak kropkę. W kolumnie{' '}
                 <span className="font-mono">numer_lokalu</span> ten sam przecinek oddziela wiele lokali (np.{' '}
-                <span className="font-mono">25,26</span> ??? lokale 25 i 26). Gdy Excel trzyma tak?? kom�rk?? jako liczb??, w tle jest to float z kropk?? ??? system i tak rozpoznaje oba lokale.
+                <span className="font-mono">25,26</span> → lokale 25 i 26). Gdy Excel trzyma taką komórkę jako liczbę, w tle jest to float z kropką — system i tak rozpoznaje oba lokale.
               </p>
 
               <button
@@ -217,22 +217,22 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                       <tr>
                         <td className="border border-cream-deep px-2 py-1 bg-amber-50 font-mono font-bold">data_salda</td>
                         <td className="border border-cream-deep px-2 py-1 bg-amber-50 font-mono">2024-12-31</td>
-                        <td className="border border-cream-deep px-2 py-1 text-outline italic">??? jedna data dla wszystkich lokali</td>
+                        <td className="border border-cream-deep px-2 py-1 text-outline italic">← jedna data dla wszystkich lokali</td>
                       </tr>
                       <tr>
                         <td className="border border-cream-deep px-2 py-1 bg-blue-50 font-mono font-bold">numer_lokalu</td>
                         <td className="border border-cream-deep px-2 py-1 bg-blue-50 font-mono font-bold">saldo_poczatkowe</td>
-                        <td className="border border-cream-deep px-2 py-1 text-outline italic">??? nag??�wki</td>
+                        <td className="border border-cream-deep px-2 py-1 text-outline italic">← nagłówki</td>
                       </tr>
                       <tr>
                         <td className="border border-cream-deep px-2 py-1 font-mono">1A</td>
                         <td className="border border-cream-deep px-2 py-1 font-mono">-200.50</td>
-                        <td className="border border-cream-deep px-2 py-1 text-outline italic">??? dane (ujemne = zaleg??o????)</td>
+                        <td className="border border-cream-deep px-2 py-1 text-outline italic">← dane (ujemne = zaległość)</td>
                       </tr>
                       <tr>
                         <td className="border border-cream-deep px-2 py-1 font-mono">2B</td>
                         <td className="border border-cream-deep px-2 py-1 font-mono">150.00</td>
-                        <td className="border border-cream-deep px-2 py-1 text-outline italic">??? (dodatnie = nadp??ata)</td>
+                        <td className="border border-cream-deep px-2 py-1 text-outline italic">← (dodatnie = nadpłata)</td>
                       </tr>
                     </tbody>
                   </table>
@@ -245,7 +245,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
             </>
           )}
 
-          {/* ?????? Krok 2: Podgl??d ?????? */}
+          {/* ── Krok 2: Podgląd ── */}
           {step === 'preview' && preview && (
             <>
               <div className="grid grid-cols-3 gap-3">
@@ -255,17 +255,17 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                 </div>
                 <div className="bg-amber-50 rounded-[var(--radius-card)] p-3 text-center">
                   <p className="text-2xl font-bold text-amber-600">{preview.skipped}</p>
-                  <p className="text-xs text-slate mt-0.5">Pomini??tych</p>
+                  <p className="text-xs text-slate mt-0.5">Pominiętych</p>
                 </div>
                 <div className={`${preview.errors > 0 ? 'bg-error-container' : 'bg-cream'} rounded-[var(--radius-card)] p-3 text-center`}>
                   <p className={`text-2xl font-bold ${preview.errors > 0 ? 'text-error' : 'text-outline'}`}>{preview.errors}</p>
-                  <p className="text-xs text-slate mt-0.5">B????d�w</p>
+                  <p className="text-xs text-slate mt-0.5">Błędów</p>
                 </div>
               </div>
 
               {preview.errors > 0 && (
                 <p className="text-sm text-error bg-error-container rounded-[var(--radius-card)] px-4 py-2">
-                  Plik zawiera b????dy. Popraw je przed zastosowaniem importu.
+                  Plik zawiera błędy. Popraw je przed zastosowaniem importu.
                 </p>
               )}
 
@@ -283,7 +283,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                     {preview.rows.map((r) => (
                       <tr key={r.row} className="border-b border-cream-deep last:border-0">
                         <td className="px-3 py-2 text-xs text-outline">{r.row}</td>
-                        <td className="px-3 py-2 text-charcoal">{r.apartment_number || '???'}</td>
+                        <td className="px-3 py-2 text-charcoal">{r.apartment_number || '—'}</td>
                         <td className={`px-3 py-2 text-xs ${STATUS_COLOR[r.status] || ''}`}>
                           {STATUS_LABEL[r.status] || r.status}
                         </td>
@@ -300,12 +300,12 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
             </>
           )}
 
-          {/* ?????? Krok 3: Wynik ?????? */}
+          {/* ── Krok 3: Wynik ── */}
           {step === 'done' && result && (
             <>
               <div className="flex items-center gap-3">
-                <span className="text-2xl">???</span>
-                <p className="font-semibold text-lg text-charcoal">Import zako??czony</p>
+                <span className="text-2xl">✓</span>
+                <p className="font-semibold text-lg text-charcoal">Import zakończony</p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -315,11 +315,11 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                 </div>
                 <div className="bg-amber-50 rounded-[var(--radius-card)] p-3 text-center">
                   <p className="text-2xl font-bold text-amber-600">{result.skipped}</p>
-                  <p className="text-xs text-slate mt-0.5">Pomini??tych</p>
+                  <p className="text-xs text-slate mt-0.5">Pominiętych</p>
                 </div>
                 <div className={`${result.errors > 0 ? 'bg-error-container' : 'bg-cream'} rounded-[var(--radius-card)] p-3 text-center`}>
                   <p className={`text-2xl font-bold ${result.errors > 0 ? 'text-error' : 'text-outline'}`}>{result.errors}</p>
-                  <p className="text-xs text-slate mt-0.5">B????d�w</p>
+                  <p className="text-xs text-slate mt-0.5">Błędów</p>
                 </div>
               </div>
             </>
@@ -341,7 +341,7 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                 disabled={!file || loading}
                 className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
               >
-                {loading ? 'Analizuj??...' : 'Analizuj plik'}
+                {loading ? 'Analizuję...' : 'Analizuj plik'}
               </button>
             </>
           )}
@@ -353,14 +353,14 @@ export default function ImportInitialStateModal({ onClose, onSuccess }: Props) {
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-slate hover:text-charcoal transition-colors disabled:opacity-50"
               >
-                ??? Wr�??
+                ← Wróć
               </button>
               <button
                 onClick={handleApply}
                 disabled={loading || (preview?.errors ?? 0) > 0 || (preview?.updated ?? 0) === 0}
                 className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
               >
-                {loading ? 'Importuj??...' : `Zastosuj (${preview?.updated ?? 0} lokali)`}
+                {loading ? 'Importuję...' : `Zastosuj (${preview?.updated ?? 0} lokali)`}
               </button>
             </>
           )}

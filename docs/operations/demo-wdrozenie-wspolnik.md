@@ -16,6 +16,7 @@ Frontend (Vite/React) z **pełnymi mockami** w pamięci — bez obowiązkowego S
 
 - **Przełącznik roli w UI:** banner demo pozwala przełączyć widok **Mieszkaniec / Zarządca / Administrator** (`DemoRoleContext`, `sessionStorage`). Używane do pokazania różnic w panelu (np. `isAdmin` vs `isAdminOrManager`).
 - **Backend `/api` na Vercel:** pełny projekt WM Gabi ma `api/` jako serverless; w samym demo frontend działa bez wywołań prawdziwego API dzięki `demoApiRouter`. Jeśli deployujesz **tylko** statyczny frontend demo, upewnij się, że żądania do `/api` nie są wymagane (w mockach wszystko jest obsłużone po stronie klienta).
-- **CSP w `vercel.json`:** przy problemach z zasobami zewnętrznymi sprawdź nagłówki `Content-Security-Policy` w ustawieniach projektu.
+- **CSP w `vercel.json`:** przy problemach z zasobami zewnętrnymi sprawdź nagłówki `Content-Security-Policy` w ustawieniach projektu.
+- **Windows / UTF-8:** pliki źródłowe (`.ts`, `.tsx`) trzymaj w UTF-8 z końcami linii LF (patrz rootowy `.gitattributes`). Nie zapisuj ich przez przekierowanie PowerShell (`command > plik.tsx`) — może uszkodzić kodowanie i zepsuć build Vite (`stream did not contain valid UTF-8`). Bezpieczniej: edytor albo `git checkout -- ścieżka` / zapis przez Node.
 
 Powiązane: [[01-wdrozenie]] (pełny stack z Supabase), `docs/roadmap-demo.md`.

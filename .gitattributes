@@ -1,0 +1,28 @@
+# Repozytorium: źródła w UTF-8, końce linii LF (Vite/ESLint/CI).
+# Unikaj zapisu plików .ts/.tsx przez przekierowanie PowerShell (`>`) — może uszkodzić kodowanie (błąd Vite: stream did not contain valid UTF-8).
+
+* text=auto
+
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.svg text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
