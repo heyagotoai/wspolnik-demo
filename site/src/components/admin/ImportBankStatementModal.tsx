@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { XIcon } from '../ui/Icons'
 import { parseApiError } from '../../lib/api'
 import { formatCaughtError } from '../../lib/userFacingErrors'
+import { isDemoApp } from '../../demo/isDemoApp'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -41,6 +42,25 @@ interface Props {
 type Step = 'upload' | 'preview' | 'done'
 
 async function callImportApi(file: File, dryRun: boolean): Promise<ImportResult> {
+  if (isDemoApp()) {
+    return {
+      dry_run: dryRun,
+      total_rows: 1,
+      matched_count: 0,
+      unmatched_count: 1,
+      matched: [],
+      unmatched: [
+        {
+          row_index: 2,
+          payment_date: null,
+          amount: null,
+          sender_name: '—',
+          description: 'Tryb demo — zestawienie bankowe nie jest przetwarzane.',
+          reason: 'demo',
+        },
+      ],
+    }
+  }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (!token) throw new Error('Brak sesji — zaloguj się ponownie')

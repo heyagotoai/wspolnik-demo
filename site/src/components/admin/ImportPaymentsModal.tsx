@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { XIcon } from '../ui/Icons'
 import { parseApiError } from '../../lib/api'
 import { formatCaughtError } from '../../lib/userFacingErrors'
+import { isDemoApp } from '../../demo/isDemoApp'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -31,6 +32,23 @@ interface Props {
 type Step = 'upload' | 'preview' | 'done'
 
 async function callImportPaymentsApi(file: File, dryRun: boolean): Promise<ImportResult> {
+  if (isDemoApp()) {
+    return {
+      dry_run: dryRun,
+      rows_total: 1,
+      updated: 0,
+      skipped: 1,
+      errors: 0,
+      rows: [
+        {
+          row: 2,
+          apartment_number: '—',
+          status: 'skipped',
+          message: 'Tryb demo — import wpłat z Excela nie zapisuje zmian.',
+        },
+      ],
+    }
+  }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (!token) throw new Error('Brak sesji — zaloguj się ponownie')
@@ -52,6 +70,9 @@ async function callImportPaymentsApi(file: File, dryRun: boolean): Promise<Impor
 }
 
 async function downloadPaymentsTemplate() {
+  if (isDemoApp()) {
+    throw new Error('W trybie demo szablon nie jest pobierany — użyj środowiska produkcyjnego.')
+  }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (!token) throw new Error('Brak sesji')
