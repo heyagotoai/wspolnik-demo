@@ -86,10 +86,11 @@ cd api && pytest
 - Istotne decyzje architektoniczne → ADR w `docs/decisions/`
 - Używaj `[[wiki linków]]` między notatkami w Obsidian vault
 - `CHANGELOG.md` — aktualizuj przy większych zmianach
+- **Karty produktu (para dokumentów):** `docs/KARTA_PRODUKTU.md` (informacyjna) oraz `docs/KARTA_PRODUKTU_OFERTA.md` (zapytanie ofertowe). Przy każdej zmianie **zakresu opisanego produktu** aktualizuj **oba** pliki, tak aby treść funkcjonalna pozostała zgodna (różnica tylko w tonie: oferta vs opis; sekcje specyficzne dla oferty zostaw wyłącznie w pliku `_OFERTA`).
 
 ### Polecenie "zaktualizuj" (WYMAGANE)
 Gdy użytkownik mówi **"zaktualizuj"** po zakończeniu implementacji, zaktualizuj **wszystkie** powiązane artefakty:
-- **Dokumentacja Obsidian** (`docs/`) — odpowiednie notatki, koncepty, ADR-y
+- **Dokumentacja Obsidian** (`docs/`) — odpowiednie notatki, koncepty, ADR-y; jeśli dotyczy zakresu produktu — **`docs/KARTA_PRODUKTU.md` i `docs/KARTA_PRODUKTU_OFERTA.md` razem**
 - **Feature map / Roadmap** (`docs/architecture/feature-map.md`) — status funkcjonalności
 - **CHANGELOG.md** — opis zmian
 - **Ten plik (.cursorrules)** — jeśli zmiany wpływają na strukturę, endpointy, stack, zasady
