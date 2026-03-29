@@ -2,6 +2,10 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-03-29 — Import z banku: kilka lokali w opisie; logowanie: błędy po polsku
+- **`api/services/bank_statement_parser.py`** — ekstrakcja wielu numerów z opisu (`lokal nr 11,16`, `11 i 16` itd.); gdy trafienia należą do jednej grupy rozliczeniowej, ustawiane jest `group_records` (rozbicie wpłaty jak przy dopasowaniu po nazwisku); testy w `api/tests/test_bank_statement_parser.py`
+- **`site/src/lib/authLoginErrors.ts`** — mapowanie komunikatów Supabase Auth na zrozumiałe teksty po polsku; **`LoginPage`** używa `getLoginErrorMessage`; testy jednostkowe modułu
+
 ### 2026-03-29 — Dokumentacja feature-map; zaostrzenie GET stawek i auto-config
 - **`docs/architecture/feature-map.md`** — usunięty nieistniejący route `/o-nas`; sekcja panelu: **admin lub manager** (`AdminRoute`) + krótki opis różnic uprawnień
 - **`GET /api/charges/rates`**, **`GET /api/charges/auto-config`** — tylko **admin** lub **manager** (`require_admin_or_manager`); mieszkaniec nie pobiera stawek ani konfiguracji auto-naliczeń przez API (backend ze `service_role`); **`PATCH /auto-config`** bez zmian (wyłącznie admin)

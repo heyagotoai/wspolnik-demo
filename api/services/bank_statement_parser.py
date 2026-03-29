@@ -126,7 +126,11 @@ def extract_apartment_from_address(address: str | None) -> str | None:
 
 
 def extract_apartment_from_description(description: str | None) -> str | None:
-    """Numer lokalu z tytułu/opisu przelewu."""
+    """Numer lokalu z tytułu/opisu przelewu.
+
+    Zwraca pojedynczy numer albo kilka po przecinku (np. ``11,16``), gdy w opisie
+    jest kilka lokali (wspólna wpłata za grupę).
+    """
     if not description:
         return None
     s = str(description)
@@ -146,6 +150,25 @@ def extract_apartment_from_description(description: str | None) -> str | None:
             m2 = re.search(w, s)
             if m2:
                 return m2.group(1)
+
+    # Wiele lokali: "LOKAL NR 11,16" / "nr 11, 16" / "nr 11;16" (przed pojedynczym NR)
+    m_multi = re.search(
+        r"(?i)lokal\s*nr\s*((?:\d+[A-Za-z]?)(?:\s*[,;/]\s*\d+[A-Za-z]?)+)",
+        s,
+    )
+    if m_multi:
+        raw = m_multi.group(1)
+        parts = [p.strip() for p in re.split(r"[,;/]", raw) if p.strip()]
+        if len(parts) >= 2:
+            return ",".join(parts)
+
+    # "lokal nr 11 i 16" (dwa lokale)
+    m_i = re.search(
+        r"(?i)lokal\s*nr\s*(\d+[A-Za-z]?)\s+i\s+(\d+[A-Za-z]?)(?!\d)",
+        s,
+    )
+    if m_i:
+        return f"{m_i.group(1)},{m_i.group(2)}"
 
     # "LOKAL NR 7" / "LOKAL NR7A"
     m_nr = re.search(r"(?i)lokal\s*nr\s*(\d+[A-Za-z]?)(?!\d)", s)
@@ -189,16 +212,34 @@ def _normalize_apartment_number(x: str | None) -> str | None:
 def _find_records_for_apartment(
     candidate: str | None, registry: list[ApartmentRecord]
 ) -> list[ApartmentRecord]:
-    """Znajduje rekordy rejestru pasujące do kandydata na numer lokalu."""
+    """Znajduje rekordy rejestru pasujące do kandydata na numer lokalu.
+
+    Obsługuje też kilka numerów w jednym opisie (``11,16``): wtedy zbiera
+    dopasowania dla każdego składnika i usuwa duplikaty po ``apartment_id``.
+    """
     nk = _normalize_apartment_number(candidate)
     if not nk:
         return []
-    results = []
+    results: list[ApartmentRecord] = []
     for rec in registry:
         raw_norm = _normalize_apartment_number(rec.number)
         if raw_norm == nk or nk in rec.number_tokens:
             results.append(rec)
-    return results
+    if results:
+        return results
+
+    # Kilka lokali w opisie — brak jednego rekordu „11,16", szukaj 11 i 16 osobno
+    if "," in nk:
+        parts = [p.strip() for p in nk.split(",") if p.strip()]
+        if len(parts) >= 2:
+            seen: set[str] = set()
+            for p in parts:
+                for rec in _find_records_for_apartment(p, registry):
+                    if rec.apartment_id not in seen:
+                        seen.add(rec.apartment_id)
+                        results.append(rec)
+            return results
+    return []
 
 
 def _find_records_for_surname(
@@ -260,7 +301,7 @@ def match_transaction(
             hits_surname.append(r)
             seen_ids.add(r.apartment_id)
 
-    # 1. Jednoznaczny lokal z opisu
+    # 1. Lokal(e) z opisu — jeden rekord albo kilka w jednej grupie rozliczeniowej
     if len(hits_desc) == 1:
         rec = hits_desc[0]
         # Sprawdź czy nazwisko z tekstu nie wskazuje na inny lokal
@@ -273,6 +314,12 @@ def match_transaction(
                     primary.group_records = hits_surname
                 return primary, 0.8, f"nazwisko '{surname_label}' z tekstu (konflikt z lokalem {apt_from_desc} z opisu)"
         return rec, 0.9, f"lokal {apt_from_desc} z opisu przelewu"
+
+    if len(hits_desc) > 1 and _surname_hits_are_one_group(hits_desc):
+        primary = hits_desc[0]
+        primary.group_records = list(hits_desc)
+        nums = ", ".join(r.number for r in sorted(hits_desc, key=lambda x: x.number))
+        return primary, 0.9, f"lokale {nums} z opisu przelewu (grupa rozliczeniowa)"
 
     # 2. Jednoznaczny lokal z adresu
     if len(hits_addr) == 1:

@@ -112,6 +112,17 @@ class TestExtractApartmentFromDescription:
         # Bank: "ZA LOKAL NR 2 5,26" → 25,26
         assert extract_apartment_from_description("ZA LOKAL NR 2 5,26") == "25,26"
 
+    def test_lokal_nr_multi_comma(self):
+        assert extract_apartment_from_description("OPŁATA ZA LOKAL NR 11,16") == "11,16"
+        assert extract_apartment_from_description("lokal nr 11, 16") == "11,16"
+
+    def test_lokal_nr_multi_i(self):
+        assert extract_apartment_from_description("CZYNSZ ZA LOKAL NR 11 I 16") == "11,16"
+
+    def test_lokal_nr_composite_still_one_cell(self):
+        """Jeden lokal w bazie jako „25,26" — opis z przecinkiem dalej jeden numer."""
+        assert extract_apartment_from_description("OPLATA ZA LOKAL NR 25,26") == "25,26"
+
     def test_no_match(self):
         assert extract_apartment_from_description("PRZELEW WŁASNY") is None
 
@@ -186,6 +197,38 @@ class TestMatchTransaction:
         )
         assert rec is None
         assert conf == 0.0
+
+    def test_match_billing_group_by_description_multi_numbers(self):
+        """Opis „lokal nr 11,16" + dwa lokale w jednej grupie rozliczeniowej (np. Brunn)."""
+        brunn_registry = [
+            ApartmentRecord(
+                apartment_id="apt-11",
+                number="11",
+                billing_surname="BRUNN",
+                billing_group_id="grp-brunn",
+            ),
+            ApartmentRecord(
+                apartment_id="apt-16",
+                number="16",
+                billing_surname="BRUNN",
+                billing_group_id="grp-brunn",
+            ),
+            ApartmentRecord(apartment_id="apt-1", number="1", billing_surname="KOSIKOWSKI"),
+        ]
+        rec, conf, details = match_transaction(
+            sender_name="JAN KOWALSKI",
+            sender_address=None,
+            description="OPŁATA ZA LOKAL NR 11,16",
+            registry=brunn_registry,
+            surnames_sorted=["KOSIKOWSKI", "BRUNN"],
+        )
+        assert rec is not None
+        assert rec.apartment_id == "apt-11"
+        assert rec.group_records is not None
+        assert len(rec.group_records) == 2
+        assert {r.apartment_id for r in rec.group_records} == {"apt-11", "apt-16"}
+        assert conf >= 0.85
+        assert "grupa" in details.lower()
 
     def test_match_billing_group_by_surname(self):
         """Wiele lokali z tym samym nazwiskiem i billing_group_id → dopasowanie jako grupa."""
