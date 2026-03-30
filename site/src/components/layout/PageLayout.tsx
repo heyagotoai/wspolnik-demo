@@ -1,11 +1,13 @@
 import { Outlet } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
+import { DemoPublicStrip } from '../../demo/DemoPublicStrip'
 
 export default function PageLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      <DemoPublicStrip />
       <main className="flex-1">
         <Outlet />
       </main>

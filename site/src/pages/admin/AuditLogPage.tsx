@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 import { SearchIcon, ChevronDownIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface AuditEntry {
   id: string
@@ -169,6 +170,11 @@ export default function AuditLogPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Dziennik operacji</h1>
+
+      <DemoHelpCallout>
+        Rejestr zmian w wrażliwych miejscach (np. naliczenia, wpłaty, głosy). W produkcji zostaje na stałe do rozliczeń i
+        kontroli — w demo widać to samo w postaci przykładowych wpisów.
+      </DemoHelpCallout>
 
       {/* Filters */}
       <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-4">

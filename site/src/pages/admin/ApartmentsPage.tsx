@@ -13,6 +13,7 @@ import ImportBankStatementModal from '../../components/admin/ImportBankStatement
 import ApartmentPaymentsModal from '../../components/admin/ApartmentPaymentsModal'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 import { roundMoney2 } from '../../lib/money'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Resident {
   id: string
@@ -530,6 +531,11 @@ export default function ApartmentsPage() {
           </div>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Lokale: numery, powierzchnia, właściciel, saldo początkowe. Przyciski importu w pełnej wersji wczytują pliki z
+        banku lub stanów — tutaj otwierają okna tylko do pokazania, bez zapisu poza demo.
+      </DemoHelpCallout>
 
       {/* Bulk balance date banner */}
       {isAdmin && aptsWithBalanceNoDate.length > 0 && !showBulkDateForm && (

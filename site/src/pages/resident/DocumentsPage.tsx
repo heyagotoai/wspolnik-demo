@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { FileIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Document {
   id: string
@@ -74,6 +75,10 @@ export default function DocumentsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Dokumenty</h1>
+
+      <DemoHelpCallout>
+        Pliki udostępnione mieszkańcom (PDF). Pobieranie działa jak w docelowym systemie — tutaj z przykładową treścią.
+      </DemoHelpCallout>
 
       {/* Category filter */}
       <div className="flex flex-wrap gap-2">

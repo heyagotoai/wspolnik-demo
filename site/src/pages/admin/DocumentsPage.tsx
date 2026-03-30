@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 import { UploadIcon, TrashIcon, FileIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
@@ -208,6 +209,11 @@ export default function AdminDocumentsPage() {
           </button>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Katalog plików PDF dla mieszkańców (regulaminy, uchwały, formularze). W produkcji pliki są w zabezpieczonym
+        repozytorium — tutaj możesz przejść ścieżkę dodania i podglądu na przykładach.
+      </DemoHelpCallout>
 
       {/* Upload form — admin only */}
       {isAdmin && showUpload && (

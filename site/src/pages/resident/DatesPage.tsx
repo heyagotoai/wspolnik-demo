@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface DateEntry {
   id: string
@@ -98,6 +99,11 @@ export default function DatesPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Ważne terminy</h1>
+
+      <DemoHelpCallout>
+        Zbliżające się wydarzenia wspólnoty oraz — jeśli jesteś w trakcie głosowania — przypomnienie o końcu terminu na
+        oddanie głosu w uchwale.
+      </DemoHelpCallout>
 
       {entries.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">

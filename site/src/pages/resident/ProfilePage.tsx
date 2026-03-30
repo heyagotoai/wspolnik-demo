@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { formatCaughtError } from '../../lib/userFacingErrors'
 import { useToast } from '../../components/ui/Toast'
 import { UserIcon } from '../../components/ui/Icons'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Profile {
   id: string
@@ -131,6 +132,11 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Mój profil</h1>
+
+      <DemoHelpCallout>
+        Tutaj zmieniasz wyświetlane imię i hasło do konta. W prawdziwym wdrożeniu pierwsze konto zakłada administrator;
+        adres e-mail służy do logowania i powiadomień.
+      </DemoHelpCallout>
 
       {/* Profile info card */}
       <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">

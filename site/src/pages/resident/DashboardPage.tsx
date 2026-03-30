@@ -7,6 +7,7 @@ import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '
 import { roundMoney2 } from '../../lib/money'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 import { communityInfo } from '../../data/mockData'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Announcement {
   id: string
@@ -185,6 +186,11 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-charcoal">Witaj{user?.email ? `, ${user.email.split('@')[0]}` : ''}!</h1>
         <p className="text-slate mt-1">Panel mieszkańca — {communityInfo.name}</p>
       </div>
+
+      <DemoHelpCallout>
+        Na pulpicie widać skrót: nieprzeczytane ogłoszenia, saldo, najbliższy termin i głosowania w toku. Poniższe karty
+        prowadzą do pełnych widoków — w prawdziwym wdrożeniu dane są Twoje (powiązane z kontem i lokalem).
+      </DemoHelpCallout>
 
       {/* Quick stats / cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

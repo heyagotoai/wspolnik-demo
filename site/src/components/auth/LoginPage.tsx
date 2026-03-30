@@ -8,6 +8,8 @@ import { useDemoBasePath } from '../../demo/useDemoBasePath'
 import { MailIcon } from '../ui/Icons'
 import { useToast } from '../ui/Toast'
 import { getLoginErrorMessage } from '../../lib/authLoginErrors'
+import { isDemoApp } from '../../demo/isDemoApp'
+import { DEMO_USER_EMAIL } from '../../demo/demoConstants'
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth()
@@ -67,6 +69,22 @@ export default function LoginPage() {
               Panel mieszkańca — zaloguj się
             </p>
           </div>
+
+          {isDemoApp() && (
+            <div
+              className="mb-6 rounded-[12px] border border-amber-container/60 bg-amber-container/15 px-4 py-3 text-sm text-slate leading-relaxed space-y-2"
+              role="note"
+            >
+              <p>
+                W tej wersji demonstracyjnej możesz wpisać <strong className="text-charcoal">dowolne hasło</strong> — logowanie jest uproszczone.
+                Przykładowy adres z danych demo:{' '}
+                <code className="text-xs bg-cream px-1.5 py-0.5 rounded text-charcoal">{DEMO_USER_EMAIL}</code>
+              </p>
+              <p>
+                Po wejściu do panelu użyj paska <strong className="text-charcoal">Podgląd roli</strong>, żeby zobaczyć widok mieszkańca, zarządcy lub administratora.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

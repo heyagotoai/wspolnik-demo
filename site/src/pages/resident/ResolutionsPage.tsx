@@ -13,6 +13,7 @@ import {
   pctDisplayWstrzymuje,
   pctDisplayZa,
 } from '../../lib/voteResultsDisplay'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Resolution {
   id: string
@@ -162,6 +163,11 @@ export default function ResidentResolutionsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Głosowania</h1>
+
+      <DemoHelpCallout>
+        Gdy uchwała jest w głosowaniu, możesz wybrać za / przeciw / wstrzymuję się (jeśli masz uprawnienia właściciela).
+        Po zamknięciu terminu widać wyniki — w demo wszystko działa na przykładowych liczbach.
+      </DemoHelpCallout>
 
       <p className="text-sm text-slate leading-relaxed">
         Przed oddaniem głosu prosimy o uważne zapoznanie się z treścią uchwały.

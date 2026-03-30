@@ -1,4 +1,5 @@
 import { announcements, importantDates } from '../data/mockData'
+import { DemoHelpCallout } from '../demo/DemoHelpCallout'
 import { CalendarIcon } from '../components/ui/Icons'
 
 function formatDate(dateStr: string) {
@@ -35,7 +36,12 @@ export default function NewsPage() {
       </section>
 
       <div className="mx-auto max-w-[1280px] px-6 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <DemoHelpCallout>
+          Na stronie głównej widać przykładowe ogłoszenia — w działającym systemie zarząd publikuje je w panelu i mogą
+          trafiać też e-mailem do mieszkańców.
+        </DemoHelpCallout>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mt-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Pinned announcement */}

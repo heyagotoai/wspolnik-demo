@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds, markRead } from '../../lib/readAnnouncements'
 import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Announcement {
   id: string
@@ -96,6 +97,11 @@ export default function AnnouncementsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Ogłoszenia</h1>
+
+      <DemoHelpCallout>
+        Lista wiadomości od zarządu. Dłuższe teksty rozwijasz kliknięciem — wtedy liczą się jako przeczytane (na pulpicie
+        znika licznik „nowych”). W demo to tylko pokaz działania.
+      </DemoHelpCallout>
 
       {announcements.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">

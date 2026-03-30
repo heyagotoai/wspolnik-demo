@@ -4,6 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/ui/Toast'
 import ContactPage from './ContactPage'
+import { isDemoApp } from '../demo/isDemoApp'
+
+vi.mock('../demo/isDemoApp', () => ({
+  isDemoApp: vi.fn(() => false),
+}))
 
 vi.mock('../components/ui/Icons', () => ({
   MapPinIcon: () => <span data-testid="icon-map" />,
@@ -30,9 +35,32 @@ function mockFetch(ok: boolean, body: object) {
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  vi.mocked(isDemoApp).mockReturnValue(false)
 })
 
 describe('ContactPage', () => {
+  it('w trybie demo pokazuje ramkę informacyjną i nie wywołuje fetch przy wysyłce', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    vi.mocked(isDemoApp).mockReturnValue(true)
+    renderPage()
+    const user = userEvent.setup()
+
+    expect(screen.getByRole('status')).toHaveTextContent('Tryb demonstracyjny')
+    expect(screen.getByRole('status')).toHaveTextContent('Prawdziwa strona wspólnoty')
+
+    await user.type(screen.getByRole('textbox', { name: /imię i nazwisko/i }), 'Jan Kowalski')
+    await user.type(screen.getByRole('textbox', { name: /adres e-mail/i }), 'jan@example.com')
+    await user.type(screen.getByRole('textbox', { name: /wiadomość/i }), 'Treść wiadomości testowej')
+    await user.click(screen.getByRole('button', { name: /wyślij wiadomość/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/W trybie demo wiadomość nie jest wysyłana\. Szczegóły znajdziesz w ramce informacyjnej/),
+      ).toBeInTheDocument()
+    })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('renderuje formularz kontaktowy', () => {
     renderPage()
 

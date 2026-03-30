@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Resident {
   id: string
@@ -208,6 +209,11 @@ export default function ResidentsPage() {
           </button>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Lista osób z dostępem do panelu. W produkcji dodanie mieszkańca zakłada konto logowania i wysyła zaproszenie — w
+        wersji demo operacje są tylko w pamięci przeglądarki.
+      </DemoHelpCallout>
 
       {/* Form */}
       {isAdmin && showForm && (

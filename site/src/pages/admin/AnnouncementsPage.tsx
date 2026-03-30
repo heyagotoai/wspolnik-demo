@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Announcement {
   id: string
@@ -195,6 +196,11 @@ export default function AdminAnnouncementsPage() {
           </button>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Ogłoszenia publikujesz na stronę główną i do panelu mieszkańców. Możesz „przypiąć” ważne na górze listy; opcjonalna
+        wysyłka e-mailem w produkcji trafia do mieszkańców — w demo bez prawdziwej poczty.
+      </DemoHelpCallout>
 
       {/* Form */}
       {isAdmin && showForm && (

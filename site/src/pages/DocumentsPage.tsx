@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { DemoHelpCallout } from '../demo/DemoHelpCallout'
 import { FileIcon, DownloadIcon, SearchIcon } from '../components/ui/Icons'
 
 interface Document {
@@ -81,8 +82,13 @@ export default function DocumentsPage() {
       </section>
 
       <div className="mx-auto max-w-[1280px] px-6 py-20">
+        <DemoHelpCallout>
+          Publiczna lista dokumentów oznaczonych jako dostępne dla gości. W panelu mieszkańca może być szerszy zestaw
+          (np. wewnętrzne materiały) — w demo widać to w dwóch widokach.
+        </DemoHelpCallout>
+
         {/* Search */}
-        <div className="relative mb-8 max-w-md">
+        <div className="relative mb-8 max-w-md mt-8">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-outline" />
           <input
             type="text"

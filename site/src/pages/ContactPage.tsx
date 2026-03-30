@@ -4,8 +4,12 @@ import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
 import { useToast } from '../components/ui/Toast'
 import { parseApiError } from '../lib/api'
 import { formatCaughtError } from '../lib/userFacingErrors'
+import { isDemoApp } from '../demo/isDemoApp'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+const CONTACT_DEMO_INFO_TOAST =
+  'W trybie demo wiadomość nie jest wysyłana. Szczegóły znajdziesz w ramce informacyjnej nad przyciskiem.'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -21,6 +25,15 @@ export default function ContactPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSending(true)
+
+    if (isDemoApp()) {
+      try {
+        toast(CONTACT_DEMO_INFO_TOAST, 'info')
+      } finally {
+        setSending(false)
+      }
+      return
+    }
 
     try {
       const res = await fetch(`${API_BASE}/contact`, {
@@ -143,6 +156,26 @@ export default function ContactPage() {
                     className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors resize-none"
                   />
                 </div>
+
+                {isDemoApp() && (
+                  <div
+                    className="rounded-[12px] border border-amber-container/60 bg-amber-container/15 px-4 py-3 text-sm text-charcoal space-y-2"
+                    role="status"
+                  >
+                    <p className="font-semibold text-charcoal">Tryb demonstracyjny</p>
+                    <p className="text-slate leading-relaxed">
+                      Tu nie ma połączenia z prawdziwą skrzynką zarządu. Po kliknięciu „Wyślij”{' '}
+                      <strong className="font-medium text-charcoal">nic nie wychodzi i nigdzie się nie zapisuje</strong>{' '}
+                      — pokazujemy tylko wygląd strony do ćwiczeń.
+                    </p>
+                    <p className="font-semibold text-charcoal pt-1">Prawdziwa strona wspólnoty</p>
+                    <p className="text-slate leading-relaxed">
+                      Na właściwej stronie wspólnoty po wysłaniu formularza treść trafia do zarządu lub administracji —
+                      tak jak zwykła wiadomość na adres kontaktowy. Mogą odpowiedzieć na e-mail podany w formularzu albo
+                      odezwać się w inny uzgodniony sposób.
+                    </p>
+                  </div>
+                )}
 
                 <button
                   type="submit"

@@ -4,6 +4,7 @@ import { TrashIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface ContactMessage {
   id: string
@@ -110,6 +111,11 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      <DemoHelpCallout>
+        Tu trafiają wiadomości wysłane z publicznego formularza „Kontakt” na stronie wspólnoty. Możesz je czytać, oznaczać
+        jako przeczytane i usuwać — w wersji demonstracyjnej nie ma prawdziwej poczty, tylko przykładowa lista.
+      </DemoHelpCallout>
 
       {messages.length === 0 ? (
         <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-8 text-center">

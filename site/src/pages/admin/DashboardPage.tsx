@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
 import { UsersIcon, MegaphoneIcon, FolderIcon, CalendarIcon, WalletIcon, ArrowRightIcon } from '../../components/ui/Icons'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Stats {
   residents: number
@@ -82,6 +83,11 @@ export default function AdminDashboardPage() {
           Witaj, {user?.email?.split('@')[0]} — zarządzaj wspólnotą z jednego miejsca.
         </p>
       </div>
+
+      <DemoHelpCallout>
+        Skrót liczb i szybkie przejścia do modułów. W działającym systemie każda wartość pochodzi z bazy i odświeża się przy
+        zmianach — tutaj to tylko podsumowanie na przykładowych danych.
+      </DemoHelpCallout>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

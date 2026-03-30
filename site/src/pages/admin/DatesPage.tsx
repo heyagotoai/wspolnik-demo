@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, VoteIcon, CalendarIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { mapSupabaseError } from '../../lib/userFacingErrors'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface ImportantDate {
   id: string
@@ -204,6 +205,11 @@ export default function AdminDatesPage() {
           Dodaj termin
         </button>
       </div>
+
+      <DemoHelpCallout>
+        Terminy zgromadzeń, przeglądów technicznych itd. widoczne są także na pulpicie mieszkańca — żeby wszyscy widzieli
+        te same daty w kalendarzu wspólnoty.
+      </DemoHelpCallout>
 
       {/* Form */}
       {showForm && (

@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
 import { BillingGroupsPanel } from './BillingGroupsPage'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Apartment {
@@ -631,6 +632,12 @@ export default function AdminChargesPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-charcoal">Naliczenia</h1>
+
+      <DemoHelpCallout>
+        Od zakładki: miesięczne opłaty na lokale, stawki (np. za m²), zawiadomienia o należnościach oraz — dla administratora
+        — grupy rozliczeniowe (np. wspólny licznik). Generowanie i wysyłki w produkcji tworzą prawdziwe dokumenty i maile;
+        tutaj wszystko jest symulowane.
+      </DemoHelpCallout>
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-cream-medium">

@@ -6,6 +6,7 @@ import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
 import { formatCaughtError } from '../../lib/userFacingErrors'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 import {
   hasWeightedVoteShares,
   pctDisplayPrzeciw,
@@ -550,6 +551,11 @@ export default function AdminResolutionsPage() {
           </button>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Uchwały mają stany (np. szkic → głosowanie → zakończone). Można dołączyć dokument i śledzić głosy mieszkańców — w
+        działającym systemie głosy są zapisywane zgodnie z zasadami głosowania; w demo to podgląd procesu.
+      </DemoHelpCallout>
 
       {/* Form — admin only */}
       {isAdmin && showForm && (

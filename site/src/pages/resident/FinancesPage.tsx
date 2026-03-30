@@ -4,6 +4,7 @@ import { roundMoney2 } from '../../lib/money'
 import { useAuth } from '../../hooks/useAuth'
 import { WalletIcon } from '../../components/ui/Icons'
 import { paymentHistoryDisplay } from '../../lib/paymentDisplay'
+import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Charge {
   id: string
@@ -259,6 +260,12 @@ export default function FinancesPage() {
           </p>
         )}
       </div>
+
+      <DemoHelpCallout>
+        Saldo to należność względem wspólnoty: uwzględnia saldo początkowe, naliczenia miesięczne i zaksięgowane wpłaty.
+        Przy kilku lokalach lub grupie rozliczeniowej kilka mieszkań jest rozliczanych wspólnie — poniżej widać podział na
+        przykładowych kwotach.
+      </DemoHelpCallout>
 
       {/* Combined balance cards (when group or multiple apartments) */}
       {apartmentsData.length > 1 && hasGroup && (
