@@ -2,6 +2,9 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-03 — Dokumentacja: obowiązek podbijania wersji przy zmianie PDF regulaminu/polityki
+- **`docs/operations/02-utrzymanie.md`** — sekcja *Zmiana polityki prywatności lub regulaminu* (checklist: env `CURRENT_*_VERSION`, redeploy API); odesłania w **`01-wdrozenie.md`** i **ADR-015**
+
 ### 2026-04-03 — RODO: zgody polityki prywatności i regulaminu przy wejściu do portalu
 - **Migracja `020_residents_legal_consent.sql`:** kolumny `privacy_accepted_at`, `terms_accepted_at`, `privacy_version`, `terms_version` w `residents`
 - **Backend:** `GET /api/profile` rozszerzone o `needs_legal_acceptance`, `current_*_version`, zapisane wersje i timestampy; **`POST /api/profile/legal-consent`**; **`CURRENT_PRIVACY_VERSION`** / **`CURRENT_TERMS_VERSION`** w `api/core/config.py` (env)
