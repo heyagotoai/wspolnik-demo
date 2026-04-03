@@ -93,7 +93,7 @@ Project Settings → Environment Variables:
 | `CURRENT_PRIVACY_VERSION` | np. `2026-04-03` (zgoda z datą obowiązywania polityki) | Production |
 | `CURRENT_TERMS_VERSION` | np. `2026-04-03` (wersja regulaminu) | Production |
 
-**Zgody RODO:** po uruchomieniu migracji `020_residents_legal_consent.sql` nowi użytkownicy mają puste zgody — przy pierwszym wejściu do panelu zobaczą modal. Gdy zmienisz pliki PDF na stronie, **podbij obie zmienne** `CURRENT_*_VERSION` w Vercel i wdróż backend, żeby poprosić mieszkańców o ponowną akceptację.
+**Zgody RODO:** po uruchomieniu migracji `020_residents_legal_consent.sql` nowi użytkownicy mają puste zgody — przy pierwszym wejściu do panelu zobaczą modal. **Przy każdej zmianie treści polityki lub regulaminu (nowe PDF)** musisz podbić odpowiednio `CURRENT_PRIVACY_VERSION` i/lub `CURRENT_TERMS_VERSION` oraz wdrożyć backend — inaczej system nie wymusi ponownej zgody. Pełna procedura operacyjna: [[02-utrzymanie]] (sekcja *Zmiana polityki prywatności lub regulaminu*).
 
 ### 3.3 Podłącz domenę
 Project Settings → Domains → Add → wpisz domenę

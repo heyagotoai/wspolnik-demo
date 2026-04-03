@@ -68,6 +68,21 @@ Filtry: tabela, typ akcji, zakres dat. Rozwijalne szczegóły z danymi JSON.
 ### Aktualizacja stawek naliczeń
 Panel admina → Naliczenia → zakładka Stawki → Dodaj nową stawkę z datą "obowiązuje od". Stare stawki zostają (wersjonowanie). Naliczenia za przyszłe miesiące użyją nowej stawki.
 
+### Zmiana polityki prywatności lub regulaminu (PDF) — wymuszenie ponownej zgody w portalu
+
+Portal zapisuje przy akceptacji **identyfikatory wersji** dokumentów w tabeli `residents` (`privacy_version`, `terms_version`). Obowiązujące wersje ustala **wyłącznie backend** ze zmiennych środowiskowych `CURRENT_PRIVACY_VERSION` i `CURRENT_TERMS_VERSION` (patrz `api/core/config.py`, `api/.env.example`).
+
+**Obowiązkowy krok przy każdej zmianie treści dokumentów udostępnianych w panelu (nowe PDF / istotna aktualizacja):**
+
+1. Wdróż nowe pliki na stronę (ścieżki publiczne, np. `/docs/polityka-prywatnosci-rodo.pdf`, `/docs/regulamin-wspolnoty.pdf` — zgodnie z linkami w stopce i w modalu zgód).
+2. **Podbij wersję tylko dla dokumentu, który się zmienił** (lub obie, jeśli zmieniasz oba):
+   - Vercel → Project → Settings → Environment Variables → zwiększ `CURRENT_PRIVACY_VERSION` i/lub `CURRENT_TERMS_VERSION` (np. data wejścia w życie: `2026-06-15` albo `v2` — ważna jest **zmiana stringu** względem poprzedniej wartości w produkcji).
+   - Lokalnie: to samo w `api/.env` przed testami.
+3. **Wdróż ponownie backend** (FastAPI na Vercelu), żeby proces wczytał nowe env — sama podmiana PDF na froncie **nie** wystarczy do wymuszenia zgód.
+4. **Efekt:** użytkownicy, u których w bazie zapisana wersja jest inna niż aktualna w env, przy następnym wejściu do panelu zobaczą modal zgód (także administrator i zarządca). Po akceptacji w `residents` zapiszą się nowe wersje i timestampy.
+
+**Bez podbicia tych zmiennych** użytkownicy nadal mają w systemie „starą” akceptację — portal nie wie, że dokument się zmienił. Szczegóły decyzji: [[ADR-015-legal-consent-rodo]].
+
 ### Dodanie mieszkańca
 Panel admina → Mieszkańcy → Dodaj. System automatycznie:
 1. Tworzy konto w Supabase Auth (email + hasło)

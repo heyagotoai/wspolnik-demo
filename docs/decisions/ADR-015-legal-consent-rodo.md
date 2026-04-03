@@ -16,7 +16,7 @@ Konta tworzy administrator — nie polegamy na „pierwszym logowaniu” z metad
 5. **Wycofanie zgód:** nie jako „odznacz i dalej korzystaj”; na profilu informacja o zaakceptowanych wersjach + kanał kontaktu z administratorem (szczegóły produktowe w karcie / polityce).
 
 ## Konsekwencje
-- Po zmianie treści PDF/MD — podbić obie zmienne `CURRENT_*_VERSION` i wdrożyć backend; użytkownicy zostaną poproszeni o akceptację przy następnym wejściu.
+- Po zmianie treści PDF/MD — podbić odpowiednio `CURRENT_PRIVACY_VERSION` i/lub `CURRENT_TERMS_VERSION` (tylko dla zmienionego dokumentu) i wdrożyć backend; użytkownicy zostaną poproszeni o akceptację przy następnym wejściu. **Procedura krok po kroku:** [[02-utrzymanie]] (operacje — *Zmiana polityki prywatności lub regulaminu*).
 - Testy: pytest (`test_profile.py`), Vitest (`ProtectedRoute`, `AdminRoute`, `ProfilePage`), Playwright (`helpers.acceptLegalConsentIfShown`).
 
 ## Powiązania
