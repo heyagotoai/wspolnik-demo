@@ -323,9 +323,9 @@ def update_auto_config(body: AutoChargesConfigUpdate, _admin: dict = Depends(req
 # ── Cron endpoint ──────────────────────────────────────────
 
 
-@router.post("/cron")
+@router.api_route("/cron", methods=["GET", "POST"])
 def cron_generate(request: Request):
-    """Called daily by Vercel Cron. Generates charges if auto-enabled and day matches."""
+    """Called daily by Vercel Cron (GET). Generates charges if auto-enabled and day matches."""
     # Verify cron secret
     auth = request.headers.get("Authorization", "")
     if not CRON_SECRET or not auth.startswith("Bearer "):

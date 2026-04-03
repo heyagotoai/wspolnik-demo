@@ -177,9 +177,9 @@ def _send_notification(subject: str, body: str) -> None:
             logger.warning("Backup: nie udało się wysłać powiadomienia do %s: %s", email, e)
 
 
-@router.post("/cron")
+@router.api_route("/cron", methods=["GET", "POST"])
 def backup_cron(request: Request):
-    """Weekly backup cron — exports DB tables + auth users + documents to Supabase Storage."""
+    """Weekly backup cron (GET from Vercel Cron). Exports DB tables + auth users + documents to Supabase Storage."""
     _verify_cron(request)
 
     sb = get_supabase()

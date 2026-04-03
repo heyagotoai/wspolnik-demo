@@ -144,9 +144,9 @@ def send_contact_message(payload: ContactMessageCreate):
     return {"detail": "Wiadomość została wysłana"}
 
 
-@router.post("/contact/cron")
+@router.api_route("/contact/cron", methods=["GET", "POST"])
 def contact_cleanup_cron(request: Request):
-    """Miesięczny cron — usuwa wiadomości starsze niż 12 miesięcy.
+    """Miesięczny cron (GET from Vercel Cron) — usuwa wiadomości starsze niż 12 miesięcy.
 
     Wysyła do adminów i zarządców:
     1. Ostrzeżenie o wiadomościach, które wygasną w ciągu 30 dni (następny cykl).

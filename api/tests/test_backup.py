@@ -48,7 +48,7 @@ def _setup_storage_mock(fake_sb, backup_files=None, doc_files=None):
     return backup_bucket, doc_bucket
 
 
-# --- POST /api/backup/cron ---------------------------------------------------
+# --- /api/backup/cron (GET + POST) --------------------------------------------
 
 
 class TestBackupCron:
@@ -61,6 +61,11 @@ class TestBackupCron:
             "/api/backup/cron",
             headers={"Authorization": "Bearer wrong-secret"},
         )
+        assert response.status_code == 401
+
+    def test_get_brak_sekretu_401(self, client, fake_sb):
+        """Vercel Cron wysyła GET — bez sekretu = 401."""
+        response = client.get("/api/backup/cron")
         assert response.status_code == 401
 
     def test_successful_backup(self, client, fake_sb):
