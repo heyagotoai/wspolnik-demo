@@ -2,8 +2,8 @@ name: Cron Jobs
 
 on:
   schedule:
-    # Naliczenia — codziennie o 20:50 UTC (22:50 CEST)
-    - cron: "50 20 * * *"
+    # Naliczenia — codziennie o 06:00 UTC (08:00 CEST)
+    - cron: "0 6 * * *"
     # Backup — niedziela o 02:00 UTC
     - cron: "0 2 * * 0"
     # Retencja wiadomości kontaktowych — 1. dzień miesiąca o 03:00 UTC
@@ -28,7 +28,7 @@ jobs:
     name: Generowanie naliczeń
     runs-on: ubuntu-latest
     if: >-
-      github.event.schedule == '50 20 * * *' ||
+      github.event.schedule == '0 6 * * *' ||
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'charges' || github.event.inputs.job == 'all'))
     steps:
       - name: Wywołaj endpoint naliczeń
