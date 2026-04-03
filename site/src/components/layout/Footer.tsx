@@ -12,8 +12,7 @@ export default function Footer() {
               Dokumenty prawne
             </h4>
             <nav className="space-y-2">
-              <a href="/docs/polityka-prywatnosci.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności</a>
-              <a href="/docs/klauzula-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Klauzula informacyjna RODO</a>
+              <a href="/docs/polityka-prywatnosci-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności i RODO</a>
               <a href="/docs/regulamin-wspolnoty.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin wspólnoty</a>
             </nav>
           </div>

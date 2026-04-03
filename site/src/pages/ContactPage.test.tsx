@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/ui/Toast'
+import { AuthContext } from '../hooks/useAuth'
+import type { User, Session } from '@supabase/supabase-js'
 import ContactPage from './ContactPage'
 
 vi.mock('../components/ui/Icons', () => ({
@@ -11,13 +13,31 @@ vi.mock('../components/ui/Icons', () => ({
   PhoneIcon: () => <span data-testid="icon-phone" />,
 }))
 
-function renderPage() {
+const guestAuthValue = {
+  user: null,
+  session: null,
+  loading: false,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}
+
+const residentAuthValue = {
+  user: { id: 'test-user-id', email: 'jan@example.com' } as User,
+  session: {} as Session,
+  loading: false,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}
+
+function renderPage(authValue = guestAuthValue) {
   return render(
-    <MemoryRouter>
-      <ToastProvider>
-        <ContactPage />
-      </ToastProvider>
-    </MemoryRouter>,
+    <AuthContext.Provider value={authValue}>
+      <MemoryRouter>
+        <ToastProvider>
+          <ContactPage />
+        </ToastProvider>
+      </MemoryRouter>
+    </AuthContext.Provider>,
   )
 }
 
@@ -33,7 +53,7 @@ beforeEach(() => {
 })
 
 describe('ContactPage', () => {
-  it('renderuje formularz kontaktowy', () => {
+  it('renderuje formularz kontaktowy dla gościa', () => {
     renderPage()
 
     expect(screen.getByRole('heading', { name: 'Wyślij wiadomość' })).toBeInTheDocument()
@@ -42,10 +62,23 @@ describe('ContactPage', () => {
     expect(screen.getByText('Wiadomość')).toBeInTheDocument()
   })
 
-  it('pole numer mieszkania ma oznaczenie opcjonalne', () => {
+  it('gość nie widzi pola numeru lokalu', () => {
     renderPage()
 
-    expect(screen.getByText('(opcjonalne)')).toBeInTheDocument()
+    expect(screen.queryByText('Numer lokalu')).not.toBeInTheDocument()
+  })
+
+  it('zalogowany widzi pole numeru lokalu (readonly z profilu)', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ full_name: 'Jan Kowalski', email: 'jan@example.com', apartment_number: '5' }),
+    } as Response)
+
+    renderPage(residentAuthValue)
+
+    await waitFor(() => {
+      expect(screen.getByText('Numer lokalu')).toBeInTheDocument()
+    })
   })
 
   it('renderuje dane kontaktowe i numery alarmowe', () => {
@@ -70,7 +103,7 @@ describe('ContactPage', () => {
     })
   })
 
-  it('wyczyścia formularz po udanym wysłaniu', async () => {
+  it('czyści formularz po udanym wysłaniu', async () => {
     mockFetch(true, { detail: 'Wiadomość wysłana' })
     renderPage()
     const user = userEvent.setup()
@@ -141,26 +174,5 @@ describe('ContactPage', () => {
     expect(screen.getByRole('button', { name: /wysyłanie/i })).toBeDisabled()
 
     resolveFetch({ ok: true, json: () => Promise.resolve({}) })
-  })
-
-  it('uwzględnia numer mieszkania w wysyłanym żądaniu', async () => {
-    mockFetch(true, { detail: 'ok' })
-    renderPage()
-    const user = userEvent.setup()
-
-    await user.type(screen.getByRole('textbox', { name: /imię i nazwisko/i }), 'Anna Nowak')
-    await user.type(screen.getByRole('textbox', { name: /adres e-mail/i }), 'anna@example.com')
-    await user.type(screen.getByRole('textbox', { name: /numer mieszkania/i }), '12A')
-    await user.type(screen.getByRole('textbox', { name: /wiadomość/i }), 'Treść wiadomości testowej')
-    await user.click(screen.getByRole('button', { name: /wyślij wiadomość/i }))
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/contact'),
-        expect.objectContaining({
-          body: expect.stringContaining('"apartment_number":"12A"'),
-        }),
-      )
-    })
   })
 })

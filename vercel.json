@@ -24,6 +24,10 @@
     {
       "path": "/api/backup/cron",
       "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/contact/cron",
+      "schedule": "0 3 1 * *"
     }
   ]
 }

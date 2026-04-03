@@ -1,24 +1,63 @@
-import { useState } from 'react'
-import { communityInfo, emergencyContacts, contactSubjects } from '../data/mockData'
+import { useEffect, useState } from 'react'
+import { communityInfo, emergencyContacts, contactSubjectsResident, contactSubjectsPublic } from '../data/mockData'
 import { MapPinIcon, MailIcon, PhoneIcon } from '../components/ui/Icons'
 import { useToast } from '../components/ui/Toast'
 import { parseApiError } from '../lib/api'
+import { api } from '../lib/api'
 import { formatCaughtError } from '../lib/userFacingErrors'
+import { useAuth } from '../hooks/useAuth'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+interface ResidentProfile {
+  full_name: string
+  email: string
+  apartment_number: string | null
+}
+
 export default function ContactPage() {
+  const { user } = useAuth()
+  const isLoggedIn = !!user
+
+  const subjects = isLoggedIn ? contactSubjectsResident : contactSubjectsPublic
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     apartment_number: '',
-    subject: contactSubjects[0],
+    subject: subjects[0],
     message: '',
   })
+  const [profileLoaded, setProfileLoaded] = useState(false)
   const [sending, setSending] = useState(false)
   const { toast } = useToast()
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Prefill danych z profilu dla zalogowanego mieszkańca
+  useEffect(() => {
+    if (!user) return
+    api.get<ResidentProfile>('/profile')
+      .then((profile) => {
+        setFormData((prev) => ({
+          ...prev,
+          name: profile.full_name,
+          email: profile.email,
+          apartment_number: profile.apartment_number || '',
+          subject: contactSubjectsResident[0],
+        }))
+        setProfileLoaded(true)
+      })
+      .catch(() => {
+        // formularz działa też bez prefilla
+        setProfileLoaded(true)
+      })
+  }, [user])
+
+  // Resetuj temat przy zmianie trybu (zalogowany ↔ gość)
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, subject: subjects[0] }))
+  }, [isLoggedIn])
+
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setSending(true)
 
@@ -35,13 +74,17 @@ export default function ContactPage() {
       }
 
       toast('Wiadomość została wysłana. Dziękujemy!', 'success')
-      setFormData({ name: '', email: '', apartment_number: '', subject: contactSubjects[0], message: '' })
+      setFormData({ name: '', email: '', apartment_number: '', subject: subjects[0], message: '' })
+      setProfileLoaded(false)
     } catch (err) {
       toast(formatCaughtError(err, 'Nie udało się wysłać wiadomości.'), 'error')
     } finally {
       setSending(false)
     }
   }
+
+  const inputClass = 'w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors'
+  const readonlyClass = 'w-full px-4 py-3 bg-cream-dark rounded-[8px] text-sm text-slate border border-transparent cursor-default select-none'
 
   return (
     <>
@@ -62,24 +105,40 @@ export default function ContactPage() {
           {/* Contact form */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-[24px] p-8 shadow-[0_12px_32px_rgba(45,52,54,0.05)]">
-              <h2 className="text-xl font-semibold text-charcoal mb-6">
+              <h2 className="text-xl font-semibold text-charcoal mb-1">
                 Wyślij wiadomość
               </h2>
+              {isLoggedIn ? (
+                <p className="text-sm text-slate mb-6">Formularz dla mieszkańców — dane pobrane z profilu.</p>
+              ) : (
+                <p className="text-sm text-slate mb-6">Formularz ogólny — dla osób spoza wspólnoty.</p>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="contact-name" className="block text-sm font-medium text-charcoal mb-1.5">
                     Imię i nazwisko
                   </label>
-                  <input
-                    id="contact-name"
-                    type="text"
-                    required
-                    maxLength={255}
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
-                  />
+                  {isLoggedIn && profileLoaded ? (
+                    <input
+                      id="contact-name"
+                      type="text"
+                      readOnly
+                      value={formData.name}
+                      className={readonlyClass}
+                      title="Dane z profilu — zmień w ustawieniach profilu"
+                    />
+                  ) : (
+                    <input
+                      id="contact-name"
+                      type="text"
+                      required
+                      maxLength={255}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={inputClass}
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -87,28 +146,43 @@ export default function ContactPage() {
                     <label htmlFor="contact-email" className="block text-sm font-medium text-charcoal mb-1.5">
                       Adres e-mail
                     </label>
-                    <input
-                      id="contact-email"
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
-                    />
+                    {isLoggedIn && profileLoaded ? (
+                      <input
+                        id="contact-email"
+                        type="email"
+                        readOnly
+                        value={formData.email}
+                        className={readonlyClass}
+                        title="Dane z profilu"
+                      />
+                    ) : (
+                      <input
+                        id="contact-email"
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className={inputClass}
+                      />
+                    )}
                   </div>
-                  <div>
-                    <label htmlFor="contact-apartment" className="block text-sm font-medium text-charcoal mb-1.5">
-                      Numer mieszkania <span className="text-slate font-normal">(opcjonalne)</span>
-                    </label>
-                    <input
-                      id="contact-apartment"
-                      type="text"
-                      maxLength={20}
-                      value={formData.apartment_number}
-                      onChange={(e) => setFormData({ ...formData, apartment_number: e.target.value })}
-                      className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors"
-                    />
-                  </div>
+
+                  {/* Numer lokalu — tylko dla zalogowanych */}
+                  {isLoggedIn && (
+                    <div>
+                      <label htmlFor="contact-apartment" className="block text-sm font-medium text-charcoal mb-1.5">
+                        Numer lokalu
+                      </label>
+                      <input
+                        id="contact-apartment"
+                        type="text"
+                        readOnly
+                        value={formData.apartment_number}
+                        className={readonlyClass}
+                        title="Dane z profilu"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -119,9 +193,9 @@ export default function ContactPage() {
                     id="contact-subject"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors appearance-none"
+                    className={`${inputClass} appearance-none`}
                   >
-                    {contactSubjects.map((s) => (
+                    {subjects.map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
@@ -140,9 +214,13 @@ export default function ContactPage() {
                     maxLength={5000}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full px-4 py-3 bg-cream rounded-[8px] text-sm text-charcoal border border-transparent focus:border-amber-container focus:outline-none transition-colors resize-none"
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
+
+                <p className="text-xs text-slate leading-relaxed">
+                  Administratorem Twoich danych osobowych jest Wspólnota Mieszkaniowa „Gabi", ul. Gdańska 58, 89-604 Chojnice. Dane podane w formularzu (imię, adres e-mail, treść wiadomości) będą przetwarzane wyłącznie w celu obsługi zgłoszenia, na podstawie art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes Administratora). Masz prawo dostępu do danych, ich sprostowania, usunięcia oraz wniesienia skargi do UODO (ul. Stawki 2, Warszawa). Szczegóły: <a href="/docs/polityka-prywatnosci-rodo.pdf" className="underline hover:text-charcoal">Polityka Prywatności i RODO</a>.
+                </p>
 
                 <button
                   type="submit"

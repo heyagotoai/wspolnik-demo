@@ -164,9 +164,21 @@ export const communityValues = [
   },
 ]
 
-export const contactSubjects = [
+/** Tematy dla zalogowanych mieszkańców */
+export const contactSubjectsResident = [
   'Pytanie ogólne',
   'Zgłoszenie usterki',
   'Sprawy finansowe',
+  'Uchwały i zebrania',
   'Inne',
 ]
+
+/** Tematy dla osób spoza wspólnoty (goście, firmy) */
+export const contactSubjectsPublic = [
+  'Pytanie ogólne',
+  'Współpraca',
+  'Inne',
+]
+
+/** @deprecated Używaj contactSubjectsResident lub contactSubjectsPublic */
+export const contactSubjects = contactSubjectsPublic
