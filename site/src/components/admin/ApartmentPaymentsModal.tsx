@@ -78,7 +78,7 @@ export default function ApartmentPaymentsModal({
               .map(p => p.parent_payment_id as string),
           ),
         ]
-        let parentTitleById = new Map<string, string>()
+        const parentTitleById = new Map<string, string>()
         if (splitParentIds.length > 0) {
           const { data: parents } = await supabase
             .from('payments')
