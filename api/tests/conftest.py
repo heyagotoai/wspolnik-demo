@@ -93,6 +93,9 @@ class FakeSupabaseBuilder:
     def gte(self, *_a, **_kw):
         return self
 
+    def lt(self, *_a, **_kw):
+        return self
+
     def lte(self, *_a, **_kw):
         return self
 
@@ -158,7 +161,8 @@ def fake_sb():
          patch("api.routes.audit.get_supabase", return_value=sb), \
          patch("api.routes.backup.get_supabase", return_value=sb), \
          patch("api.routes.billing_groups.get_supabase", return_value=sb), \
-         patch("api.routes.import_routes.get_supabase", return_value=sb):
+         patch("api.routes.import_routes.get_supabase", return_value=sb), \
+         patch("api.routes.retention.get_supabase", return_value=sb):
         yield sb
 
 

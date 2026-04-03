@@ -1,0 +1,101 @@
+name: Cron Jobs
+
+on:
+  schedule:
+    # Naliczenia — codziennie o 06:00 UTC (08:00 CEST)
+    - cron: "0 6 * * *"
+    # Backup — niedziela o 02:00 UTC
+    - cron: "0 2 * * 0"
+    # Retencja wiadomości kontaktowych — 1. dzień miesiąca o 03:00 UTC
+    - cron: "0 3 1 * *"
+    # Retencja danych finansowych — 1. dzień kwartału o 04:00 UTC
+    - cron: "0 4 1 1,4,7,10 *"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Które zadanie uruchomić"
+        required: true
+        type: choice
+        options:
+          - charges
+          - backup
+          - contact-cleanup
+          - financial-retention
+          - all
+
+jobs:
+  charges:
+    name: Generowanie naliczeń
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.schedule == '0 6 * * *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'charges' || github.event.inputs.job == 'all'))
+    steps:
+      - name: Wywołaj endpoint naliczeń
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/charges/cron")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "::error::Cron naliczeń zwrócił HTTP $response"
+            exit 1
+          fi
+
+  backup:
+    name: Backup tygodniowy
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.schedule == '0 2 * * 0' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'backup' || github.event.inputs.job == 'all'))
+    steps:
+      - name: Wywołaj endpoint backupu
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/backup/cron")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "::error::Cron backupu zwrócił HTTP $response"
+            exit 1
+          fi
+
+  contact-cleanup:
+    name: Retencja wiadomości kontaktowych
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.schedule == '0 3 1 * *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'contact-cleanup' || github.event.inputs.job == 'all'))
+    steps:
+      - name: Wywołaj endpoint retencji wiadomości
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/contact/cron")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "::error::Cron retencji wiadomości zwrócił HTTP $response"
+            exit 1
+          fi
+
+  financial-retention:
+    name: Retencja danych finansowych (5 lat)
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.schedule == '0 4 1 1,4,7,10 *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'financial-retention' || github.event.inputs.job == 'all'))
+    steps:
+      - name: Wywołaj endpoint retencji finansowej
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/retention/cron")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "::error::Cron retencji finansowej zwrócił HTTP $response"
+            exit 1
+          fi
