@@ -48,7 +48,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Dokumenty** — pobieranie dokumentów prywatnych i publicznych
 - **Terminy** — nadchodzące daty z odliczaniem + terminy aktywnych głosowań
 - **Głosowania** — lista uchwał (aktywne/zamknięte), oddawanie głosów (za/przeciw/wstrzymuję się), pasek wyników w czasie rzeczywistym
-- **Profil** — edycja danych osobowych, zmiana hasła
+- **Profil** — edycja danych osobowych, zmiana hasła; zgodnie z RODO: potwierdzenie akceptacji polityki prywatności i regulaminu przy wejściu do portalu (lub po aktualizacji dokumentów); przejrzysty podgląd zaakceptowanych wersji i kanał kontaktu w sprawie danych
 
 ### 3.3 Panel administratora
 

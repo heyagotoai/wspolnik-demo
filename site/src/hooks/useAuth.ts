@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, createContext, useContext } f
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
-interface AuthState {
+export interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean

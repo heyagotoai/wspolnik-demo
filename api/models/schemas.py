@@ -185,6 +185,18 @@ class ProfileOut(BaseModel):
     is_active: bool
     created_at: str
     can_vote_resolutions: bool = False
+    needs_legal_acceptance: bool = False
+    current_privacy_version: str = ""
+    current_terms_version: str = ""
+    privacy_accepted_at: str | None = None
+    terms_accepted_at: str | None = None
+    privacy_version: str | None = None
+    terms_version: str | None = None
+
+
+class LegalConsentBody(BaseModel):
+    accept_privacy: bool = False
+    accept_terms: bool = False
 
 
 class ProfileUpdate(BaseModel):

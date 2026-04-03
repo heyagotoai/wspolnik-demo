@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-03 — RODO: zgody polityki prywatności i regulaminu przy wejściu do portalu
+- **Migracja `020_residents_legal_consent.sql`:** kolumny `privacy_accepted_at`, `terms_accepted_at`, `privacy_version`, `terms_version` w `residents`
+- **Backend:** `GET /api/profile` rozszerzone o `needs_legal_acceptance`, `current_*_version`, zapisane wersje i timestampy; **`POST /api/profile/legal-consent`**; **`CURRENT_PRIVACY_VERSION`** / **`CURRENT_TERMS_VERSION`** w `api/core/config.py` (env)
+- **Frontend:** `LegalConsentGate` w `ProtectedRoute` i `AdminRoute` (modal z checkboxami + linki do PDF); profil — sekcja dokumentów prawnych i kanał kontaktu; **Playwright:** `acceptLegalConsentIfShown()` w `login()`
+- **Dokumentacja:** [[ADR-015-legal-consent-rodo]], `feature-map`, `docs/operations/01-wdrozenie.md`, karty produktu; testy: `test_profile.py`, `conftest` (deep copy + merge `update`), Vitest tras i profilu
+
 ### 2026-03-29 — Uchwały: głosy z zebrania przed publikacją
 - **`POST /api/resolutions/:id/votes/register`** (admin, tylko `status=draft`) — rejestracja głosu mieszkańca oddanego osobiście na zebraniu; te same reguły co `POST /vote` (`voting_eligibility`); **`DELETE /api/resolutions/:id/votes/:resident_id`** — pojedyncze usunięcie w szkicu
 - **Panel admina Uchwały** — przycisk „Głosy z zebrania” przy szkicu; podgląd wyników także dla szkicu z głosami; eksport PDF gdy są głosy

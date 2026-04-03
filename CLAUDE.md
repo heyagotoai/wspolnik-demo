@@ -117,13 +117,13 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-019 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname) — uruchamiane przez SQL Editor w dashboardzie Supabase
+- Migracje 001-020 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `POST :id/votes/register` (głosy z zebrania, tylko szkic) + `DELETE :id/votes/:resident_id` (pojedynczy głos, tylko szkic); `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu)
-- `/api/profile` — profil mieszkańca + pole `can_vote_resolutions` (spójne z głosowaniem)
+- `/api/profile` — profil + `can_vote_resolutions`, zgody RODO: `needs_legal_acceptance`, wersje dokumentów; **`POST /profile/legal-consent`** — akceptacja polityki i regulaminu (wymóg przed panelem); wersje obowiązujące: env `CURRENT_PRIVACY_VERSION`, `CURRENT_TERMS_VERSION`
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej); **GET** `/charges/rates` i `/charges/auto-config` — tylko admin lub manager (mieszkaniec nie pobiera przez API)
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)

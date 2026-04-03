@@ -17,7 +17,7 @@
 | Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem + terminy głosowań (nieodgłosowane uchwały), wyróżnione wizualnie |
 | Finanse | `/panel/finanse` | Saldo (łączne przy wielu lokalach / grupie rozliczeniowej), naliczenia (kolejność typów: eksploatacja → fundusz → śmieci), historia wpłat (ujednolicony „Wpłata z dnia” bez znaczników źródła dla mieszkańca); zakładki per-lokal; lookup przez `my_apartment_ids` (właściciel + grupa rozliczeniowa); wyświetlanie salda z zaokrągleniem do groszy (`roundMoney2`) — bez artefaktu „-0,00 zł” z floatów |
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów (wg `can_vote_resolutions` z `/profile`), wyniki: udziały (`apartments.share` + właściciel) lub fallback % wg liczby głosów — [[ADR-010-voting-system]]; wejście z ogłoszenia/pulpitu z hashem `#resolution-{id}` przewija do karty uchwały |
-| Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
+| Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła; sekcja dokumentów prawnych (zaakceptowane wersje, linki PDF, kontakt w sprawie danych). **Wejście do panelu:** przy `needs_legal_acceptance` z `GET /api/profile` modal zgód (oba dokumenty + `POST /api/profile/legal-consent`) — [[ADR-015-legal-consent-rodo|ADR-015]] |
 
 ## Panel administratora / zarządcy (wymaga roli **admin** lub **manager** → [[ADR-003-auth-pattern|AdminRoute]])
 
@@ -69,6 +69,7 @@
 | Import Excel — saldo / stan początkowy lokali | ✅ done | WYSOKI | Szablon + upload z panelu Lokale; `GET/POST /api/import/*`; nie zastępuje importu wyciągów bankowych |
 | Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; deduplikacja `(lokal, data)` jak w imporcie bankowym — [[ADR-014-payment-import-deduplication|ADR-014]] |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
+| Zgody RODO (polityka + regulamin) | ✅ done | WYSOKI | Migracja 020 (`residents`); gate przy `/panel/*` i `/admin/*`; wersjonowanie przez env backendu; ADR-015 |
 | Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
 
 ### Faza: Komercjalizacja (po wdrożeniu u siebie)
@@ -92,4 +93,5 @@
 - [[ADR-012-charge-generation]] — automatyczne generowanie naliczeń
 - [[ADR-013-billing-groups]] — grupy rozliczeniowe
 - [[ADR-014-payment-import-deduplication]] — deduplikacja importów wpłat (Excel + bank)
+- [[ADR-015-legal-consent-rodo]] — zgody polityki i regulaminu w portalu
 - [[system-overview]] — architektura techniczna

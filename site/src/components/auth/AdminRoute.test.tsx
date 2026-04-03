@@ -1,14 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AdminRoute from './AdminRoute'
-import { AuthContext } from '../../hooks/useAuth'
+import { AuthContext, type AuthState } from '../../hooks/useAuth'
+import { ToastProvider } from '../ui/Toast'
 import type { User, Session } from '@supabase/supabase-js'
 
 // Mock useRole oddzielnie — każdy test kontroluje zwracaną rolę
 const mockUseRole = vi.fn()
 vi.mock('../../hooks/useRole', () => ({
   useRole: () => mockUseRole(),
+}))
+
+const apiGet = vi.fn()
+vi.mock('../../lib/api', () => ({
+  api: { get: (...a: unknown[]) => apiGet(...a) },
 }))
 
 function renderWithAuth(
@@ -27,32 +33,38 @@ function renderWithAuth(
     loading: role.loading,
   })
 
-  const auth = {
+  const auth: AuthState = {
     user,
     session: user ? ({ access_token: 'test' } as unknown as Session) : null,
     loading: false,
-    signIn: vi.fn(),
-    signOut: vi.fn(),
+    signIn: vi.fn(async () => ({ error: null })),
+    signOut: vi.fn(async () => {}),
   }
 
   return render(
-    <AuthContext.Provider value={auth}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <Routes>
-          <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<div>Panel admina</div>} />
-          </Route>
-          <Route path="/logowanie" element={<div>Strona logowania</div>} />
-          <Route path="/panel" element={<div>Panel mieszkańca</div>} />
-        </Routes>
-      </MemoryRouter>
-    </AuthContext.Provider>,
+    <ToastProvider>
+      <AuthContext.Provider value={auth}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <Routes>
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<div>Panel admina</div>} />
+            </Route>
+            <Route path="/logowanie" element={<div>Strona logowania</div>} />
+            <Route path="/panel" element={<div>Panel mieszkańca</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    </ToastProvider>,
   )
 }
 
 const fakeUser = { id: 'u1', email: 'admin@gabi.pl' } as User
 
 describe('AdminRoute', () => {
+  beforeEach(() => {
+    apiGet.mockResolvedValue({ needs_legal_acceptance: false })
+  })
+
   it('pokazuje loader podczas sprawdzania roli', () => {
     renderWithAuth(fakeUser, { isAdmin: false, loading: true })
     expect(screen.getByText('Ładowanie...')).toBeInTheDocument()
@@ -68,13 +80,13 @@ describe('AdminRoute', () => {
     expect(screen.getByText('Panel mieszkańca')).toBeInTheDocument()
   })
 
-  it('renderuje panel admina dla administratora', () => {
+  it('renderuje panel admina dla administratora', async () => {
     renderWithAuth(fakeUser, { isAdmin: true, loading: false })
-    expect(screen.getByText('Panel admina')).toBeInTheDocument()
+    expect(await screen.findByText('Panel admina')).toBeInTheDocument()
   })
 
-  it('renderuje panel dla zarządcy', () => {
+  it('renderuje panel dla zarządcy', async () => {
     renderWithAuth(fakeUser, { isManager: true, loading: false })
-    expect(screen.getByText('Panel admina')).toBeInTheDocument()
+    expect(await screen.findByText('Panel admina')).toBeInTheDocument()
   })
 })

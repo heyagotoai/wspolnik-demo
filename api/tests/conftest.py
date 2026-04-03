@@ -4,6 +4,7 @@ Patches get_supabase where it's imported (security + routes),
 so all Supabase calls go through FakeSupabase.
 """
 
+import copy
 import os
 
 # Zanim załaduje się api.core.config (wymaga kluczy), ustaw placeholdery.
@@ -24,11 +25,15 @@ from fastapi.testclient import TestClient
 class FakeSupabaseBuilder:
     """Chainable query builder that returns preconfigured data."""
 
-    def __init__(self, data=None, error=None):
+    def __init__(self, data=None, error=None, parent=None, table_name: str | None = None):
         self._data = data if data is not None else []
         self._error = error
         self._is_single = False
         self._count = None
+        self._parent = parent
+        self._table_name = table_name
+        self._update_patch: dict | None = None
+        self._eq_filters: list[tuple[str, object]] = []
 
     def select(self, *_a, **kw):
         if kw.get("count") == "exact":
@@ -53,6 +58,7 @@ class FakeSupabaseBuilder:
         return self
 
     def update(self, data):
+        self._update_patch = dict(data) if data else {}
         return self
 
     def limit(self, _n):
@@ -61,7 +67,8 @@ class FakeSupabaseBuilder:
     def delete(self):
         return self
 
-    def eq(self, *_a, **_kw):
+    def eq(self, col, val):
+        self._eq_filters.append((col, val))
         return self
 
     def in_(self, *_a, **_kw):
@@ -93,6 +100,18 @@ class FakeSupabaseBuilder:
         return self
 
     def execute(self):
+        if self._update_patch is not None and self._parent and self._table_name:
+            rows = self._parent._tables.get(self._table_name, [])
+            matched = None
+            for row in rows:
+                if all(row.get(k) == v for k, v in self._eq_filters):
+                    row.update(self._update_patch)
+                    matched = row
+                    break
+            self._data = [dict(matched)] if matched is not None else []
+            self._update_patch = None
+            self._eq_filters = []
+
         data = self._data
         if self._is_single and isinstance(data, list):
             data = data[0] if data else None
@@ -113,10 +132,14 @@ class FakeSupabase:
     def table(self, name: str):
         """Return a fresh builder with the stored data for this table."""
         data = self._tables.get(name, [])
-        return FakeSupabaseBuilder(data=list(data))
+        return FakeSupabaseBuilder(data=list(data), parent=self, table_name=name)
 
     def set_table_data(self, name: str, data: list | None = None, error=None):
-        self._tables[name] = data if data is not None else []
+        raw = data if data is not None else []
+        # Głęboka kopia — update() w teście mutuje wiersze; bez tego kolejne testy widzą zmiany.
+        self._tables[name] = [
+            copy.deepcopy(row) if isinstance(row, dict) else row for row in raw
+        ]
 
 
 # --- Fixtures ----------------------------------------------------------------

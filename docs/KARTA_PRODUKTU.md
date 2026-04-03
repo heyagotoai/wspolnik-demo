@@ -43,7 +43,7 @@ Konta mieszkańców **nie rejestrują się samodzielnie** — administrator twor
 - **Dokumenty** — publiczne i prywatne
 - **Terminy** — z odliczaniem; terminy aktywnych głosowań
 - **Głosowania** — uchwały (aktywne/zamknięte), głosy (za/przeciw/wstrzymuję się), podgląd wyników
-- **Profil** — dane osobowe, zmiana hasła
+- **Profil** — dane osobowe, zmiana hasła; przy pierwszej sesji (lub po zmianie wersji dokumentów) akceptacja polityki prywatności i regulaminu; na profilu: zapisane wersje dokumentów, linki do PDF, informacja o kontakcie w sprawie danych osobowych
 
 ### 3.3 Panel administratora
 

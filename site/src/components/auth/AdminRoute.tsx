@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useRole } from '../../hooks/useRole'
+import LegalConsentGate from './LegalConsentGate'
 
 export default function AdminRoute() {
   const { user, loading: authLoading } = useAuth()
@@ -22,5 +23,9 @@ export default function AdminRoute() {
     return <Navigate to="/panel" replace />
   }
 
-  return <Outlet />
+  return (
+    <LegalConsentGate>
+      <Outlet />
+    </LegalConsentGate>
+  )
 }

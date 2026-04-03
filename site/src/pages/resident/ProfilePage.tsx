@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { formatCaughtError } from '../../lib/userFacingErrors'
 import { useToast } from '../../components/ui/Toast'
@@ -13,6 +14,13 @@ interface Profile {
   is_active: boolean
   created_at: string
   can_vote_resolutions?: boolean
+  needs_legal_acceptance?: boolean
+  current_privacy_version?: string
+  current_terms_version?: string
+  privacy_accepted_at?: string | null
+  terms_accepted_at?: string | null
+  privacy_version?: string | null
+  terms_version?: string | null
 }
 
 export default function ProfilePage() {
@@ -107,8 +115,11 @@ export default function ProfilePage() {
       year: 'numeric',
     })
 
-  const roleLabel = (role: string) =>
-    role === 'admin' ? 'Administrator' : 'Mieszkaniec'
+  const roleLabel = (role: string) => {
+    if (role === 'admin') return 'Administrator'
+    if (role === 'manager') return 'Zarządca'
+    return 'Mieszkaniec'
+  }
 
   if (loading) {
     return (
@@ -216,7 +227,9 @@ export default function ProfilePage() {
             <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
               profile.role === 'admin'
                 ? 'bg-amber-light/30 text-amber'
-                : 'bg-sage-pale/40 text-sage'
+                : profile.role === 'manager'
+                  ? 'bg-sky-100 text-sky-800'
+                  : 'bg-sage-pale/40 text-sage'
             }`}>
               {roleLabel(profile.role)}
             </span>
@@ -230,6 +243,65 @@ export default function ProfilePage() {
             <p className="text-sm text-charcoal font-medium">{formatDate(profile.created_at)}</p>
           </div>
         </div>
+      </div>
+
+      {/* Dokumenty prawne — informacja o zaakceptowanych wersjach */}
+      <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6 space-y-4">
+        <h2 className="text-base font-semibold text-charcoal">Dokumenty prawne</h2>
+        <p className="text-sm text-slate">
+          Obowiązujące w portalu wersje dokumentów to polityka prywatności{' '}
+          <span className="font-medium text-charcoal">
+            {profile.current_privacy_version ?? '—'}
+          </span>{' '}
+          oraz regulamin wspólnoty{' '}
+          <span className="font-medium text-charcoal">
+            {profile.current_terms_version ?? '—'}
+          </span>
+          .
+        </p>
+        {profile.privacy_version && profile.terms_version ? (
+          <p className="text-sm text-slate">
+            Twoja ostatnia akceptacja: polityka (wersja {profile.privacy_version},{' '}
+            {profile.privacy_accepted_at ? formatDate(profile.privacy_accepted_at) : '—'}), regulamin
+            (wersja {profile.terms_version},{' '}
+            {profile.terms_accepted_at ? formatDate(profile.terms_accepted_at) : '—'}).
+          </p>
+        ) : (
+          <p className="text-sm text-amber">
+            Nie zapisano jeszcze akceptacji dokumentów — po zalogowaniu uzupełnisz ją w oknie portalu.
+          </p>
+        )}
+        <ul className="text-sm space-y-2">
+          <li>
+            <a
+              href="/docs/polityka-prywatnosci-rodo.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sage font-medium hover:text-sage-light underline"
+            >
+              Polityka prywatności i RODO (PDF)
+            </a>
+          </li>
+          <li>
+            <a
+              href="/docs/regulamin-wspolnoty.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sage font-medium hover:text-sage-light underline"
+            >
+              Regulamin wspólnoty (PDF)
+            </a>
+          </li>
+        </ul>
+        <p className="text-sm text-slate border-t border-cream-medium pt-4">
+          W sprawie wycofania zgody na określone cele przetwarzania, żądań dotyczących danych
+          osobowych lub rezygnacji z korzystania z portalu skontaktuj się z administratorem
+          wspólnoty — np. przez{' '}
+          <Link to="/kontakt" className="text-sage font-medium hover:text-sage-light underline">
+            formularz kontaktowy
+          </Link>
+          .
+        </p>
       </div>
 
       {/* Change password card */}

@@ -47,6 +47,8 @@ SQL Editor → New Query → skopiuj i uruchom **po kolei**:
 011_initial_balance_date.sql — data salda początkowego
 ```
 
+Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–020** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`).
+
 **Kolejność jest ważna!** Każda migracja zależy od poprzednich.
 
 ### 2.4 Wyłącz publiczną rejestrację
@@ -88,6 +90,10 @@ Project Settings → Environment Variables:
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGci...` | Production |
 | `FRONTEND_URL` | `https://twojadomena.pl` | Production |
 | `CRON_SECRET` | dowolny losowy string | Production |
+| `CURRENT_PRIVACY_VERSION` | np. `2026-04-03` (zgoda z datą obowiązywania polityki) | Production |
+| `CURRENT_TERMS_VERSION` | np. `2026-04-03` (wersja regulaminu) | Production |
+
+**Zgody RODO:** po uruchomieniu migracji `020_residents_legal_consent.sql` nowi użytkownicy mają puste zgody — przy pierwszym wejściu do panelu zobaczą modal. Gdy zmienisz pliki PDF na stronie, **podbij obie zmienne** `CURRENT_*_VERSION` w Vercel i wdróż backend, żeby poprosić mieszkańców o ponowną akceptację.
 
 ### 3.3 Podłącz domenę
 Project Settings → Domains → Add → wpisz domenę
