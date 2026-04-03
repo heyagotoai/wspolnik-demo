@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
@@ -14,27 +15,31 @@ vi.mock('../../lib/api', () => ({
 
 const mockSupabaseData = { data: [] as unknown[], error: null }
 
-const chainable = {
-  select: vi.fn().mockReturnThis(),
-  insert: vi.fn().mockReturnThis(),
-  update: vi.fn().mockReturnThis(),
-  delete: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  then: undefined as unknown,
+function makeChainable(table: string) {
+  const chainable = {
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    then: undefined as unknown,
+  }
+  Object.defineProperty(chainable, 'then', {
+    get() {
+      const data = table === 'resolutions' ? mockResolutionsRows : mockSupabaseData.data
+      const error = mockSupabaseData.error
+      return (resolve: (v: unknown) => void) => resolve({ data, error })
+    },
+  })
+  return chainable
 }
-// Make it thenable so await works
-Object.defineProperty(chainable, 'then', {
-  get() {
-    const data = mockSupabaseData.data
-    const error = mockSupabaseData.error
-    return (resolve: (v: unknown) => void) => resolve({ data, error })
-  },
-})
+
+const mockResolutionsRows: { id: string; title: string }[] = []
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
-    from: vi.fn(() => chainable),
+    from: vi.fn((table: string) => makeChainable(table)),
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({
@@ -81,11 +86,13 @@ const mockAnnouncements = [
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <ConfirmProvider>
-        <AdminAnnouncementsPage />
-      </ConfirmProvider>
-    </ToastProvider>,
+    <MemoryRouter>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AdminAnnouncementsPage />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -93,6 +100,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockSupabaseData.data = mockAnnouncements
   mockSupabaseData.error = null
+  mockResolutionsRows.length = 0
 })
 
 describe('AdminAnnouncementsPage — mailing', () => {
@@ -152,6 +160,27 @@ describe('AdminAnnouncementsPage — mailing', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Brak ogłoszeń. Dodaj pierwsze ogłoszenie.')).toBeInTheDocument()
+    })
+  })
+
+  it('tytuł auto-ogłoszenia o głosowaniu linkuje do uchwały w panelu', async () => {
+    mockSupabaseData.data = [
+      {
+        id: 'ann-vote',
+        title: 'Nowe głosowanie: Wymiana windy',
+        content: 'Otwarto głosowanie.',
+        excerpt: null,
+        is_pinned: false,
+        email_sent_at: null,
+        created_at: '2026-03-10T10:00:00Z',
+      },
+    ]
+    mockResolutionsRows.push({ id: 'res-1', title: 'Wymiana windy' })
+    renderPage()
+
+    await waitFor(() => {
+      const link = screen.getByRole('link', { name: 'Nowe głosowanie: Wymiana windy' })
+      expect(link).toHaveAttribute('href', '/admin/uchwaly#resolution-res-1')
     })
   })
 })

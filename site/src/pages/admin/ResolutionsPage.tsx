@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
@@ -101,6 +102,7 @@ export default function AdminResolutionsPage() {
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { isAdmin } = useRole()
+  const location = useLocation()
 
   const fetchResolutions = async () => {
     try {
@@ -127,6 +129,17 @@ export default function AdminResolutionsPage() {
   useEffect(() => {
     fetchResolutions()
   }, [])
+
+  useEffect(() => {
+    if (loading) return
+    const raw = location.hash.replace(/^#/, '')
+    if (!raw.startsWith('resolution-')) return
+    const id = raw.slice('resolution-'.length)
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(`resolution-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [loading, location.hash, resolutions])
 
   const openAdd = () => {
     setEditingId(null)
@@ -658,7 +671,11 @@ export default function AdminResolutionsPage() {
                 : 'głos.'
 
             return (
-              <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
+              <div
+                key={r.id}
+                id={`resolution-${r.id}`}
+                className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 scroll-mt-24"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

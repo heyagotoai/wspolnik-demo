@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
@@ -6,6 +7,7 @@ import { useToast } from '../../components/ui/Toast'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
+import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
 
 interface Announcement {
   id: string
@@ -15,6 +17,11 @@ interface Announcement {
   is_pinned: boolean
   email_sent_at: string | null
   created_at: string
+}
+
+interface ResolutionRow {
+  id: string
+  title: string
 }
 
 interface AnnouncementForm {
@@ -30,6 +37,7 @@ export default function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [resolutions, setResolutions] = useState<ResolutionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -41,12 +49,16 @@ export default function AdminAnnouncementsPage() {
   const { confirm } = useConfirm()
 
   const fetchAnnouncements = async () => {
-    const { data } = await supabase
-      .from('announcements')
-      .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
+    const [{ data }, { data: resData }] = await Promise.all([
+      supabase
+        .from('announcements')
+        .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase.from('resolutions').select('id, title'),
+    ])
 
+    if (resData) setResolutions(resData as ResolutionRow[])
     if (data) setAnnouncements(data)
     setLoading(false)
   }
@@ -290,7 +302,23 @@ export default function AdminAnnouncementsPage() {
                     )}
                     <span className="text-xs text-outline">{formatDate(a.created_at)}</span>
                   </div>
-                  <h3 className="text-sm font-semibold text-charcoal">{a.title}</h3>
+                  {(() => {
+                    const resTitle = resolutionTitleFromVotingAnnouncement(a.title)
+                    const resId = resTitle ? findResolutionIdByTitle(resTitle, resolutions) : null
+                    if (resId) {
+                      return (
+                        <h3 className="text-sm font-semibold">
+                          <Link
+                            to={`/admin/uchwaly#resolution-${resId}`}
+                            className="text-sage hover:text-sage-light"
+                          >
+                            {a.title}
+                          </Link>
+                        </h3>
+                      )
+                    }
+                    return <h3 className="text-sm font-semibold text-charcoal">{a.title}</h3>
+                  })()}
                   <p className="text-sm text-slate mt-1 line-clamp-2">
                     {a.excerpt || a.content.slice(0, 150)}{a.content.length > 150 ? '...' : ''}
                   </p>
