@@ -19,7 +19,7 @@
   "crons": [
     {
       "path": "/api/charges/cron",
-      "schedule": "12 17 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/backup/cron",
