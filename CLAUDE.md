@@ -127,6 +127,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `/api/charges` — naliczenia (generowanie, regeneracja, CRUD stawek, wysyłka salda PDF: pojedyncza + masowa, zawiadomienie o opłatach: preview PDF + wysyłka email + bulk + config podstawy prawnej); **GET** `/charges/rates` i `/charges/auto-config` — tylko admin lub manager (mieszkaniec nie pobiera przez API)
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
+- `GET /api/retention/cron` — kwartalny cron RODO: carry-forward salda + usuwanie danych finansowych >5 lat (charges, payments, bank_statements, audit_log); email do adminów/zarządców
 - `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
 - `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, `POST /payments-bank-statement`, admin)
 - `GET /api/health` — health check

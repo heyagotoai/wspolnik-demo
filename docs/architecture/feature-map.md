@@ -47,7 +47,7 @@
 | Audyt XSS/injection | ✅ done | KRYTYCZNY | escapeHtml() w PDF uchwał, CSP + security headers w vercel.json (2026-03-25) |
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
-| CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
+| CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (`ci.yml`); crony przeniesione z Vercel do GitHub Actions (`cron.yml`) |
 | Testy E2E | ✅ done | WYSOKI | Playwright (Chromium): 13 testów — logowanie (4), głosowanie (4), finanse (5). Konta testowe: e2e_admin/e2e_resident@wmgabi.pl. `site/e2e/` |
 | Testy obciążeniowe | ✅ done | ŚREDNI | Locust: 10 userów, prod (wmgabi.pl), 0 błędów aplikacji, median 460-630ms. `api/tests/load/locustfile.py` + `api/tests/test_concurrency.py` (4 testy race condition) |
 | Backup & recovery | ✅ done | WYSOKI | Supabase auto-backup (7 dni) + tygodniowy cron backup do Storage (12 tyg. retencji): 9 tabel + auth.users + PDF-y. Email notification do adminów (OK/NIEUDANY). `POST /api/backup/cron` (niedziela 2:00 UTC). `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
@@ -70,7 +70,7 @@
 | Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; deduplikacja `(lokal, data)` jak w imporcie bankowym — [[ADR-014-payment-import-deduplication|ADR-014]] |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
 | Zgody RODO (polityka + regulamin) | ✅ done | WYSOKI | Migracja 020 (`residents`); gate przy `/panel/*` i `/admin/*`; wersjonowanie przez env backendu; ADR-015 |
-| Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
+| Retencja danych | ✅ done | ŚREDNI | Kwartalny cron (GitHub Actions): carry-forward salda → usuwanie charges, payments, bank_statements, audit_log starszych niż 5 lat; powiadomienia email |
 
 ### Faza: Komercjalizacja (po wdrożeniu u siebie)
 | Zadanie | Status | Priorytet | Opis |

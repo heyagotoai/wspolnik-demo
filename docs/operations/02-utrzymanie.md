@@ -188,16 +188,26 @@ COPY (SELECT * FROM charge_rates ORDER BY effective_from) TO STDOUT WITH CSV HEA
 
 ---
 
-## 6. Cron Job (auto-naliczenia)
+## 6. Cron Jobs (GitHub Actions)
 
-Vercel uruchamia `/api/charges/cron` codziennie o 6:00 UTC.
+Zadania cron są obsługiwane przez **GitHub Actions** (`.github/workflows/cron.yml`), a nie przez Vercel. Każde zadanie wywołuje odpowiedni endpoint FastAPI z nagłówkiem `Authorization: Bearer CRON_SECRET`.
 
-**Warunki działania:**
-- `system_settings.auto_charges_enabled` = `true`
-- `system_settings.auto_charges_day` = dzień miesiąca (np. `1`)
-- Endpoint wymaga nagłówka `Authorization: Bearer CRON_SECRET`
+Wymagane sekrety w GitHub → Settings → Secrets and variables → Actions:
+- **`CRON_SECRET`** — ten sam co w Vercel env vars
+- **`APP_URL`** — URL aplikacji (np. `https://wmgabi.pl`)
 
-**Wyłączenie:** Panel admina → Naliczenia → Stawki → przełącznik auto-generowania
+**Ręczne uruchomienie:** GitHub → Actions → Cron Jobs → Run workflow → wybierz zadanie
+
+| Zadanie | Endpoint | Harmonogram | Uwagi |
+|---------|----------|-------------|-------|
+| Naliczenia | `GET /api/charges/cron` | codziennie 06:00 UTC (08:00 CEST) | wymaga `auto_charges_enabled=true` i `auto_charges_day` = dzień miesiąca |
+| Backup | `GET /api/backup/cron` | niedziela 02:00 UTC | eksport 9 tabel + auth.users + PDF |
+| Retencja wiadomości | `GET /api/contact/cron` | 1. dzień miesiąca 03:00 UTC | usuwa wiadomości kontaktowe starsze niż 12 miesięcy |
+| Retencja finansowa | `GET /api/retention/cron` | 1. dzień kwartału 04:00 UTC | carry-forward salda + usuwanie danych finansowych starszych niż 5 lat |
+
+**Uwaga:** GitHub Actions crony mogą mieć opóźnienie do ~70 minut w godzinach szczytu. Dla naliczeń i backupów jest to bez znaczenia.
+
+**Wyłączenie auto-naliczeń:** Panel admina → Naliczenia → Stawki → przełącznik auto-generowania
 
 ---
 

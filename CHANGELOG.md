@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-04 — Crony przeniesione z Vercel do GitHub Actions + retencja danych finansowych
+- **`.github/workflows/cron.yml`** — 4 zadania: naliczenia (06:00 UTC), backup (niedziela 02:00 UTC), retencja wiadomości (1. dzień miesiąca 03:00 UTC), retencja finansowa (1. dzień kwartału 04:00 UTC); `workflow_dispatch` — ręczne uruchomienie z UI GitHub
+- **`POST/GET /api/retention/cron`** — kwartalny cron RODO: carry-forward salda (przeniesienie efektu starych naliczeń/wpłat do `initial_balance` przed usunięciem), usuwanie z `charges`, `payments`, `bank_statements` (fallback `created_at` przy NULL `statement_date`), `audit_log` starszych niż 5 lat; powiadomienia email do adminów/zarządców
+- **`vercel.json`** — usunięte crony (limit 2 na darmowym planie Vercel)
+- Przywrócony cron retencji wiadomości kontaktowych (`/api/contact/cron`) — usunięty wcześniej z powodu limitu Vercel
+- Testy: `api/tests/test_retention.py` (11 testów); `conftest.py` — dodano `lt()` do FakeSupabaseBuilder
+
 ### 2026-04-03 — Dokumentacja: obowiązek podbijania wersji przy zmianie PDF regulaminu/polityki
 - **`docs/operations/02-utrzymanie.md`** — sekcja *Zmiana polityki prywatności lub regulaminu* (checklist: env `CURRENT_*_VERSION`, redeploy API); odesłania w **`01-wdrozenie.md`** i **ADR-015**
 
