@@ -28,8 +28,9 @@ jobs:
     name: Generowanie naliczeń
     runs-on: ubuntu-latest
     if: >-
+      github.repository == 'wmgabi/gabi-site' && (
       github.event.schedule == '0 6 * * *' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'charges' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'charges' || github.event.inputs.job == 'all')))
     steps:
       - name: Wywołaj endpoint naliczeń
         run: |
@@ -47,8 +48,9 @@ jobs:
     name: Backup tygodniowy
     runs-on: ubuntu-latest
     if: >-
+      github.repository == 'wmgabi/gabi-site' && (
       github.event.schedule == '0 2 * * 0' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'backup' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'backup' || github.event.inputs.job == 'all')))
     steps:
       - name: Wywołaj endpoint backupu
         run: |
@@ -66,8 +68,9 @@ jobs:
     name: Retencja wiadomości kontaktowych
     runs-on: ubuntu-latest
     if: >-
+      github.repository == 'wmgabi/gabi-site' && (
       github.event.schedule == '0 3 1 * *' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'contact-cleanup' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'contact-cleanup' || github.event.inputs.job == 'all')))
     steps:
       - name: Wywołaj endpoint retencji wiadomości
         run: |
@@ -85,8 +88,9 @@ jobs:
     name: Retencja danych finansowych (5 lat)
     runs-on: ubuntu-latest
     if: >-
+      github.repository == 'wmgabi/gabi-site' && (
       github.event.schedule == '0 4 1 1,4,7,10 *' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'financial-retention' || github.event.inputs.job == 'all'))
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'financial-retention' || github.event.inputs.job == 'all')))
     steps:
       - name: Wywołaj endpoint retencji finansowej
         run: |
