@@ -26,51 +26,6 @@ export const navLinks = [
   { label: 'Kontakt', path: '/kontakt' },
 ]
 
-export const announcements = [
-  {
-    id: 1,
-    title: 'Zebranie roczne wspólnoty',
-    date: '2026-04-15',
-    excerpt: 'Zapraszamy wszystkich mieszkańców na coroczne zebranie wspólnoty. W programie: sprawozdanie finansowe, plan remontów oraz wybór nowych członków zarządu.',
-    pinned: true,
-  },
-  {
-    id: 2,
-    title: 'Prace konserwacyjne instalacji wodnej',
-    date: '2026-03-28',
-    excerpt: 'Informujemy o planowanych pracach konserwacyjnych instalacji wodnej w dniach 28-29 marca. Możliwe krótkie przerwy w dostawie wody.',
-    pinned: false,
-  },
-  {
-    id: 3,
-    title: 'Zmiana godzin odbioru odpadów',
-    date: '2026-03-20',
-    excerpt: 'Od 1 kwietnia zmieniają się godziny odbioru odpadów segregowanych. Prosimy o zapoznanie się z nowym harmonogramem.',
-    pinned: false,
-  },
-  {
-    id: 4,
-    title: 'Remont klatki schodowej — harmonogram',
-    date: '2026-03-15',
-    excerpt: 'Rozpoczynamy prace remontowe klatki schodowej. Prace potrwają do końca kwietnia. Przepraszamy za utrudnienia.',
-    pinned: false,
-  },
-  {
-    id: 5,
-    title: 'Przegląd instalacji gazowej',
-    date: '2026-03-10',
-    excerpt: 'Przypominamy o obowiązkowym przeglądzie instalacji gazowej. Prosimy o umożliwienie dostępu do mieszkań w wyznaczonym terminie.',
-    pinned: false,
-  },
-]
-
-export const importantDates = [
-  { date: '2026-04-15', event: 'Zebranie roczne wspólnoty' },
-  { date: '2026-04-30', event: 'Termin płatności zaliczki' },
-  { date: '2026-05-10', event: 'Przegląd instalacji gazowej' },
-  { date: '2026-05-20', event: 'Sprzątanie terenu wspólnoty' },
-]
-
 export const documents = [
   {
     id: 1,

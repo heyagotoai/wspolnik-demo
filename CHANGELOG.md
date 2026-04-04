@@ -2,6 +2,16 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-04 — Strona publiczna: aktualności z bazy, jawność ogłoszeń, nawigacja
+- **Migracje `021_announcements_is_public.sql`**, **`022_announcements_is_public_default_false.sql`** — kolumna `is_public`, RLS: anon widzi tylko jawne wpisy; zalogowany — pełna lista w panelu; domyślna wartość `false` dla nowych wierszy bez jawnej wartości
+- **`site/src/lib/loadPublicAnnouncements.ts`** — pobieranie + deduplikacja auto-ogłoszeń głosowań; **`announcementPreview`**; testy
+- **`site/src/pages/HomePage.tsx`**, **`NewsPage.tsx`** — treść z Supabase (zamiast mocków); hero: przyciski logowanie / aktualności / kontakt; usunięty podtytuł na `/aktualnosci`; usunięty sidebar „Ważne terminy”; **`TextWithAutoLinks`** — klikalne `http(s)://` w podglądzie
+- **`site/src/pages/admin/AnnouncementsPage.tsx`** — checkbox „Aktualności - widoczne na stronie głównej bez logowania” (`is_public`), badge „Tylko panel”
+- **`api/routes/resolutions.py`** — insert auto-ogłoszenia głosowania z `is_public: false`
+- **`Header.tsx`**, **`Footer.tsx`** — link „Dokumenty” w menu tylko po zalogowaniu
+- **`mockData.ts`** — usunięte nieużywane mocki ogłoszeń/terminów
+- **Dokumentacja:** [[ADR-016-public-announcements-visibility]], `feature-map.md`, `KARTA_PRODUKTU.md`, `KARTA_PRODUKTU_OFERTA.md`, `docs/operations/01-wdrozenie.md`, `memory/postep.md`, **CLAUDE.md** / **.cursorrules** (migracje 021–022)
+
 ### 2026-04-04 — Lokale: „Ostatnie importy wpłat” (admin i zarządca)
 - **`site/src/pages/admin/ApartmentsPage.tsx`** — panel z datą ostatniego importu z zestawienia bankowego (`.xls`), ostatniego importu wpłat z Excela (arkusz Dopasowań) oraz najpóźniejszą **zaksięgowaną** datą wpłaty (`confirmed_by_admin`) z **lokalem** (lub wpłatą zbiorczą) i **kwotą** (sort: `payment_date` ↓, `created_at` ↓); identyfikacja importów po tytułach wpłat zgodnych z `api/routes/import_routes.py`
 - **`docs/instrukcja-admina.md`**, **`docs/architecture/feature-map.md`**

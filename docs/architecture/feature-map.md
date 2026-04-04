@@ -3,9 +3,9 @@
 ## Strona publiczna (bez logowania)
 | Strona | Route | Opis |
 |--------|-------|------|
-| Strona główna | `/` | Hero, karty szybkiego dostępu, ostatnie ogłoszenia |
-| Aktualności | `/aktualnosci` | Przypięte + zwykłe ogłoszenia, ważne daty |
-| Dokumenty | `/dokumenty` | Publiczne dokumenty z filtrowaniem kategorii |
+| Strona główna | `/` | Hero (logowanie, aktualności ↓, kontakt), sekcja **Aktualności** — skrót z ogłoszeń **`is_public`** (Supabase), linki `http(s)://` w treści jako klikalne |
+| Aktualności | `/aktualnosci` | Lista ogłoszeń z **`is_public`** (to samo źródło co strona główna; bez sidebaru terminów); linki w treści automatycznie |
+| Dokumenty | `/dokumenty` | Publiczne dokumenty z filtrowaniem kategorii — **link w nawigacji i stopce tylko po zalogowaniu** (gość może wejść z adresu URL) |
 | Kontakt | `/kontakt` | Formularz, dane kontaktowe, numery alarmowe |
 
 ## Panel mieszkańca (wymaga logowania → [[ADR-003-auth-pattern|ProtectedRoute]])
@@ -28,13 +28,13 @@
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
 | Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
 | Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, **saldo bieżące** z zaokrągleniem do groszy (bez „-0,00 zł”), przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge), pole **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy. **Podgląd wpłat lokalu** (modal z listą wpłat, sumy vs tabela — admin i zarządca). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie; **deduplikacja** `(lokal, data)` względem bazy i w obrębie pliku — [[ADR-014-payment-import-deduplication|ADR-014]]. **Import z banku (.xls)** (`POST /payments-bank-statement`): zestawienie bankowe, dopasowanie po nazwisku rozliczeniowym i numerze z opisu; ta sama deduplikacja; modal `ImportBankStatementModal`. **Skrót „Ostatnie importy wpłat”** (zwijany panel, domyślnie zwinięty; data ostatniego importu z banku i z Excela, najpóźniejsza zaksięgowana data wpłaty + lokal/kwota) — admin i zarządca. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
-| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
+| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie + **jawność** (`is_public`: widoczność na `/` i `/aktualnosci` bez logowania; domyślnie wyłączona; auto-ogłoszenia o głosowaniu — tylko panel) |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
 | Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Grupy rozliczeniowe | `/admin/grupy-rozliczeniowe` | CRUD grup, przypisywanie lokali, rejestracja wpłat grupowych z auto-rozbiciem, podgląd salda łącznego (admin; backend `/api/billing-groups`) |
 | Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), **głosy z zebrania** (modal przy szkicu — rejestracja głosów osobistych przed publikacją; API `POST /resolutions/:id/votes/register`, korekta `DELETE .../votes/:resident_id` tylko w szkicu, tylko **admin**), wyniki (agregacja wg udziałów + fallback w UI/PDF), eksport PDF także dla szkicu z głosami; **pasek akcji:** „Głosy z zebrania” → ikony (reset głosów, PDF, edycja, usuń) — [[ADR-010-voting-system]] |
-| Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
+| Wiadomości | `/admin/wiadomosci` | Wiadomości z **formularza kontaktowego** (`contact_messages` — zapis przez `POST /api/contact`), podgląd, oznaczanie jako przeczytane |
 
 ## Roadmapa — przed produkcją
 
@@ -94,4 +94,5 @@
 - [[ADR-013-billing-groups]] — grupy rozliczeniowe
 - [[ADR-014-payment-import-deduplication]] — deduplikacja importów wpłat (Excel + bank)
 - [[ADR-015-legal-consent-rodo]] — zgody polityki i regulaminu w portalu
+- [[ADR-016-public-announcements-visibility]] — jawność ogłoszeń na stronie publicznej (`is_public`, RLS)
 - [[system-overview]] — architektura techniczna

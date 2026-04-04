@@ -21,6 +21,7 @@ interface Announcement {
   content: string
   excerpt: string | null
   is_pinned: boolean
+  is_public: boolean
   email_sent_at: string | null
   created_at: string
 }
@@ -32,9 +33,16 @@ interface AnnouncementForm {
   content: string
   excerpt: string
   is_pinned: boolean
+  is_public: boolean
 }
 
-const emptyForm: AnnouncementForm = { title: '', content: '', excerpt: '', is_pinned: false }
+const emptyForm: AnnouncementForm = {
+  title: '',
+  content: '',
+  excerpt: '',
+  is_pinned: false,
+  is_public: false,
+}
 
 export default function AdminAnnouncementsPage() {
   const { user } = useAuth()
@@ -55,7 +63,7 @@ export default function AdminAnnouncementsPage() {
     const [{ data }, { data: resData }] = await Promise.all([
       supabase
         .from('announcements')
-        .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
+        .select('id, title, content, excerpt, is_pinned, is_public, email_sent_at, created_at')
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('resolutions').select('id, title, status, voting_start, voting_end'),
@@ -84,6 +92,7 @@ export default function AdminAnnouncementsPage() {
       content: a.content,
       excerpt: a.excerpt || '',
       is_pinned: a.is_pinned,
+      is_public: a.is_public ?? false,
     })
     setError(null)
     setShowForm(true)
@@ -114,6 +123,7 @@ export default function AdminAnnouncementsPage() {
       content: form.content.trim(),
       excerpt: form.excerpt.trim() || null,
       is_pinned: form.is_pinned,
+      is_public: form.is_public,
     }
 
     if (editingId) {
@@ -266,6 +276,17 @@ export default function AdminAnnouncementsPage() {
               />
               <span className="text-sm text-charcoal">Przypnij na górze (ważne)</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_public}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+                className="w-4 h-4 rounded border-cream-deep text-sage focus:ring-sage/30"
+              />
+              <span className="text-sm text-charcoal">
+                Aktualności - widoczne na stronie głównej bez logowania
+              </span>
+            </label>
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
@@ -297,10 +318,15 @@ export default function AdminAnnouncementsPage() {
             <div key={a.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     {a.is_pinned && (
                       <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full shrink-0">
                         Ważne
+                      </span>
+                    )}
+                    {a.is_public === false && (
+                      <span className="px-2 py-0.5 bg-cream-deep text-slate text-xs font-medium rounded-full shrink-0">
+                        Tylko panel
                       </span>
                     )}
                     <span className="text-xs text-outline">{formatDate(a.created_at)}</span>

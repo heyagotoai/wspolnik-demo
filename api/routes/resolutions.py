@@ -90,6 +90,7 @@ def create_resolution(body: ResolutionCreate, _admin: dict = Depends(require_adm
             "content": content,
             "excerpt": f'Głosowanie nad uchwałą "{title}" jest otwarte.',
             "is_pinned": True,
+            "is_public": False,
         }).execute()
 
     return result.data[0]
@@ -153,6 +154,7 @@ def update_resolution(
             "content": content,
             "excerpt": f'Głosowanie nad uchwałą "{resolution_title}" jest otwarte.',
             "is_pinned": True,
+            "is_public": False,
         }).execute()
 
     return result.data[0]

@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
 import { communityInfo, navLinks } from '../../data/mockData'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function Footer() {
+  const { user } = useAuth()
+  const navLinksVisible = user ? navLinks : navLinks.filter((l) => l.path !== '/dokumenty')
+
   return (
     <footer className="bg-cream-dark mt-auto">
       <div className="mx-auto max-w-[1280px] px-6 py-16">
@@ -23,7 +27,7 @@ export default function Footer() {
               Nawigacja
             </h4>
             <nav className="space-y-2">
-              {navLinks.map((link) => (
+              {navLinksVisible.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}

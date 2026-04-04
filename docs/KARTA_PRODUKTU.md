@@ -26,9 +26,9 @@ Konta mieszkańców **nie rejestrują się samodzielnie** — administrator twor
 
 ### 3.1 Strona publiczna (bez logowania)
 
-- **Strona główna** — prezentacja wspólnoty, skróty do sekcji, ostatnie ogłoszenia
-- **Aktualności** — lista ogłoszeń (przypinanie ważnych), terminy z odliczaniem dni
-- **Dokumenty** — dokumenty publiczne do pobrania (kategorie)
+- **Strona główna** — prezentacja wspólnoty (hero: logowanie, aktualności, kontakt), sekcja aktualności z ogłoszeniami oznaczonymi jako jawne (`is_public`); adresy `http(s)://` w treści jako klikalne linki
+- **Aktualności** — lista tych samych jawnych ogłoszeń co na stronie głównej (pełniejsza); przypinanie ważnych
+- **Dokumenty** — dokumenty publiczne do pobrania (kategorie); link „Dokumenty” w menu/stopce **dopiero po zalogowaniu** (gość może wejść z adresu URL)
 - **Kontakt** — formularz (imię, e‑mail, nr mieszkania, temat, treść), dane wspólnoty, numery alarmowe
 - **Stopka** — m.in. odniesienia do dokumentów prawnych
 
@@ -53,7 +53,7 @@ Konta mieszkańców **nie rejestrują się samodzielnie** — administrator twor
 - **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), dopasowanie numerów (także złożone przypadki)
 - **Import wpłat (Excel)** — arkusz dopasowań; wiele dat/kwot; wpłaty zbiorcze z podziałem; **deduplikacja** po parze (lokal, data)
 - **Grupy rozliczeniowe** — zgrupowanie lokali, wpłaty grupowe, saldo łączne u mieszkańca
-- **Ogłoszenia** — CRUD, przypinanie, **wysyłka e‑mail** do aktywnych mieszkańców
+- **Ogłoszenia** — CRUD, przypinanie, **jawność na stronie głównej /aktualnosci** (pole `is_public`; domyślnie wyłączone — treść tylko w panelu mieszkańca; auto-ogłoszenia o głosowaniu — niepubliczne), **wysyłka e‑mail** do aktywnych mieszkańców
 - **Dokumenty** — upload PDF (limit rozmiaru wg konfiguracji), publiczny/prywatny
 - **Terminy** — CRUD
 - **Naliczenia miesięczne** — generowanie per lokal i miesiąc; wzory (m², osoby); regeneracja z zachowaniem pozycji ręcznych; pozycje „inne”; stawki z datą obowiązywania; podsumowania; ostrzeżenie przy kolizji z saldem początkowym

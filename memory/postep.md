@@ -1,8 +1,9 @@
 # Postęp projektu WM GABI (skrót)
 
-Ostatnia aktualizacja: **2026-04-03**.
+Ostatnia aktualizacja: **2026-04-04**.
 
 ## Zrobione niedawno
+- **Strona publiczna — aktualności (2026-04-04)** — migracje `021`/`022` (`announcements.is_public`, RLS, domyślna wartość false); strona główna i `/aktualnosci` z Supabase (`loadPublicAnnouncements`); auto-ogłoszenia uchwał niepubliczne; panel admina: checkbox jawności; `TextWithAutoLinks`; nawigacja: „Dokumenty” ukryte dla gości; **ADR-016**, CHANGELOG, karty produktu, feature-map, `operations/01`.
 - **Zgody RODO — polityka i regulamin (2026-04-03)** — migracja 020 (`residents`: timestampy + wersje); `GET/POST /api/profile` + `/legal-consent`; env `CURRENT_PRIVACY_VERSION` / `CURRENT_TERMS_VERSION`; `LegalConsentGate` na trasach panelu i admina; sekcja w profilu; Playwright `acceptLegalConsentIfShown` w `login()`; ADR-015, CHANGELOG, karty produktu, `operations/01`, CLAUDE / `.cursorrules`.
 - **Głosy z zebrania (uchwały, 2026-03-29)** — przed publikacją uchwały admin rejestruje w panelu głosy oddane osobiście na zebraniu (`POST /api/resolutions/:id/votes/register`, `DELETE .../votes/:resident_id` w szkicu); `UNIQUE` blokuje drugi głos online; UI `/admin/uchwaly` — „Głosy z zebrania”, PDF dla szkicu z głosami; **pasek akcji:** ikona PDF w grupie z resetem / edycją / usunięciem (ADR-010, CHANGELOG). Zsynchronizowane: `feature-map.md` (roadmapa + uzupełnienie), `system-overview.md`, `KARTA_PRODUKTU.md`, ADR-002/010, pentest-doc, `operations/02`, `instrukcja-admina.md`.
 - **UI panelu (2026-03-29)** — sidebary `ResidentLayout` / `AdminLayout`: sticky `h-screen`, linki profil/wyloguj zaraz pod menu (bez zjeżdżania przy długiej treści). Finanse: kolejność naliczeń; historia wpłat bez znaczników importu dla mieszkańca; `paymentDisplay` + modal wpłat w Lokale (admin/zarządca). Ogłoszenia: link z tytułu „Nowe głosowanie” do `#resolution-{id}` + scroll w Głosowania; `votingAnnouncement.ts`.

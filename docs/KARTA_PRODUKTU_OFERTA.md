@@ -30,9 +30,9 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 
 ### 3.1 Strona publiczna (bez logowania)
 
-- **Strona główna** — prezentacja wspólnoty, szybki dostęp do najważniejszych sekcji, ostatnie ogłoszenia
-- **Aktualności** — lista ogłoszeń (z możliwością przypięcia ważnych na górze), ważne terminy z odliczaniem dni
-- **Dokumenty** — publiczne dokumenty do pobrania (regulaminy, protokoły, formularze) z filtrowaniem po kategorii
+- **Strona główna** — prezentacja wspólnoty (m.in. logowanie, aktualności, kontakt), sekcja aktualności z ogłoszeniami **jawnymi** (widoczne bez logowania); linki `http(s)://` w treści klikalne
+- **Aktualności** — pełniejsza lista tych samych jawnych ogłoszeń; przypięcie ważnych na górze
+- **Dokumenty** — publiczne dokumenty do pobrania z filtrowaniem po kategorii; pozycja „Dokumenty” w menu/stopce **po zalogowaniu**
 - **Kontakt** — formularz kontaktowy (imię, email, nr mieszkania, temat, treść), dane kontaktowe wspólnoty, numery alarmowe
 - **Stopka** — linki do dokumentów prawnych
 
@@ -58,7 +58,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
 - **Import wpłat z Excela** — arkusz Dopasowania: kolumny Lokal, Data wpłaty, Kwota (inne ignorowane); wiele dat/kwot po średniku; wpłata zbiorcza = parent + automatyczne rozbicie per lokal; **deduplikacja** po parze (lokal, data) względem bazy i w obrębie tego samego pliku (ponowny import nie dubluje wpłat)
 - **Grupy rozliczeniowe** — łączenie lokali w grupę, wpłaty grupowe z podziałem, saldo łączne u mieszkańca
-- **Ogłoszenia** — CRUD + przypinanie na górze + wysyłka emailem do wszystkich aktywnych mieszkańców
+- **Ogłoszenia** — CRUD + przypinanie + **przełącznik jawności** na stronie www (domyślnie treść tylko w panelu mieszkańca) + wysyłka emailem do wszystkich aktywnych mieszkańców
 - **Dokumenty** — upload plików PDF (max 10MB), przełącznik publiczny/prywatny
 - **Terminy** — CRUD ważnych dat z opisami
 - **Naliczenia miesięczne**
