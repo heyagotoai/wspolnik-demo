@@ -7,7 +7,13 @@ import { useToast } from '../../components/ui/Toast'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
-import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
+import {
+  buildVotingAnnouncementBody,
+  findResolutionForVotingAnnouncement,
+  findResolutionIdByTitle,
+  resolutionTitleFromVotingAnnouncement,
+} from '../../lib/votingAnnouncement'
+import type { ResolutionSnapshotForAnnouncement } from '../../lib/votingAnnouncement'
 
 interface Announcement {
   id: string
@@ -19,10 +25,7 @@ interface Announcement {
   created_at: string
 }
 
-interface ResolutionRow {
-  id: string
-  title: string
-}
+type ResolutionRow = ResolutionSnapshotForAnnouncement
 
 interface AnnouncementForm {
   title: string
@@ -55,7 +58,7 @@ export default function AdminAnnouncementsPage() {
         .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase.from('resolutions').select('id, title'),
+      supabase.from('resolutions').select('id, title, status, voting_start, voting_end'),
     ])
 
     if (resData) setResolutions(resData as ResolutionRow[])
@@ -320,7 +323,16 @@ export default function AdminAnnouncementsPage() {
                     return <h3 className="text-sm font-semibold text-charcoal">{a.title}</h3>
                   })()}
                   <p className="text-sm text-slate mt-1 line-clamp-2">
-                    {a.excerpt || a.content.slice(0, 150)}{a.content.length > 150 ? '...' : ''}
+                    {(() => {
+                      const r = findResolutionForVotingAnnouncement(a.title, resolutions)
+                      if (r) {
+                        const body = buildVotingAnnouncementBody(r, formatDate)
+                        const line = body.split('\n')[0]
+                        return line.length > 150 ? `${line.slice(0, 150)}…` : line
+                      }
+                      const raw = a.excerpt || a.content.slice(0, 150)
+                      return `${raw}${a.content.length > 150 && !a.excerpt ? '…' : ''}`
+                    })()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

@@ -1,7 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+import re
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from api.core.config import CRON_SECRET
 from api.core.security import get_current_user, require_admin, require_admin_or_manager
 from api.core.supabase_client import get_supabase
+from api.core.resolution_voting_window import (
+    has_voting_ended,
+    is_within_voting_period,
+)
 from api.core.voting_eligibility import check_resolution_vote_eligibility
 from api.models.schemas import (
     ResolutionCreate,
@@ -16,6 +23,39 @@ from api.models.schemas import (
 )
 
 router = APIRouter(prefix="/resolutions", tags=["resolutions"])
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _verify_cron(request: Request) -> None:
+    auth = request.headers.get("Authorization", "")
+    if not CRON_SECRET or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid cron secret")
+    if auth.split(" ", 1)[1] != CRON_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid cron secret")
+
+
+def _validate_merged_calendar(merged: dict) -> None:
+    """Po zapisie uchwały zawsze wymagane obie daty (dzień, RRRR-MM-DD)."""
+    vs = merged.get("voting_start")
+    ve = merged.get("voting_end")
+    if vs is None or ve is None or not str(vs).strip() or not str(ve).strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Początek i koniec głosowania są wymagane (format RRRR-MM-DD).",
+        )
+    vs_s = str(vs).strip()[:10]
+    ve_s = str(ve).strip()[:10]
+    if not _ISO_DATE.match(vs_s) or not _ISO_DATE.match(ve_s):
+        raise HTTPException(
+            status_code=400,
+            detail="Nieprawidłowy format daty (oczekiwano RRRR-MM-DD).",
+        )
+    if ve_s < vs_s:
+        raise HTTPException(
+            status_code=400,
+            detail="Data końca głosowania musi być taka sama lub późniejsza niż początek.",
+        )
 
 
 # ── Admin CRUD ──────────────────────────────────────────────
@@ -42,11 +82,7 @@ def create_resolution(body: ResolutionCreate, _admin: dict = Depends(require_adm
 
     # Auto-create announcement when created directly with "voting" status
     if body.status == "voting":
-        voting_end = result.data[0].get("voting_end")
-        end_info = ""
-        if voting_end:
-            end_info = f" Głosowanie trwa do {voting_end}."
-
+        end_info = f" Głosowanie trwa do {body.voting_end}."
         title = body.title
         content = f'Rozpoczęto głosowanie nad uchwałą "{title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
         sb.table("announcements").insert({
@@ -68,17 +104,21 @@ def update_resolution(
     """Update a resolution (admin only)."""
     sb = get_supabase()
 
-    # Check current status before update
-    current = sb.table("resolutions").select("status, title").eq("id", resolution_id).execute()
+    # Check current row before update
+    current = sb.table("resolutions").select("*").eq("id", resolution_id).execute()
     if not current.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
 
-    old_status = current.data[0]["status"]
-    resolution_title = body.title or current.data[0]["title"]
+    current_row = current.data[0]
+    old_status = current_row["status"]
+    resolution_title = body.title or current_row["title"]
 
     update_data = body.model_dump(exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="Brak danych do aktualizacji")
+
+    merged = {**current_row, **update_data}
+    _validate_merged_calendar(merged)
 
     result = (
         sb.table("resolutions")
@@ -105,11 +145,8 @@ def update_resolution(
 
     # Auto-create announcement when status changes to "voting"
     if body.status == "voting" and old_status != "voting":
-        voting_end = result.data[0].get("voting_end")
-        end_info = ""
-        if voting_end:
-            end_info = f" Głosowanie trwa do {voting_end}."
-
+        ve = merged["voting_end"]
+        end_info = f" Głosowanie trwa do {ve}."
         content = f'Rozpoczęto głosowanie nad uchwałą "{resolution_title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
         sb.table("announcements").insert({
             "title": f"Nowe głosowanie: {resolution_title}",
@@ -119,6 +156,27 @@ def update_resolution(
         }).execute()
 
     return result.data[0]
+
+
+@router.api_route("/cron/close-ended", methods=["GET", "POST"])
+def resolutions_close_ended_cron(request: Request):
+    """Codziennie (GitHub Actions): status voting → closed gdy minął ostatni dzień głosowania (PL)."""
+    _verify_cron(request)
+    sb = get_supabase()
+    rows = sb.table("resolutions").select("id, voting_end, status").eq("status", "voting").execute()
+    raw = rows.data or []
+    # W testach FakeSupabase nie filtruje po .eq — w produkcji Supabase zwraca tylko voting.
+    candidates = [r for r in raw if r.get("status") == "voting"]
+    if not candidates:
+        return {"detail": "Brak uchwał do zamknięcia", "closed": 0}
+
+    closed = 0
+    for row in candidates:
+        if has_voting_ended(row.get("voting_end")):
+            sb.table("resolutions").update({"status": "closed"}).eq("id", row["id"]).execute()
+            closed += 1
+
+    return {"detail": f"Zamknięto uchwał: {closed}", "closed": closed}
 
 
 @router.delete("/{resolution_id}", response_model=MessageOut)
@@ -374,12 +432,23 @@ def cast_vote(
 
     sb = get_supabase()
 
-    # Check resolution exists and is in 'voting' status
-    resolution = sb.table("resolutions").select("id, status").eq("id", resolution_id).execute()
+    # Check resolution exists and is in 'voting' status; okres wg dat (PL)
+    resolution = (
+        sb.table("resolutions")
+        .select("id, status, voting_start, voting_end")
+        .eq("id", resolution_id)
+        .execute()
+    )
     if not resolution.data:
         raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
-    if resolution.data[0]["status"] != "voting":
+    row = resolution.data[0]
+    if row["status"] != "voting":
         raise HTTPException(status_code=400, detail="Głosowanie nie jest aktywne dla tej uchwały")
+    if not is_within_voting_period(row.get("voting_start"), row.get("voting_end")):
+        raise HTTPException(
+            status_code=400,
+            detail="Trwa poza zaplanowanym okresem głosowania (daty początku/końca)",
+        )
 
     ok, denial = check_resolution_vote_eligibility(sb, user["sub"])
     if not ok:

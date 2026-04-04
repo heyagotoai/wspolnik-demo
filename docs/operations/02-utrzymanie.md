@@ -204,6 +204,7 @@ Wymagane sekrety w GitHub → Settings → Secrets and variables → Actions:
 | Backup | `GET /api/backup/cron` | niedziela 02:00 UTC | eksport 9 tabel + auth.users + PDF |
 | Retencja wiadomości | `GET /api/contact/cron` | 1. dzień miesiąca 03:00 UTC | usuwa wiadomości kontaktowe starsze niż 12 miesięcy |
 | Retencja finansowa | `GET /api/retention/cron` | 1. dzień kwartału 04:00 UTC | carry-forward salda + usuwanie danych finansowych starszych niż 5 lat |
+| Zamknięcie uchwał | `GET /api/resolutions/cron/close-ended` | codziennie 06:30 UTC | uchwały w statusie `voting` z `voting_end` w przeszłości → `closed` (kalendarz PL) |
 
 **Uwaga:** GitHub Actions crony mogą mieć opóźnienie do ~70 minut w godzinach szczytu. Dla naliczeń i backupów jest to bez znaczenia.
 

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
 
@@ -100,6 +100,14 @@ beforeEach(() => {
 })
 
 describe('ResidentResolutionsPage', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-04-10T12:00:00+02:00'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('wyświetla listę uchwał (bez szkiców)', async () => {
     renderPage()
 
@@ -163,6 +171,40 @@ describe('ResidentResolutionsPage', () => {
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith('/resolutions/res-1/vote', { vote: 'za' })
     })
+  })
+
+  it('nie pokazuje przycisków gdy minął voting_end (status nadal voting)', async () => {
+    vi.setSystemTime(new Date('2026-04-04T14:00:00+02:00'))
+
+    mockGet.mockImplementation((path: string) => {
+      if (path === '/resolutions') {
+        return Promise.resolve([
+          {
+            id: 'res-exp',
+            title: 'Uchwała po terminie',
+            description: 'opis',
+            document_id: null,
+            voting_start: '2026-03-26',
+            voting_end: '2026-03-31',
+            status: 'voting',
+            created_at: '2026-03-20T10:00:00',
+          },
+          mockResolutions[1],
+        ])
+      }
+      if (path === '/profile') return Promise.resolve(mockProfilePayload)
+      if (path.includes('/results')) return Promise.resolve(mockResultsPayload)
+      if (path.includes('/my-vote')) return Promise.resolve(null)
+      return Promise.resolve(null)
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Uchwała po terminie')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Okres głosowania zakończony')).toBeInTheDocument()
+    expect(screen.queryByText('Za')).not.toBeInTheDocument()
   })
 
   it('pokazuje oddany głos', async () => {

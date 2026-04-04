@@ -120,6 +120,8 @@ class TestResidentCannotDoAdminOps:
         """POST /api/resolutions wymaga admina."""
         r = client.post("/api/resolutions", headers=resident_headers, json={
             "title": "Próba włamania",
+            "voting_start": "2026-04-01",
+            "voting_end": "2026-04-15",
             "status": "draft",
         })
         assert r.status_code == 403
@@ -319,7 +321,12 @@ class TestUnauthenticatedAccess:
         assert r.status_code == 401
 
     def test_tworzenie_uchwaly_wymaga_auth(self, client):
-        r = client.post("/api/resolutions", json={"title": "Test"})
+        r = client.post("/api/resolutions", json={
+            "title": "Test",
+            "voting_start": "2026-04-01",
+            "voting_end": "2026-04-15",
+            "status": "draft",
+        })
         assert r.status_code == 401
 
     def test_aktualizacja_uchwaly_wymaga_auth(self, client):
@@ -394,6 +401,8 @@ class TestAdminEndpointsRejectResidentTokens:
     def test_tworzenie_uchwaly_odrzuca_resident(self, client, resident_headers):
         r = client.post("/api/resolutions", headers=resident_headers, json={
             "title": "Próba eskalacji",
+            "voting_start": "2026-04-01",
+            "voting_end": "2026-04-15",
             "status": "draft",
         })
         assert r.status_code == 403

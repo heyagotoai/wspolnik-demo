@@ -178,8 +178,12 @@ export default function AdminResolutionsPage() {
       setError('Tytuł musi mieć min. 3 znaki.')
       return
     }
-    if (form.voting_start && form.voting_end && form.voting_end < form.voting_start) {
-      setError('Data końca głosowania musi być późniejsza niż data początku.')
+    if (!form.voting_start.trim() || !form.voting_end.trim()) {
+      setError('Początek i koniec głosowania są wymagane.')
+      return
+    }
+    if (form.voting_end < form.voting_start) {
+      setError('Data końca głosowania musi być taka sama lub późniejsza niż początek.')
       return
     }
 
@@ -208,8 +212,8 @@ export default function AdminResolutionsPage() {
     const payload: Record<string, string | null> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      voting_start: form.voting_start || null,
-      voting_end: form.voting_end || null,
+      voting_start: form.voting_start.trim(),
+      voting_end: form.voting_end.trim(),
       status: form.status,
     }
 
@@ -605,24 +609,29 @@ export default function AdminResolutionsPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Początek głosowania</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Początek głosowania *</label>
                 <input
                   type="date"
+                  required
                   value={form.voting_start}
                   onChange={(e) => setForm({ ...form, voting_start: e.target.value })}
                   className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Koniec głosowania</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Koniec głosowania *</label>
                 <input
                   type="date"
+                  required
                   value={form.voting_end}
                   onChange={(e) => setForm({ ...form, voting_end: e.target.value })}
                   className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                 />
               </div>
             </div>
+            <p className="text-xs text-outline">
+              Daty dotyczą całych dni (kalendarz). Aby przedłużyć głosowanie, ustaw późniejszy koniec przy statusie „Głosowanie otwarte”.
+            </p>
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Status</label>
               <select

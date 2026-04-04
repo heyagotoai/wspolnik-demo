@@ -10,9 +10,14 @@ za obsługę błędów bazy danych podczas współbieżnego głosowania.
 Faktyczny test race condition na żywej bazie → patrz api/tests/load/locustfile.py.
 """
 
+import pytest
+from datetime import date
+
 RESOLUTION_DATA = {
     "id": "res-1",
     "title": "Wymiana windy",
+    "voting_start": "2026-04-01",
+    "voting_end": "2026-04-15",
     "status": "voting",
     "created_at": "2026-03-20T10:00:00",
 }
@@ -45,6 +50,12 @@ def _patch_votes_insert_to_raise(fake_sb, exception_message: str):
 # ── Wyścig: unique constraint ────────────────────────────────────────────────
 
 class TestVotingRaceCondition:
+    @pytest.fixture(autouse=True)
+    def _freeze_today_w_oknie_glosowania(self, monkeypatch):
+        from api.core import resolution_voting_window
+
+        monkeypatch.setattr(resolution_voting_window, "local_today_pl", lambda: date(2026, 4, 10))
+
     def test_unique_constraint_zwraca_409_nie_500(self, resident_client, fake_sb):
         """Wyjątek unique constraint (23505) podczas insertu → 409, nie 500.
 

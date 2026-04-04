@@ -1,7 +1,9 @@
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # --- Shared types ---
@@ -76,12 +78,15 @@ class ContactMessageCreate(BaseModel):
 
 # --- Resolutions (Uchwały) ---
 
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 class ResolutionCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=500)
     description: str | None = Field(default=None, max_length=5000)
     document_id: str | None = None
-    voting_start: str | None = None
-    voting_end: str | None = None
+    voting_start: str = Field(..., min_length=10, max_length=32)
+    voting_end: str = Field(..., min_length=10, max_length=32)
     status: ResolutionStatus = "draft"
 
     @field_validator("title")
@@ -91,13 +96,19 @@ class ResolutionCreate(BaseModel):
             raise ValueError("Tytuł nie może być pusty")
         return v.strip()
 
-    @field_validator("voting_end")
+    @field_validator("voting_start", "voting_end")
     @classmethod
-    def voting_end_after_start(cls, v: str | None, info) -> str | None:
-        start = info.data.get("voting_start")
-        if v and start and v < start:
-            raise ValueError("Data końca głosowania musi być późniejsza niż data początku")
-        return v
+    def iso_date_format(cls, v: str) -> str:
+        s = v.strip()
+        if not _ISO_DATE.match(s):
+            raise ValueError("Oczekiwany format daty: RRRR-MM-DD")
+        return s
+
+    @model_validator(mode="after")
+    def voting_end_after_start(self):
+        if self.voting_end < self.voting_start:
+            raise ValueError("Data końca głosowania musi być taka sama lub późniejsza niż początek")
+        return self
 
 
 class ResolutionUpdate(BaseModel):
@@ -115,13 +126,24 @@ class ResolutionUpdate(BaseModel):
             raise ValueError("Tytuł nie może być pusty")
         return v.strip() if v else v
 
-    @field_validator("voting_end")
+    @field_validator("voting_start", "voting_end")
     @classmethod
-    def voting_end_after_start(cls, v: str | None, info) -> str | None:
-        start = info.data.get("voting_start")
-        if v and start and v < start:
-            raise ValueError("Data końca głosowania musi być późniejsza niż data początku")
-        return v
+    def optional_iso_date(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        s = v.strip()
+        if not _ISO_DATE.match(s):
+            raise ValueError("Oczekiwany format daty: RRRR-MM-DD")
+        return s
+
+    @model_validator(mode="after")
+    def patch_dates_order(self):
+        if self.voting_start is not None and self.voting_end is not None:
+            if self.voting_end < self.voting_start:
+                raise ValueError(
+                    "Data końca głosowania musi być taka sama lub późniejsza niż początek",
+                )
+        return self
 
 
 class ResolutionOut(BaseModel):
