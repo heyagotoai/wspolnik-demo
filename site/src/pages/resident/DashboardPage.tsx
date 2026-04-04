@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds } from '../../lib/readAnnouncements'
 import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
 import { roundMoney2 } from '../../lib/money'
+import { votingPeriodPhase } from '../../lib/resolutionVotingWindow'
 import { MegaphoneIcon, CalendarIcon, FolderIcon, WalletIcon, ArrowRightIcon, VoteIcon } from '../../components/ui/Icons'
 
 interface Announcement {
@@ -18,6 +19,7 @@ interface Announcement {
 interface Resolution {
   id: string
   title: string
+  voting_start: string | null
   voting_end: string | null
 }
 
@@ -33,8 +35,10 @@ export default function DashboardPage() {
   const [apartmentCount, setApartmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
+    if (!silent) setLoading(true)
+    try {
       const [annRes, datesRes, resRes] = await Promise.all([
         supabase
           .from('announcements')
@@ -50,10 +54,9 @@ export default function DashboardPage() {
           .limit(1),
         supabase
           .from('resolutions')
-          .select('id, title, voting_end')
+          .select('id, title, voting_start, voting_end')
           .eq('status', 'voting')
-          .order('created_at', { ascending: false })
-          .limit(3),
+          .order('created_at', { ascending: false }),
       ])
 
       if (annRes.data) {
@@ -63,35 +66,42 @@ export default function DashboardPage() {
           setUnreadIds(new Set(annRes.data.filter((a: Announcement) => !readIds.has(a.id)).map((a: Announcement) => a.id)))
         }
       }
-      if (resRes.data) setResolutions(resRes.data)
+
+      const votingList = (resRes.data ?? []) as Resolution[]
+      setResolutions(votingList)
 
       // Check which active resolutions the user already voted on
       const votedIds = new Set<string>()
-      if (resRes.data?.length && user) {
+      if (votingList.length && user) {
         const { data: votes } = await supabase
           .from('votes')
           .select('resolution_id')
           .eq('resident_id', user.id)
-          .in('resolution_id', resRes.data.map((r: Resolution) => r.id))
-        if (votes) {
+          .in('resolution_id', votingList.map((r: Resolution) => r.id))
+        if (votes?.length) {
           for (const v of votes) votedIds.add(v.resolution_id)
           const titles = new Set(
-            resRes.data
+            votingList
               .filter((r: Resolution) => votedIds.has(r.id))
               .map((r: Resolution) => r.title)
           )
           setVotedResolutionTitles(titles)
+        } else {
+          setVotedResolutionTitles(new Set())
         }
+      } else {
+        setVotedResolutionTitles(new Set())
       }
 
       // Nearest upcoming date: important_dates + voting deadlines user hasn't voted on yet
       const allDates: string[] = []
       if (datesRes.data?.[0]) allDates.push(datesRes.data[0].date)
-      for (const r of resRes.data || []) {
+      for (const r of votingList) {
         if (r.voting_end && !votedIds.has(r.id)) allDates.push(r.voting_end)
       }
       allDates.sort()
       if (allDates.length > 0) setNextDate(allDates[0])
+      else setNextDate(null)
 
       // Fetch balance: payments - charges for user's apartments (including billing groups)
       if (user) {
@@ -154,14 +164,29 @@ export default function DashboardPage() {
             .reduce((s, p) => s + Number(p.amount), 0)
           const initialBalanceSum = apartments.reduce((s, a) => s + (Number(a.initial_balance) || 0), 0)
           setBalance(roundMoney2(initialBalanceSum + totalPayments - totalCharges))
+        } else {
+          setBalance(null)
         }
+      } else {
+        setApartmentCount(0)
+        setBalance(null)
       }
-
-      setLoading(false)
+    } finally {
+      if (!silent) setLoading(false)
     }
-
-    fetchData()
   }, [user])
+
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchData({ silent: true })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [fetchData])
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pl-PL', {
@@ -177,6 +202,11 @@ export default function DashboardPage() {
       </div>
     )
   }
+
+  /** Zgodnie ze stroną Głosowania: tylko uchwały w faktycznym oknie dat (badge „Głosowanie otwarte”). */
+  const openVotingCount = resolutions.filter(
+    (r) => votingPeriodPhase('voting', r.voting_start, r.voting_end) === 'voting',
+  ).length
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -216,7 +246,7 @@ export default function DashboardPage() {
         <DashboardCard
           icon={<VoteIcon className="w-6 h-6" />}
           label="Głosowania"
-          value={`${resolutions.length} aktywnych`}
+          value={`${openVotingCount} aktywnych`}
           to="/panel/glosowania"
         />
       </div>
