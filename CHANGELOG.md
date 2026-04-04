@@ -2,6 +2,11 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-04 — Lokale: „Ostatnie importy wpłat” (admin i zarządca)
+- **`site/src/pages/admin/ApartmentsPage.tsx`** — panel z datą ostatniego importu z zestawienia bankowego (`.xls`), ostatniego importu wpłat z Excela (arkusz Dopasowań) oraz najpóźniejszą **zaksięgowaną** datą wpłaty (`confirmed_by_admin`) z **lokalem** (lub wpłatą zbiorczą) i **kwotą** (sort: `payment_date` ↓, `created_at` ↓); identyfikacja importów po tytułach wpłat zgodnych z `api/routes/import_routes.py`
+- **`docs/instrukcja-admina.md`**, **`docs/architecture/feature-map.md`**
+- Panel **Ostatnie importy wpłat** — zwijany (domyślnie zwinięty), nagłówek z chevronem, `aria-expanded` / `aria-controls`
+
 ### 2026-04-04 — Crony przeniesione z Vercel do GitHub Actions + retencja danych finansowych
 - **`.github/workflows/cron.yml`** — 4 zadania: naliczenia (06:00 UTC), backup (niedziela 02:00 UTC), retencja wiadomości (1. dzień miesiąca 03:00 UTC), retencja finansowa (1. dzień kwartału 04:00 UTC); `workflow_dispatch` — ręczne uruchomienie z UI GitHub
 - **`POST/GET /api/retention/cron`** — kwartalny cron RODO: carry-forward salda (przeniesienie efektu starych naliczeń/wpłat do `initial_balance` przed usunięciem), usuwanie z `charges`, `payments`, `bank_statements` (fallback `created_at` przy NULL `statement_date`), `audit_log` starszych niż 5 lat; powiadomienia email do adminów/zarządców
