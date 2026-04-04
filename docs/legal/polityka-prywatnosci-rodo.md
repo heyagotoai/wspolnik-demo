@@ -33,7 +33,7 @@ Dane osobowe mieszkańców są przetwarzane w następujących celach:
 - **Podstawa prawna:** art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes Administratora polegający na usprawnieniu komunikacji wewnątrz Wspólnoty oraz terminowym informowaniu właścicieli o sprawach dotyczących nieruchomości wspólnej.
 
 ### E. Obsługa wiadomości z formularza kontaktowego
-- **Zakres danych:** imię, adres e-mail, treść wiadomości.
+- **Zakres danych:** imię i nazwisko, adres e-mail, temat, treść wiadomości; w przypadku zalogowanego mieszkańca także numer lokalu przekazywany z profilu.
 - **Podstawa prawna:** art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes Administratora polegający na umożliwieniu kontaktu z Zarządem Wspólnoty.
 
 ## § 3. Odbiorcy danych
@@ -45,7 +45,7 @@ Dane osobowe mieszkańców są przetwarzane w następujących celach:
    - Podmioty uprawnione do uzyskania danych na podstawie przepisów prawa (np. organy administracji publicznej, sądy).
 2. Wspólnota jest zarządzana przez własny Zarząd wybrany spośród właścicieli lokali. Zarząd działa jako organ Wspólnoty (administratora danych), a nie jako odrębny podmiot przetwarzający.
 
-2. Dostawcy infrastruktury IT świadczą usługi na podstawie swoich regulaminów zawierających postanowienia dotyczące powierzenia przetwarzania danych (Data Processing Addendum / DPA) zgodne z wymogami art. 28 RODO. Kopie tych dokumentów są przechowywane w dokumentacji Wspólnoty.
+3. Dostawcy infrastruktury IT świadczą usługi na podstawie swoich regulaminów zawierających postanowienia dotyczące powierzenia przetwarzania danych (Data Processing Addendum / DPA) zgodne z wymogami art. 28 RODO. Kopie tych dokumentów są przechowywane w dokumentacji Wspólnoty.
 
 ## § 4. Przekazywanie danych do państw trzecich
 
@@ -56,7 +56,7 @@ Dane osobowe mieszkańców są przetwarzane w następujących celach:
 
 1. **Dane konta użytkownika** (imię, nazwisko, e-mail, numer lokalu) — przez okres bycia właścicielem lokalu we Wspólnocie. Po zbyciu lokalu konto jest usuwane z Systemu niezwłocznie, z zastrzeżeniem ewentualnego krótkiego okresu przejściowego niezbędnego do zakończenia bieżących rozliczeń.
 2. **Dane z głosowań w Systemie** — przechowywane w Systemie do czasu wygenerowania protokołu z głosowania (wydruk PDF dołączany do dokumentacji Wspólnoty). Wiążącym zapisem jest dokumentacja papierowa przechowywana poza Systemem przez okres wynikający z przepisów prawa (co do zasady do upływu terminu przedawnienia roszczeń z tytułu uchwały, tj. 6 lat — art. 118 Kodeksu cywilnego, lub dłużej w przypadku zaskarżenia uchwały).
-3. **Dane z formularza kontaktowego** — wiadomości nie są przechowywane w Systemie; formularz generuje e-mail do Zarządu Wspólnoty. Jedyną kopią jest wiadomość w skrzynce pocztowej Zarządu.
+3. **Dane z formularza kontaktowego** — treść zgłoszenia jest zapisywana w Systemie (nie dłużej niż 12 miesięcy, następnie usuwana automatycznie), równolegle wysyłane jest powiadomienie e-mail do Zarządu Wspólnoty.
 4. **Dane finansowe (informacyjne)** — prezentowane w Systemie przez okres bycia właścicielem lokalu. Wiążąca dokumentacja księgowa przechowywana jest poza Systemem przez okresy wynikające z ustawy o rachunkowości (5 lat od początku roku następującego po roku obrotowym, którego dotyczą — art. 74 ust. 2 ustawy o rachunkowości).
 
 ## § 6. Prawa osoby, której dane dotyczą

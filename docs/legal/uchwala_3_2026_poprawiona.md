@@ -23,7 +23,7 @@ Właściciele lokali wyrażają zgodę na wykorzystanie systemu informatycznego 
 
 **§ 4.**
 1. Korzystanie z Systemu jest dobrowolne. Właściciel lokalu, który nie korzysta z Systemu, zachowuje prawo do oddania głosu w formie tradycyjnej (pisemnej) przy indywidualnym zbieraniu głosów lub na zebraniu Wspólnoty.
-2. Szczegółowe zasady korzystania z Systemu, w tym zasady bezpieczeństwa konta, tryb głosowania i ochronę danych osobowych, określa Regulamin Systemu WM GABI oraz Polityka Prywatności, przyjęte przez Zarząd Wspólnoty.
+2. Szczegółowe zasady korzystania z Systemu, w tym zasady bezpieczeństwa konta, tryb głosowania i ochronę danych osobowych, określa Regulamin portalu WM GABI oraz Polityka Prywatności, przyjęte przez Zarząd Wspólnoty.
 
 **§ 5.**
 Zarząd Wspólnoty jest zobowiązany do powiadomienia właścicieli o treści każdej uchwały podjętej z wykorzystaniem Systemu, zgodnie z wymogami ustawowymi.

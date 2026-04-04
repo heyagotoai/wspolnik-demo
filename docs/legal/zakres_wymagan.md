@@ -9,7 +9,7 @@
 | # | Dokument | Status | Uwagi |
 |---|----------|--------|-------|
 | 1 | **Polityka Prywatności (RODO)** | ✅ Przygotowany | Wymaga uzupełnienia danych kontaktowych. Zalecana weryfikacja przez prawnika. |
-| 2 | **Regulamin Systemu WM GABI** | ✅ Przygotowany | Wymaga uzupełnienia adresu URL systemu i adresu e-mail. Zalecana weryfikacja przez prawnika. |
+| 2 | **Regulamin portalu WM GABI** | ✅ Przygotowany | Wymaga uzupełnienia adresu URL systemu i adresu e-mail. Zalecana weryfikacja przez prawnika. |
 | 3 | **Uchwała nr 3/2026** | ✅ Przygotowany (poprawiony) | Rozszerzona o klauzulę dobrowolności, odniesienie do regulaminu i RODO. |
 
 ---

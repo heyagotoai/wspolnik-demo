@@ -17,7 +17,7 @@ export default function Footer() {
             </h4>
             <nav className="space-y-2">
               <a href="/docs/polityka-prywatnosci-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności i RODO</a>
-              <a href="/docs/regulamin-wspolnoty.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin wspólnoty</a>
+              <a href="/docs/regulamin-portalu-wmgabi.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin portalu WM GABI</a>
             </nav>
           </div>
 

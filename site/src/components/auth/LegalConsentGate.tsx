@@ -15,7 +15,7 @@ export interface ProfileLegalFields {
 
 type Props = { children: ReactNode }
 
-/** Ładuje profil i blokuje panel do czasu akceptacji polityki i regulaminu. */
+/** Ładuje profil i blokuje panel do czasu akceptacji polityki i regulaminu portalu. */
 export default function LegalConsentGate({ children }: Props) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -107,7 +107,7 @@ export default function LegalConsentGate({ children }: Props) {
           </h1>
           <p className="text-sm text-slate mb-6">
             Aby korzystać z portalu, zaakceptuj obowiązującą wersję polityki prywatności (wersja{' '}
-            <span className="font-medium text-charcoal">{pv}</span>) oraz regulaminu wspólnoty (wersja{' '}
+            <span className="font-medium text-charcoal">{pv}</span>) oraz regulaminu portalu WM GABI (wersja{' '}
             <span className="font-medium text-charcoal">{tv}</span>).
           </p>
           <ul className="text-sm text-slate space-y-2 mb-6">
@@ -123,12 +123,12 @@ export default function LegalConsentGate({ children }: Props) {
             </li>
             <li>
               <a
-                href="/docs/regulamin-wspolnoty.pdf"
+                href="/docs/regulamin-portalu-wmgabi.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sage font-medium hover:text-sage-light underline"
               >
-                Otwórz regulamin wspólnoty (PDF)
+                Otwórz regulamin portalu WM GABI (PDF)
               </a>
             </li>
           </ul>
@@ -149,7 +149,7 @@ export default function LegalConsentGate({ children }: Props) {
                 onChange={(e) => setAcceptTerms(e.target.checked)}
                 className="mt-1 rounded border-cream-medium text-sage focus:ring-sage/30"
               />
-              <span>Oświadczam, że zapoznałem(-am) się z treścią regulaminu wspólnoty i go akceptuję.</span>
+              <span>Oświadczam, że zapoznałem(-am) się z treścią regulaminu portalu WM GABI i go akceptuję.</span>
             </label>
             <button
               type="submit"

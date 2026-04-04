@@ -1,8 +1,8 @@
-# Regulamin Systemu Informatycznego WM GABI
+# Regulamin portalu WM GABI
 
 ## § 1. Postanowienia ogólne
 
-1. Niniejszy Regulamin określa zasady korzystania z systemu informatycznego **WM GABI** (dalej: „System"), udostępnianego właścicielom lokali we Wspólnocie Mieszkaniowej „Gabi" przy ul. Gdańskiej 58 w Chojnicach (dalej: „Wspólnota").
+1. Niniejszy Regulamin określa zasady korzystania z portalu internetowego **WM GABI** (dalej: „System"), udostępnianego właścicielom lokali we Wspólnocie Mieszkaniowej „Gabi" przy ul. Gdańskiej 58 w Chojnicach (dalej: „Wspólnota").
 2. System jest narzędziem wspierającym zarządzanie Wspólnotą, udostępnionym właścicielom lokali na podstawie decyzji Wspólnoty.
 3. System służy do:
   a) usprawnienia komunikacji między Wspólnotą a właścicielami lokali,
@@ -16,7 +16,7 @@
 
 Użyte w niniejszym Regulaminie pojęcia oznaczają:
 
-1. **System** — aplikacja internetowa WM GABI dostępna pod adresem **wmgabi.pl**.
+1. **System** — portal internetowy WM GABI dostępny pod adresem **wmgabi.pl**.
 2. **Użytkownik** — aktualny właściciel lub współwłaściciel lokalu wchodzącego w skład Wspólnoty, posiadający aktywne konto w Systemie.
 3. **Zarząd Wspólnoty** (dalej również: „Zarząd") — zarząd Wspólnoty Mieszkaniowej „Gabi" wybrany spośród właścicieli lokali w rozumieniu art. 20 ustawy o własności lokali.
 4. **Administrator Systemu** — członek Zarządu Wspólnoty lub osoba wyznaczona przez Zarząd do obsługi technicznej Systemu, posiadająca uprawnienia administracyjne.
@@ -33,8 +33,8 @@ Użyte w niniejszym Regulaminie pojęcia oznaczają:
 
 1. Podczas pierwszego logowania (aktywacji konta), Użytkownik składa — poprzez zaznaczenie odpowiednich pól wyboru (checkbox) — następujące oświadczenia:
   a) **„Potwierdzam, że jestem właścicielem/współwłaścicielem lokalu nr [numer] i osobą uprawnioną do oddania głosu w pełnej wysokości udziału przysługującego dla danego lokalu."**
-   b) **„Wyrażam zgodę na składanie oświadczeń woli (oddawanie głosów) w formie dokumentowej za pośrednictwem Systemu WM GABI, zgodnie z art. 77² i 77³ Kodeksu cywilnego."**
-   c) **„Zapoznałem/am się z Regulaminem Systemu WM GABI oraz Polityką Prywatności i akceptuję ich treść."**
+   b) **„Wyrażam zgodę na składanie oświadczeń woli (oddawanie głosów) w formie dokumentowej za pośrednictwem Systemu, zgodnie z art. 77² i 77³ Kodeksu cywilnego."**
+   c) **„Zapoznałem/am się z Regulaminem portalu WM GABI oraz Polityką Prywatności i akceptuję ich treść."**
 2. Złożenie powyższych oświadczeń jest warunkiem korzystania z Systemu.
 3. Treść Regulaminu oraz Polityki Prywatności jest dostępna do zapoznania się przed złożeniem oświadczeń i pozostaje dostępna w Systemie przez cały okres korzystania z konta.
 
@@ -73,7 +73,7 @@ Użyte w niniejszym Regulaminie pojęcia oznaczają:
 ## § 9. Formularz kontaktowy
 
 1. System udostępnia formularz kontaktowy umożliwiający wysłanie wiadomości do Zarządu Wspólnoty.
-2. Dane wprowadzone w formularzu (imię, adres e-mail, treść wiadomości) są przechowywane w Systemie w celu obsługi zgłoszenia oraz przekazywane Zarządowi Wspólnoty w formie powiadomienia e-mail.
+2. Dane wprowadzone w formularzu (imię i nazwisko, adres e-mail, temat, treść wiadomości; w przypadku zalogowanego mieszkańca — numer lokalu przekazywany z profilu) są zapisywane w Systemie w celu obsługi zgłoszenia oraz przekazywane Zarządowi Wspólnoty w formie powiadomienia e-mail.
 3. Przy formularzu kontaktowym wyświetlana jest klauzula informacyjna o przetwarzaniu danych osobowych zgodnie z art. 13 RODO.
 
 ## § 10. Zasady korzystania z Systemu — czynności zabronione
@@ -139,6 +139,6 @@ Użyte w niniejszym Regulaminie pojęcia oznaczają:
 ## § 18. Postanowienia końcowe
 
 1. W sprawach nieuregulowanych niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeks cywilny, ustawa o własności lokali oraz RODO.
-2. Regulamin wchodzi w życie z dniem uruchomienia Systemu WM GABI.
+2. Regulamin wchodzi w życie z dniem uruchomienia Systemu.
 3. Regulamin jest dostępny w Systemie dla każdego Użytkownika przez cały okres korzystania z konta.
 

@@ -219,7 +219,8 @@ export default function ContactPage() {
                 </div>
 
                 <p className="text-xs text-slate leading-relaxed">
-                  Administratorem Twoich danych osobowych jest Wspólnota Mieszkaniowa „Gabi", ul. Gdańska 58, 89-604 Chojnice. Dane podane w formularzu (imię, adres e-mail, treść wiadomości) będą przetwarzane wyłącznie w celu obsługi zgłoszenia, na podstawie art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes Administratora). Masz prawo dostępu do danych, ich sprostowania, usunięcia oraz wniesienia skargi do UODO (ul. Stawki 2, Warszawa). Szczegóły: <a href="/docs/polityka-prywatnosci-rodo.pdf" className="underline hover:text-charcoal">Polityka Prywatności i RODO</a>.
+                  Administratorem Twoich danych osobowych jest Wspólnota Mieszkaniowa „Gabi", ul. Gdańska 58, 89-604 Chojnice. Dane podane w formularzu (imię i nazwisko, adres e-mail, temat, treść wiadomości
+                  {isLoggedIn ? ', numer lokalu z profilu' : ''}) będą przetwarzane wyłącznie w celu obsługi zgłoszenia, na podstawie art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes Administratora). Masz prawo dostępu do danych, ich sprostowania, usunięcia oraz wniesienia skargi do UODO (ul. Stawki 2, Warszawa). Szczegóły: <a href="/docs/polityka-prywatnosci-rodo.pdf" className="underline hover:text-charcoal">Polityka Prywatności i RODO</a>.
                 </p>
 
                 <button

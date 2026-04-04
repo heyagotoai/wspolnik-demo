@@ -35,7 +35,7 @@ import DocumentsPage from './DocumentsPage'
 const mockDocuments = [
   {
     id: 'd1',
-    name: 'Regulamin wspólnoty',
+    name: 'Regulamin portalu WM GABI',
     category: 'regulamin',
     file_path: '1700000000_regulamin.pdf',
     file_size: '2.1 MB',
@@ -83,7 +83,7 @@ describe('Resident DocumentsPage', () => {
     expect(screen.getByText('Ładowanie...')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText('Regulamin wspólnoty')).toBeInTheDocument()
+      expect(screen.getByText('Regulamin portalu WM GABI')).toBeInTheDocument()
     })
     expect(screen.getByText('Formularz zgłoszenia')).toBeInTheDocument()
   })
@@ -102,12 +102,12 @@ describe('Resident DocumentsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Regulamin wspólnoty')).toBeInTheDocument()
+      expect(screen.getByText('Regulamin portalu WM GABI')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: 'Regulaminy' }))
 
-    expect(screen.getByText('Regulamin wspólnoty')).toBeInTheDocument()
+    expect(screen.getByText('Regulamin portalu WM GABI')).toBeInTheDocument()
     expect(screen.queryByText('Formularz zgłoszenia')).not.toBeInTheDocument()
   })
 
@@ -117,7 +117,7 @@ describe('Resident DocumentsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Regulamin wspólnoty')).toBeInTheDocument()
+      expect(screen.getByText('Regulamin portalu WM GABI')).toBeInTheDocument()
     })
 
     const downloadButtons = screen.getAllByTitle('Pobierz')
@@ -137,7 +137,7 @@ describe('Resident DocumentsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText('Regulamin wspólnoty')).toBeInTheDocument()
+      expect(screen.getByText('Regulamin portalu WM GABI')).toBeInTheDocument()
     })
 
     const downloadButtons = screen.getAllByTitle('Pobierz')

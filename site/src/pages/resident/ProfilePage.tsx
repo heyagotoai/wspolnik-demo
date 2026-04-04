@@ -253,7 +253,7 @@ export default function ProfilePage() {
           <span className="font-medium text-charcoal">
             {profile.current_privacy_version ?? '—'}
           </span>{' '}
-          oraz regulamin wspólnoty{' '}
+          oraz regulamin portalu WM GABI{' '}
           <span className="font-medium text-charcoal">
             {profile.current_terms_version ?? '—'}
           </span>
@@ -263,7 +263,7 @@ export default function ProfilePage() {
           <p className="text-sm text-slate">
             Twoja ostatnia akceptacja: polityka (wersja {profile.privacy_version},{' '}
             {profile.privacy_accepted_at ? formatDate(profile.privacy_accepted_at) : '—'}), regulamin
-            (wersja {profile.terms_version},{' '}
+            portalu WM GABI (wersja {profile.terms_version},{' '}
             {profile.terms_accepted_at ? formatDate(profile.terms_accepted_at) : '—'}).
           </p>
         ) : (
@@ -284,12 +284,12 @@ export default function ProfilePage() {
           </li>
           <li>
             <a
-              href="/docs/regulamin-wspolnoty.pdf"
+              href="/docs/regulamin-portalu-wmgabi.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sage font-medium hover:text-sage-light underline"
             >
-              Regulamin wspólnoty (PDF)
+              Regulamin portalu WM GABI (PDF)
             </a>
           </li>
         </ul>
