@@ -2,6 +2,20 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-14 — Bezpieczeństwo sesji: stabilna referencja user + auto-wylogowanie po bezczynności
+- **`site/src/hooks/useAuth.ts`** — `onAuthStateChange`: zachowuje stabilną referencję `user` gdy `id` się nie zmienił (fix: `TOKEN_REFRESHED` nie powoduje już odmontowania widoków i utraty stanu formularzy)
+- **`site/src/hooks/useIdleLogout.ts`** — nowy hook: timer bezczynności niezależny od widoczności karty (karta w tle wygasa tak samo jak aktywna); aktywność (`mousemove/mousedown/keydown/touchstart/scroll`) resetuje timer; w trakcie ostrzeżenia wymagany jawny klik; zwraca `{ warning, remainingSec, extend }`
+- **`site/src/components/auth/IdleWarningDialog.tsx`** — modal ostrzeżenia z odliczaniem sekund i przyciskiem „Zostaję — przedłuż sesję"
+- **`site/src/components/auth/AdminRoute.tsx`** — auto-wylogowanie po **15 min** bezczynności + ostrzeżenie przez ostatnie **60 s**
+- **`site/src/components/auth/ProtectedRoute.tsx`** — auto-wylogowanie po **30 min** bezczynności (bez ostrzeżenia)
+
+### 2026-04-05 — Dokumentacja: `KARTA_PRODUKTU` / `KARTA_PRODUKTU_OFERTA` zsynchronizowane z aplikacją
+- **Role:** doprecyzowanie **zarządcy** (read-only + CRUD ogłoszeń/terminów; bez naliczeń, importów, salda, zawiadomień o opłatach)
+- **Panel:** wspólne URL admin/zarządca; **Lokale** — `billing_surname`, podgląd wpłat, ostatnie importy; **Naliczenia** — zawiadomienia o opłatach (PDF, e‑mail, masowo); saldo — **masowa** wysyłka
+- **Powiadomienia:** zawiadomienia o opłatach, e‑mail po tygodniowym backupie
+- **Niefunkcjonalne / bezpieczeństwo:** backup tygodniowy do magazynu plików + retencja plików (~12 tyg.), retencja finansów 5 lat jako proces zautomatyzowany
+- **Oferta:** Wariant B — dopisanie zawiadomień o opłatach, zarządcy, backupu
+
 ### 2026-04-04 — Strona publiczna: aktualności z bazy, jawność ogłoszeń, nawigacja
 - **Migracje `021_announcements_is_public.sql`**, **`022_announcements_is_public_default_false.sql`** — kolumna `is_public`, RLS: anon widzi tylko jawne wpisy; zalogowany — pełna lista w panelu; domyślna wartość `false` dla nowych wierszy bez jawnej wartości
 - **`site/src/lib/loadPublicAnnouncements.ts`** — pobieranie + deduplikacja auto-ogłoszeń głosowań; **`announcementPreview`**; testy

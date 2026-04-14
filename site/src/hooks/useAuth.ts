@@ -29,9 +29,16 @@ export function useAuthProvider(): AuthState {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
+      (event, nextSession) => {
+        setSession(nextSession)
+        setUser((prev) => {
+          const nextUser = nextSession?.user ?? null
+          // Zachowaj stabilną referencję user przy TOKEN_REFRESHED / USER_UPDATED,
+          // gdy id się nie zmienia — inaczej hooki z deps [user] niepotrzebnie
+          // refetchują po powrocie do karty i odmontowują widoki (tracąc stan formularzy).
+          if (prev && nextUser && prev.id === nextUser.id) return prev
+          return nextUser
+        })
         if (event === 'SIGNED_OUT' && !signingOut.current) {
           sessionStorage.setItem('session_expired', '1')
         }

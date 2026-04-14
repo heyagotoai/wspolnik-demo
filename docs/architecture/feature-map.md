@@ -41,6 +41,8 @@
 ### Faza: Hardening (wymagane przed wdrożeniem)
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
+| Auto-wylogowanie po bezczynności | ✅ done | WYSOKI | `useIdleLogout`: admin 15 min (ostrzeżenie 60 s + modal), mieszkaniec 30 min; timer niezależny od widoczności karty |
+| Stabilna referencja user (TOKEN_REFRESHED) | ✅ done | WYSOKI | `useAuth.onAuthStateChange` — brak odmontowania widoków przy odświeżeniu tokenu; formularze zachowują stan |
 | Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 55 testów: auth, role, izolacja danych, privilege escalation, reset głosów |
 | Pentest RLS na żywej bazie | ✅ done | KRYTYCZNY | 2026-03-27: 19/19 testów zaliczonych. RLS, IDOR, autentykacja, XSS, Storage — brak luk. Raport: `docs/security/pentest-2026-03-27.md` |
 | Pentest IDOR frontend | ✅ done | KRYTYCZNY | 2026-03-27: admin endpointy (5/5 → 403), głosowanie IDOR (resident_id z JWT), brak dangerouslySetInnerHTML — patrz raport |
