@@ -1,6 +1,6 @@
 # UCHWAŁA NR 3/2026
-**Wspólnoty Mieszkaniowej „Gabi" przy ul. Gdańskiej 58 w Chojnicach**
-**z dnia 31.03.2026 r.**
+**Wspólnoty Mieszkaniowej „________" przy ul. __________ w _______**
+**z dnia __________ r.**
 
 **podjęta w drodze indywidualnego zbierania głosów (w tym z wykorzystaniem środków komunikacji elektronicznej)**
 

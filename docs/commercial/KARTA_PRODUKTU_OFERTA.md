@@ -7,7 +7,7 @@
 
 ## 1. Cel projektu
 
-Potrzebuję webowej aplikacji do zarządzania małą wspólnotą mieszkaniową. System ma zastąpić arkusze Excel, papierowe głosowania i ręczne powiadomienia. Trzy warstwy dostępu: strona publiczna, panel mieszkańca, panel administratora. Aplikacja na własnej domenie wspólnoty.
+Potrzebuję webowej aplikacji do zarządzania małą wspólnotą mieszkaniową. System ma zastąpić arkusze Excel, papierowe głosowania i ręczne powiadomienia. Trzy warstwy dostępu: strona publiczna, panel mieszkańca, panel administracyjny (administrator oraz — w ograniczonym zakresie — zarządca). Aplikacja na własnej domenie wspólnoty.
 
 **Skala:** wspólnota ~50 lokali/mieszkańców, administrator + zarządca.
 
@@ -19,7 +19,7 @@ Potrzebuję webowej aplikacji do zarządzania małą wspólnotą mieszkaniową. 
 |------|-----|-------------|
 | Gość | Każdy bez logowania | Przeglądanie strony publicznej, formularz kontaktowy |
 | Mieszkaniec | Właściciel lokalu | Panel z finansami, głosowaniami, dokumentami. Widzi TYLKO swoje dane |
-| Zarządca | Osoba zarządzająca (ograniczone prawa) | Podgląd finansów, ogłoszenia, terminy. Bez edycji stawek, bez zarządzania kontami |
+| Zarządca | Osoba zarządzająca (ograniczone prawa) | Podgląd read-only: finanse, lokale, mieszkańcy, dokumenty, uchwały, wiadomości z kontaktu, dziennik operacji. Pełny CRUD: ogłoszenia (w tym jawność, wysyłka e‑mail ogłoszenia) i terminy. Bez m.in.: kont mieszkańców, stawek, generowania naliczeń, importów, wysyłki salda i zawiadomień o opłatach |
 | Administrator | Pełne zarządzanie | Wszystko: CRUD mieszkańców, lokali, naliczeń, stawek, uchwał, dokumentów |
 
 Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zaproszenie emailem).
@@ -50,11 +50,13 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Głosowania** — lista uchwał (aktywne/zamknięte), oddawanie głosów (za/przeciw/wstrzymuję się), pasek wyników w czasie rzeczywistym
 - **Profil** — edycja danych osobowych, zmiana hasła; zgodnie z RODO: potwierdzenie akceptacji polityki prywatności i regulaminu przy wejściu do portalu (lub po aktualizacji dokumentów); przejrzysty podgląd zaakceptowanych wersji i kanał kontaktu w sprawie danych
 
-### 3.3 Panel administratora
+### 3.3 Panel administratora (i zarządcy — ograniczony zakres)
+
+Ten sam zestaw tras URL co u zarządcy; pełny zakres poniżej = **administrator**. Ograniczenia zarządcy — tabela ról (pkt 2).
 
 - **Dashboard** — statystyki: liczba mieszkańców, lokali, ogłoszeń, dokumentów
 - **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem
-- **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, saldo początkowe + data obowiązywania salda. Możliwość hurtowego ustawiania daty salda
+- **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, opcjonalna grupa rozliczeniowa, **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy, saldo początkowe + data obowiązywania salda. Hurtowe ustawianie daty salda; **podgląd wpłat** lokalu; skrót **ostatnich importów** (bank / Excel)
 - **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
 - **Import wpłat z Excela** — arkusz Dopasowania: kolumny Lokal, Data wpłaty, Kwota (inne ignorowane); wiele dat/kwot po średniku; wpłata zbiorcza = parent + automatyczne rozbicie per lokal; **deduplikacja** po parze (lokal, data) względem bazy i w obrębie tego samego pliku (ponowny import nie dubluje wpłat)
 - **Grupy rozliczeniowe** — łączenie lokali w grupę, wpłaty grupowe z podziałem, saldo łączne u mieszkańca
@@ -69,6 +71,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
   - Zarządzanie stawkami z wersjonowaniem (data obowiązywania "od")
   - Podsumowania per typ naliczenia + suma zbiorcza
   - Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym (ochrona przed podwójnym naliczeniem)
+  - **Zawiadomienia o opłatach** — podgląd PDF, wysyłka e‑mail (pojedynczo i masowo), edycja podstawy prawnej, wybór miesiąca obowiązywania
 - **Uchwały i głosowania**
   - Workflow statusów: szkic → głosowanie → zamknięte
   - Rejestracja **głosów z zebrania** (osobiście) w szkicu przed publikacją — ten sam zapis co głos online, brak podwójnego głosu w panelu
@@ -79,14 +82,16 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
 - **Dziennik operacji** — historia wszystkich operacji finansowych i głosowań (kto, co, kiedy), filtrowanie po obszarze systemu i zakresie dat, podgląd szczegółów zmian
 - **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona
-- **Powiadomienie email o saldzie** — wysyłka informacji o saldzie na email mieszkańca jednym kliknięciem
+- **Powiadomienie email o saldzie** — wysyłka na e‑mail mieszkańca z załącznikiem PDF (pojedynczo i **masowo** z wyborem lokali)
 - **Import zestawienia bankowego (.xls)** — plik zestawienia z banku (stary Excel); automatyczne dopasowanie przelewów do lokali po **nazwisku rozliczeniowym** (`billing_surname`) i numerze lokalu z opisu/adresu; podgląd (dry-run) i zapis; **deduplikacja** po parze (lokal, data) jak przy imporcie z Excela; niedopasowane pozycje w raporcie. Format **MT940** — opcjonalnie, gdy bank go dostarczy (osobna ścieżka)
 
 ### 3.4 Powiadomienia email
 
 - Wysyłka ogłoszeń emailem do wszystkich mieszkańców
-- Powiadomienie o saldzie (indywidualnie per mieszkaniec)
+- Powiadomienie o saldzie (indywidualnie i masowo, PDF w załączniku)
+- Zawiadomienia o opłatach (PDF, pojedynczo i masowo)
 - Powiadomienie z formularza kontaktowego do admina
+- E‑mail do administratorów po **tygodniowym backupie** (sukces / błąd)
 - Konfiguracja SMTP na domenie wspólnoty (np. powiadomienia@wspolnota.pl)
 
 ---
@@ -100,7 +105,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 | Izolacja danych | Mieszkaniec widzi TYLKO swoje dane: swój lokal, swoje naliczenia, swoje wpłaty, swoje głosy. Nie może zobaczyć danych innego mieszkańca |
 | RODO/GDPR | Minimalizacja danych osobowych, prawo do usunięcia konta i danych, pseudonimizacja w logach |
 | Audit log | Logowanie operacji finansowych (kto, co, kiedy) — wymóg prawny |
-| Retencja danych | Automatyczne usuwanie danych finansowych starszych niż 5 lat |
+| Retencja danych | Automatyczne usuwanie danych finansowych starszych niż 5 lat (zaplanowany proces / cron) |
 | Ochrona formularzy | Rate limiting na formularzu kontaktowym, ochrona przed XSS i injection |
 | Testy bezpieczeństwa | Testy jednostkowe + testy izolacji danych + pentest przed wdrożeniem |
 
@@ -115,7 +120,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 | Dostępność | Hosting z SLA 99.9%+, automatyczne SSL |
 | Koszty utrzymania | Minimalne — darmowe/tanie plany hostingu (Vercel free, Supabase free wystarczą dla tej skali) |
 | Domena | System na własnej domenie wspólnoty (np. wspolnota.pl) |
-| Backup | Automatyczne backupy bazy danych, procedura przywracania |
+| Backup | Backupy po stronie dostawcy bazy; dodatkowo tygodniowy eksport wybranych danych do magazynu plików (np. JSON), retencja np. 12 ostatnich tygodni, powiadomienie e‑mail do adminów; procedura przywracania udokumentowana |
 | CI/CD | Automatyczne testy przy każdym pushu, blokowanie deploy przy błędach |
 | Testy E2E | Automatyczne testy kluczowych ścieżek (logowanie, głosowanie, finanse) |
 
@@ -148,7 +153,7 @@ Proszę o wycenę w wariantach:
 Strona publiczna + panel mieszkańca (finanse, dokumenty, profil) + panel admina (mieszkańcy, lokale, ogłoszenia, dokumenty, naliczenia). Bez głosowań, bez importu bankowego, bez roli zarządcy.
 
 ### Wariant B — Pełny produkt
-Wszystko z sekcji 3 (strona publiczna, panel mieszkańca, panel admina z głosowaniami, naliczeniami, eksportem PDF, powiadomieniami email, wydrukiem salda).
+Wszystko z sekcji 3 (strona publiczna, panel mieszkańca, panel admina z głosowaniami, naliczeniami, zawiadomieniami o opłatach, eksportem PDF, powiadomieniami e‑mail, masową wysyłką salda, rolą zarządcy, importami, tygodniowym backupem z retencją plików).
 
 **W każdym wariancie proszę o podanie:**
 - Szacunek godzin pracy
@@ -190,5 +195,5 @@ Jestem otwarty na inne propozycje, jeśli uzasadnione.
 
 ---
 
-*Zapytanie ofertowe — marzec 2026*
+*Zapytanie ofertowe — kwiecień 2026*
 *Kontakt: [do uzupełnienia]*
