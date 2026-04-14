@@ -67,7 +67,7 @@
 |---------|--------|-----------|------|
 | SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
 | Import z zestawienia bankowego (.xls) | ✅ done | WYSOKI | `POST /api/import/payments-bank-statement`; dopasowanie po `billing_surname` i numerach lokali z opisu/adresu; deduplikacja `(lokal, data)` — [[ADR-014-payment-import-deduplication|ADR-014]]; parser: `api/services/bank_statement_parser.py` |
-| Import bankowy (MT940) | ⏸ czeka | ŚREDNI | Czeka na format eksportu z banku (opcjonalnie, jeśli .xls nie wystarczy) |
+| Import bankowy (MT940) | ❌ odrzucono | — | Niewymagane; pozostajemy przy `.xls` (zestawienia) i `.xlsx` (import ręczny) |
 | Import Excel — saldo / stan początkowy lokali | ✅ done | WYSOKI | Szablon + upload z panelu Lokale; `GET/POST /api/import/*`; nie zastępuje importu wyciągów bankowych |
 | Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; deduplikacja `(lokal, data)` jak w imporcie bankowym — [[ADR-014-payment-import-deduplication|ADR-014]] |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |

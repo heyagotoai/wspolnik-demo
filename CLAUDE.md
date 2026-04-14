@@ -70,7 +70,7 @@ cd api && pytest
 - **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`.
 - **Stan początkowy i wpłaty z Excel (.xlsx)** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale.
 - **Deduplikacja wpłat** (import `.xls` i import wpłat `.xlsx`) — para `(apartment_id, payment_date)`; ponowny import tego samego pliku nie dubluje zapisów; szczegóły: `docs/decisions/ADR-014-payment-import-deduplication.md`.
-- **MT940** — format eksportu z banku **nie jest jeszcze potwierdzony**; schemat (`payments`, `bank_statements`) jest przygotowany.
+- **MT940** — niewymagane; pozostajemy przy zestawieniach bankowych w `.xls` i imporcie ręcznym `.xlsx`.
 
 ### Testy (WYMAGANE)
 - **Wersje bibliotek** — `api/requirements.txt` używa `==` dla wszystkich pakietów; `site/package.json` ma przypięte wersje bez `^`/`~` (spójnie z `package-lock.json`). Podbicie wersji: świadomie, po testach (`pytest`, `npm test`).
