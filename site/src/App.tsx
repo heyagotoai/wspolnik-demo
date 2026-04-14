@@ -27,6 +27,11 @@ import AdminAuditLogPage from './pages/admin/AuditLogPage'
 import ResidentResolutionsPage from './pages/resident/ResolutionsPage'
 import ProfilePage from './pages/resident/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
+import {
+  CommunityRulesPage,
+  GdprClausePage,
+  PrivacyPolicyPage,
+} from './pages/legal/LegalDemoPages'
 import { AuthContext, useAuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -41,6 +46,9 @@ function AppRoutes() {
         <Route path="/aktualnosci" element={<NewsPage />} />
         <Route path="/dokumenty" element={<DocumentsPage />} />
         <Route path="/kontakt" element={<ContactPage />} />
+        <Route path="/polityka-prywatnosci" element={<PrivacyPolicyPage />} />
+        <Route path="/klauzula-rodo" element={<GdprClausePage />} />
+        <Route path="/regulamin-wspolnoty" element={<CommunityRulesPage />} />
       </Route>
 
       <Route path="/logowanie" element={<LoginPage />} />

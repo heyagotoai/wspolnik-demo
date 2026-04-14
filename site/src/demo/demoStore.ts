@@ -386,7 +386,7 @@ function seed() {
     {
       id: docUchwala,
       name: 'Projekt uchwały — fundusz remontowy',
-      category: 'uchwały',
+      category: 'Uchwały',
       file_path: 'demo/uchwala_fundusz.pdf',
       file_size: '240 KB',
       is_public: false,
@@ -396,7 +396,7 @@ function seed() {
     {
       id: gid('f', 3),
       name: 'Protokół z zebrania 2025',
-      category: 'protokoły',
+      category: 'Protokoły',
       file_path: 'demo/protokol_2025.pdf',
       file_size: '310 KB',
       is_public: true,
@@ -406,7 +406,7 @@ function seed() {
     {
       id: gid('f', 4),
       name: 'Sprawozdanie finansowe — skrót',
-      category: 'finanse',
+      category: 'Finanse',
       file_path: 'demo/sprawozdanie.pdf',
       file_size: '89 KB',
       is_public: true,
@@ -416,7 +416,7 @@ function seed() {
     {
       id: gid('f', 5),
       name: 'Umowa na utrzymanie czystości',
-      category: 'umowy',
+      category: 'Umowy',
       file_path: 'demo/utrzymanie.pdf',
       file_size: '156 KB',
       is_public: false,
