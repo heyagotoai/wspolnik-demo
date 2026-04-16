@@ -150,16 +150,16 @@ describe('ProfilePage', () => {
     const inputs = screen.getAllByDisplayValue('')
     // password inputs: current, new, confirm
     const passwordInputs = inputs.filter((el) => el.tagName === 'INPUT')
-    await user.type(passwordInputs[0], 'stare123')
-    await user.type(passwordInputs[1], 'nowe123')
-    await user.type(passwordInputs[2], 'nowe123')
+    await user.type(passwordInputs[0], 'Stare123')
+    await user.type(passwordInputs[1], 'Nowe1234')
+    await user.type(passwordInputs[2], 'Nowe1234')
 
     await user.click(screen.getByText('Zmień hasło'))
 
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith('/profile/change-password', {
-        current_password: 'stare123',
-        new_password: 'nowe123',
+        current_password: 'Stare123',
+        new_password: 'Nowe1234',
       })
     })
   })
