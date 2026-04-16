@@ -1,5 +1,7 @@
 """Tests for profile endpoints (GET/PATCH /profile, POST /profile/change-password)."""
 
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
 
 from api.core.config import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
@@ -175,24 +177,28 @@ def test_update_profile_empty_name(fake_sb, resident_client):
 
 
 def test_change_password_success(fake_sb, resident_client):
-    fake_sb.auth.sign_in_with_password.return_value = True
+    tmp_sb = MagicMock()
+    tmp_sb.auth.sign_in_with_password.return_value = True
     fake_sb.auth.admin.update_user_by_id.return_value = True
-    r = resident_client.post("/api/profile/change-password", json={
-        "current_password": "old123",
-        "new_password": "new123",
-    })
+    with patch("api.routes.profile.create_client", return_value=tmp_sb):
+        r = resident_client.post("/api/profile/change-password", json={
+            "current_password": "old123",
+            "new_password": "new123",
+        })
     assert r.status_code == 200
     assert "zmienione" in r.json()["detail"].lower()
-    fake_sb.auth.sign_in_with_password.assert_called_once()
+    tmp_sb.auth.sign_in_with_password.assert_called_once()
     fake_sb.auth.admin.update_user_by_id.assert_called_once()
 
 
 def test_change_password_wrong_current(fake_sb, resident_client):
-    fake_sb.auth.sign_in_with_password.side_effect = Exception("Invalid credentials")
-    r = resident_client.post("/api/profile/change-password", json={
-        "current_password": "wrong",
-        "new_password": "new123",
-    })
+    tmp_sb = MagicMock()
+    tmp_sb.auth.sign_in_with_password.side_effect = Exception("Invalid credentials")
+    with patch("api.routes.profile.create_client", return_value=tmp_sb):
+        r = resident_client.post("/api/profile/change-password", json={
+            "current_password": "wrong",
+            "new_password": "new123",
+        })
     assert r.status_code == 400
     assert "nieprawidłowe" in r.json()["detail"].lower()
 

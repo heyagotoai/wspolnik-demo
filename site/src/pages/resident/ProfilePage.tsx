@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [showCurrentPw, setShowCurrentPw] = useState(false)
   const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
 
   const { toast } = useToast()
 
@@ -356,14 +357,23 @@ export default function ProfilePage() {
           {/* Confirm password */}
           <div>
             <label className="block text-sm text-slate mb-1">Powtórz nowe hasło</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPw ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full px-3 py-2 pr-14 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPw(!showConfirmPw)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-slate text-xs"
+              >
+                {showConfirmPw ? 'Ukryj' : 'Pokaż'}
+              </button>
+            </div>
           </div>
 
           <button

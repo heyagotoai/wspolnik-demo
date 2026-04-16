@@ -115,17 +115,24 @@ def change_password(body: ChangePassword, user: dict = Depends(get_current_user)
     """Change current user's password. Verifies old password first."""
     # password length validation (min 6) handled by Pydantic
 
-    sb = get_supabase()
+    from supabase import create_client
+    from api.core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+
+    # Use a temporary client for sign_in to avoid tainting the global
+    # singleton's auth state (sign_in_with_password switches session
+    # from service_role to user, breaking subsequent admin calls).
+    tmp = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     # Verify current password by attempting sign-in
     try:
-        sb.auth.sign_in_with_password(
+        tmp.auth.sign_in_with_password(
             {"email": user["email"], "password": body.current_password}
         )
     except Exception:
         raise HTTPException(status_code=400, detail="Obecne hasło jest nieprawidłowe")
 
-    # Update password via admin API
+    # Update password via admin API (use the global client — its state is clean)
+    sb = get_supabase()
     try:
         sb.auth.admin.update_user_by_id(
             user["sub"], {"password": body.new_password}
