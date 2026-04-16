@@ -121,8 +121,13 @@ export default function ResidentsPage() {
         }
       } else {
         // Create via FastAPI backend (uses service_role to create auth user)
-        if (!form.password || form.password.length < 6) {
-          setError('Hasło musi mieć min. 6 znaków.')
+        if (!form.password || form.password.length < 8) {
+          setError('Hasło musi mieć min. 8 znaków.')
+          setSaving(false)
+          return
+        }
+        if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/\d/.test(form.password)) {
+          setError('Hasło musi zawierać wielką literę, małą literę i cyfrę.')
           setSaving(false)
           return
         }
@@ -256,7 +261,7 @@ export default function ResidentsPage() {
                   maxLength={128}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="min. 6 znaków"
+                  placeholder="min. 8 znaków, wielka/mała litera, cyfra"
                   className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                 />
               </div>

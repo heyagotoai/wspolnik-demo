@@ -83,8 +83,20 @@ export default function ProfilePage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (newPassword.length < 6) {
-      toast('Nowe hasło musi mieć minimum 6 znaków', 'error')
+    if (newPassword.length < 8) {
+      toast('Hasło musi mieć minimum 8 znaków', 'error')
+      return
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      toast('Hasło musi zawierać wielką literę', 'error')
+      return
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      toast('Hasło musi zawierać małą literę', 'error')
+      return
+    }
+    if (!/\d/.test(newPassword)) {
+      toast('Hasło musi zawierać cyfrę', 'error')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -340,7 +352,7 @@ export default function ProfilePage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-3 py-2 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage pr-10"
               />
               <button
@@ -351,7 +363,7 @@ export default function ProfilePage() {
                 {showNewPw ? 'Ukryj' : 'Pokaż'}
               </button>
             </div>
-            <p className="text-xs text-outline mt-1">Minimum 6 znaków</p>
+            <p className="text-xs text-outline mt-1">Min. 8 znaków, wielka i mała litera, cyfra</p>
           </div>
 
           {/* Confirm password */}
@@ -363,7 +375,7 @@ export default function ProfilePage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-3 py-2 pr-14 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
               />
               <button

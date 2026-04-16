@@ -16,12 +16,30 @@ ChargeRateType = Literal["eksploatacja", "fundusz_remontowy", "smieci"]
 
 # --- Residents ---
 
+def _validate_password_strength(v: str) -> str:
+    """Min 8 chars, at least one uppercase, one lowercase, one digit."""
+    if len(v) < 8:
+        raise ValueError("Hasło musi mieć minimum 8 znaków")
+    if not re.search(r"[A-Z]", v):
+        raise ValueError("Hasło musi zawierać wielką literę")
+    if not re.search(r"[a-z]", v):
+        raise ValueError("Hasło musi zawierać małą literę")
+    if not re.search(r"\d", v):
+        raise ValueError("Hasło musi zawierać cyfrę")
+    return v
+
+
 class ResidentCreate(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=6, max_length=128)
+    password: str = Field(..., min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
     apartment_number: str | None = Field(default=None, max_length=20)
     role: RoleType = "resident"
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return _validate_password_strength(v)
 
     @field_validator("full_name")
     @classmethod
@@ -234,7 +252,12 @@ class ProfileUpdate(BaseModel):
 
 class ChangePassword(BaseModel):
     current_password: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=6, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        return _validate_password_strength(v)
 
 
 # --- Charge Rates (Stawki naliczeń) ---

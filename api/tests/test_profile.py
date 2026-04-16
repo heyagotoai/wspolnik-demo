@@ -182,8 +182,8 @@ def test_change_password_success(fake_sb, resident_client):
     fake_sb.auth.admin.update_user_by_id.return_value = True
     with patch("api.routes.profile.create_client", return_value=tmp_sb):
         r = resident_client.post("/api/profile/change-password", json={
-            "current_password": "old123",
-            "new_password": "new123",
+            "current_password": "Old12345",
+            "new_password": "New12345",
         })
     assert r.status_code == 200
     assert "zmienione" in r.json()["detail"].lower()
@@ -197,7 +197,7 @@ def test_change_password_wrong_current(fake_sb, resident_client):
     with patch("api.routes.profile.create_client", return_value=tmp_sb):
         r = resident_client.post("/api/profile/change-password", json={
             "current_password": "wrong",
-            "new_password": "new123",
+            "new_password": "New12345",
         })
     assert r.status_code == 400
     assert "nieprawidłowe" in r.json()["detail"].lower()
@@ -206,6 +206,22 @@ def test_change_password_wrong_current(fake_sb, resident_client):
 def test_change_password_too_short(fake_sb, resident_client):
     r = resident_client.post("/api/profile/change-password", json={
         "current_password": "old123",
-        "new_password": "ab",
+        "new_password": "Ab1",
     })
-    assert r.status_code == 422  # Pydantic validation (min_length=6)
+    assert r.status_code == 422  # Pydantic validation (min_length=8)
+
+
+def test_change_password_missing_uppercase(fake_sb, resident_client):
+    r = resident_client.post("/api/profile/change-password", json={
+        "current_password": "old123",
+        "new_password": "abcdefg1",
+    })
+    assert r.status_code == 422
+
+
+def test_change_password_missing_digit(fake_sb, resident_client):
+    r = resident_client.post("/api/profile/change-password", json={
+        "current_password": "old123",
+        "new_password": "Abcdefgh",
+    })
+    assert r.status_code == 422
