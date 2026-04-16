@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.core.config import CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
+from supabase import create_client
+
+from api.core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
 from api.core.security import get_current_user
 from api.core.supabase_client import get_supabase
 from api.core.voting_eligibility import check_resolution_vote_eligibility
@@ -114,9 +116,6 @@ def accept_legal_consent(body: LegalConsentBody, user: dict = Depends(get_curren
 def change_password(body: ChangePassword, user: dict = Depends(get_current_user)):
     """Change current user's password. Verifies old password first."""
     # password length validation (min 6) handled by Pydantic
-
-    from supabase import create_client
-    from api.core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
     # Use a temporary client for sign_in to avoid tainting the global
     # singleton's auth state (sign_in_with_password switches session
