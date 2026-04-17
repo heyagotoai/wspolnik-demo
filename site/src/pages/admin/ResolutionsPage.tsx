@@ -795,7 +795,7 @@ export default function AdminResolutionsPage() {
               role="dialog"
               aria-modal
               aria-labelledby="meeting-votes-title"
-              className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col"
+              className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-3xl max-h-[90vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-cream-deep shrink-0">

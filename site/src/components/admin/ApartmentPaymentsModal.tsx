@@ -125,7 +125,7 @@ export default function ApartmentPaymentsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-charcoal/40" onClick={onClose} aria-hidden />
       <div
-        className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-lg max-h-[min(90vh,640px)] flex flex-col"
+        className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-3xl max-h-[min(90vh,640px)] flex flex-col"
         role="dialog"
         aria-labelledby="apt-payments-title"
       >
