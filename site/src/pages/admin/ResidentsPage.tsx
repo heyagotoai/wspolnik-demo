@@ -203,7 +203,17 @@ export default function ResidentsPage() {
       await fetchResidents()
       closeForm()
     } catch (err) {
-      setError(formatCaughtError(err, 'Wystąpił błąd'))
+      const msg = formatCaughtError(err, '')
+      if (msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('already registered')) {
+        const existing = residents.find(r => r.email.toLowerCase() === form.email.trim().toLowerCase())
+        if (existing) {
+          setError(`Konto z tym emailem już istnieje (${existing.full_name}). Aby dodać kolejny lokal, zamknij ten formularz i kliknij ikonę 🏠 przy wierszu tego mieszkańca.`)
+        } else {
+          setError('Konto z tym adresem email już istnieje. Znajdź tego mieszkańca na liście i kliknij ikonę 🏠 przy jego wierszu, aby przypisać kolejny lokal.')
+        }
+      } else {
+        setError(formatCaughtError(err, 'Wystąpił błąd'))
+      }
     }
 
     setSaving(false)
