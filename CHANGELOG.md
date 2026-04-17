@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-17 — Jeden właściciel, wiele lokali: zarządzanie + rozbicie finansów + głosowania
+- **`api/routes/residents.py`** — `POST /residents/{id}/apartments` (przypisanie lokalu do istniejącego właściciela) + `DELETE /residents/{id}/apartments/{apartment_id}` (odpięcie); walidacja 404/409
+- **`api/models/schemas.py`** — nowy `ApartmentAssign`; `VoteDetail` rozszerzony o `apartments_count: int` + `share: float`
+- **`api/routes/resolutions.py`** — `GET /:id/votes`: każdy głos wzbogacony o liczbę lokali właściciela, sumę udziałów (`apartments.share`) i listę numerów lokali (pole `apartment_number` = "32, 45" dla wielolokalowców)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — modal „Zarządzaj lokalami" (ikona 🏠 przy wierszu): lista przypisanych lokali z przyciskiem „Odepnij" + dropdown wolnych lokali → „Przypisz"; kolumna „Lokal" pokazuje wszystkie lokale właściciela
+- **`site/src/pages/resident/FinancesPage.tsx`** — rozbicie per lokal (tabela Naliczenia / Wpłaty / Saldo) wyświetlane zawsze przy > 1 lokalu (dotychczas tylko przy grupie rozliczeniowej)
+- **`site/src/pages/admin/ResolutionsPage.tsx`** — lista głosów (UI + PDF): kolumna „Udział", format „lokale 32, 45 (2)" dla wielolokalowców; dropdown „Dodaj głos" pokazuje wszystkie lokale właściciela pobrane z `apartments.owner_resident_id`
+
 ### 2026-04-14 — Bezpieczeństwo sesji: stabilna referencja user + auto-wylogowanie po bezczynności
 - **`site/src/hooks/useAuth.ts`** — `onAuthStateChange`: zachowuje stabilną referencję `user` gdy `id` się nie zmienił (fix: `TOKEN_REFRESHED` nie powoduje już odmontowania widoków i utraty stanu formularzy)
 - **`site/src/hooks/useIdleLogout.ts`** — nowy hook: timer bezczynności niezależny od widoczności karty (karta w tle wygasa tak samo jak aktywna); aktywność (`mousemove/mousedown/keydown/touchstart/scroll`) resetuje timer; w trakcie ostrzeżenia wymagany jawny klik; zwraca `{ warning, remainingSec, extend }`

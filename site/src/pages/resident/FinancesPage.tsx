@@ -261,7 +261,7 @@ export default function FinancesPage() {
       </div>
 
       {/* Combined balance cards (when group or multiple apartments) */}
-      {apartmentsData.length > 1 && hasGroup && (
+      {apartmentsData.length > 1 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <BalanceCard label="Saldo łączne" amount={combinedBalance} formatCurrency={formatCurrency} highlight />

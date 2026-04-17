@@ -73,6 +73,10 @@ class ResidentOut(BaseModel):
     created_at: str
 
 
+class ApartmentAssign(BaseModel):
+    apartment_id: str = Field(..., min_length=1)
+
+
 class MessageOut(BaseModel):
     detail: str
 
@@ -210,6 +214,8 @@ class VoteDetail(BaseModel):
     resident_id: str
     full_name: str
     apartment_number: str | None
+    apartments_count: int = 0
+    share: float = 0.0
     vote: str
     voted_at: str
 

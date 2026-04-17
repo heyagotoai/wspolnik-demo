@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.core.security import require_admin
 from api.core.supabase_client import get_supabase
-from api.models.schemas import ResidentCreate, ResidentUpdate, ResidentOut, MessageOut
+from api.models.schemas import ResidentCreate, ResidentUpdate, ResidentOut, MessageOut, ApartmentAssign
 
 router = APIRouter(prefix="/residents", tags=["residents"])
 
@@ -139,3 +139,47 @@ def delete_resident(resident_id: str, _admin: dict = Depends(require_admin)):
         pass
 
     return {"detail": "Mieszkaniec został usunięty"}
+
+
+@router.post("/{resident_id}/apartments", response_model=MessageOut, status_code=201)
+def assign_apartment(
+    resident_id: str,
+    body: ApartmentAssign,
+    _admin: dict = Depends(require_admin),
+):
+    """Assign apartment to existing resident (owner_resident_id)."""
+    sb = get_supabase()
+
+    res = sb.table("residents").select("id").eq("id", resident_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Mieszkaniec nie znaleziony")
+
+    apt = sb.table("apartments").select("id, number, owner_resident_id").eq("id", body.apartment_id).execute()
+    if not apt.data:
+        raise HTTPException(status_code=404, detail="Lokal nie znaleziony")
+
+    current_owner = apt.data[0].get("owner_resident_id")
+    if current_owner and current_owner != resident_id:
+        raise HTTPException(status_code=409, detail="Lokal ma już przypisanego właściciela")
+
+    sb.table("apartments").update({"owner_resident_id": resident_id}).eq("id", body.apartment_id).execute()
+    return {"detail": f"Lokal {apt.data[0]['number']} przypisany"}
+
+
+@router.delete("/{resident_id}/apartments/{apartment_id}", response_model=MessageOut)
+def unassign_apartment(
+    resident_id: str,
+    apartment_id: str,
+    _admin: dict = Depends(require_admin),
+):
+    """Remove apartment ownership from resident."""
+    sb = get_supabase()
+
+    apt = sb.table("apartments").select("id, owner_resident_id").eq("id", apartment_id).execute()
+    if not apt.data:
+        raise HTTPException(status_code=404, detail="Lokal nie znaleziony")
+    if apt.data[0].get("owner_resident_id") != resident_id:
+        raise HTTPException(status_code=409, detail="Ten lokal nie należy do wskazanego mieszkańca")
+
+    sb.table("apartments").update({"owner_resident_id": None}).eq("id", apartment_id).execute()
+    return {"detail": "Lokal odpięty"}

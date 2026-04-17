@@ -393,11 +393,41 @@ def get_resolution_vote_details(resolution_id: str, _user: dict = Depends(requir
     )
     residents_map = {r["id"]: r for r in residents_result.data}
 
+    apt_result = (
+        sb.table("apartments")
+        .select("owner_resident_id, number, share")
+        .in_("owner_resident_id", resident_ids)
+        .execute()
+    )
+    apts_count: dict[str, int] = {}
+    apts_share: dict[str, float] = {}
+    apts_numbers: dict[str, list[str]] = {}
+    for a in apt_result.data or []:
+        oid = a.get("owner_resident_id")
+        if not oid:
+            continue
+        apts_count[oid] = apts_count.get(oid, 0) + 1
+        sh = a.get("share")
+        if sh is not None:
+            apts_share[oid] = apts_share.get(oid, 0.0) + float(sh)
+        num = a.get("number")
+        if num:
+            apts_numbers.setdefault(oid, []).append(str(num))
+
+    for nums in apts_numbers.values():
+        nums.sort()
+
     return [
         VoteDetail(
             resident_id=v["resident_id"],
             full_name=residents_map.get(v["resident_id"], {}).get("full_name", "—"),
-            apartment_number=residents_map.get(v["resident_id"], {}).get("apartment_number"),
+            apartment_number=(
+                ", ".join(apts_numbers[v["resident_id"]])
+                if apts_numbers.get(v["resident_id"])
+                else residents_map.get(v["resident_id"], {}).get("apartment_number")
+            ),
+            apartments_count=apts_count.get(v["resident_id"], 0),
+            share=round(apts_share.get(v["resident_id"], 0.0), 8),
             vote=v["vote"],
             voted_at=v["voted_at"],
         )

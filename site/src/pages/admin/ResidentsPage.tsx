@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, HomeIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
@@ -18,6 +18,12 @@ interface Resident {
   created_at: string
 }
 
+interface Apartment {
+  id: string
+  number: string
+  owner_resident_id: string | null
+}
+
 interface ResidentForm {
   email: string
   password: string
@@ -31,6 +37,7 @@ const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartm
 export default function ResidentsPage() {
   const { isAdmin, isAdminOrManager, loading: roleLoading } = useRole()
   const [residents, setResidents] = useState<Resident[]>([])
+  const [apartments, setApartments] = useState<Apartment[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -38,23 +45,75 @@ export default function ResidentsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [aptModalResident, setAptModalResident] = useState<Resident | null>(null)
+  const [aptSelected, setAptSelected] = useState<string>('')
+  const [aptBusy, setAptBusy] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
 
   const fetchResidents = async () => {
-    const { data } = await supabase
-      .from('residents')
-      .select('id, email, full_name, apartment_number, role, is_active, created_at')
-      .order('full_name', { ascending: true })
+    const [{ data: resData }, { data: aptData }] = await Promise.all([
+      supabase
+        .from('residents')
+        .select('id, email, full_name, apartment_number, role, is_active, created_at')
+        .order('full_name', { ascending: true }),
+      supabase
+        .from('apartments')
+        .select('id, number, owner_resident_id')
+        .order('number', { ascending: true }),
+    ])
 
-    if (data) setResidents(data)
+    if (resData) setResidents(resData)
+    if (aptData) setApartments(aptData)
     setLoading(false)
   }
 
   useEffect(() => {
     fetchResidents()
   }, [])
+
+  const apartmentsOf = (residentId: string) =>
+    apartments.filter(a => a.owner_resident_id === residentId)
+
+  const freeApartments = apartments.filter(a => !a.owner_resident_id)
+
+  const openAptModal = (r: Resident) => {
+    setAptModalResident(r)
+    setAptSelected('')
+  }
+
+  const closeAptModal = () => {
+    setAptModalResident(null)
+    setAptSelected('')
+  }
+
+  const handleAssignApartment = async () => {
+    if (!aptModalResident || !aptSelected) return
+    setAptBusy(true)
+    try {
+      await api.post(`/residents/${aptModalResident.id}/apartments`, { apartment_id: aptSelected })
+      await fetchResidents()
+      setAptSelected('')
+      toast('Lokal przypisany', 'success')
+    } catch (err) {
+      toast(formatCaughtError(err, 'Błąd przypisania lokalu'), 'error')
+    }
+    setAptBusy(false)
+  }
+
+  const handleUnassignApartment = async (apartmentId: string) => {
+    if (!aptModalResident) return
+    setAptBusy(true)
+    try {
+      await api.delete(`/residents/${aptModalResident.id}/apartments/${apartmentId}`)
+      await fetchResidents()
+      toast('Lokal odpięty', 'success')
+    } catch (err) {
+      toast(formatCaughtError(err, 'Błąd odpinania lokalu'), 'error')
+    }
+    setAptBusy(false)
+  }
 
   useEffect(() => {
     if (showForm) {
@@ -333,7 +392,13 @@ export default function ResidentsPage() {
                   <tr key={r.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-charcoal">{r.full_name}</td>
                     <td className="px-5 py-3 text-slate">{r.email}</td>
-                    <td className="px-5 py-3 text-slate">{r.apartment_number || '—'}</td>
+                    <td className="px-5 py-3 text-slate">
+                      {(() => {
+                        const owned = apartmentsOf(r.id)
+                        if (owned.length > 0) return owned.map(a => a.number).join(', ')
+                        return r.apartment_number || '—'
+                      })()}
+                    </td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         r.role === 'admin'
@@ -357,6 +422,13 @@ export default function ResidentsPage() {
                     {isAdmin && (
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openAptModal(r)}
+                            className="p-1.5 text-outline hover:text-sage transition-colors"
+                            title="Zarządzaj lokalami"
+                          >
+                            <HomeIcon className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openEdit(r)}
                             className="p-1.5 text-outline hover:text-sage transition-colors"
@@ -389,6 +461,81 @@ export default function ResidentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Apartments modal */}
+      {isAdmin && aptModalResident && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4">
+          <div className="bg-white rounded-[var(--radius-card)] shadow-ambient w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-charcoal">Lokale — {aptModalResident.full_name}</h2>
+                <p className="text-xs text-outline mt-0.5">{aptModalResident.email}</p>
+              </div>
+              <button onClick={closeAptModal} className="text-outline hover:text-charcoal">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <h3 className="text-sm font-medium text-charcoal mb-2">Przypisane lokale</h3>
+              {apartmentsOf(aptModalResident.id).length === 0 ? (
+                <p className="text-sm text-slate">Brak przypisanych lokali.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {apartmentsOf(aptModalResident.id).map(a => (
+                    <li key={a.id} className="flex items-center justify-between px-3 py-2 bg-cream/50 rounded-[var(--radius-input)]">
+                      <span className="text-sm text-charcoal">Lokal {a.number}</span>
+                      <button
+                        onClick={() => handleUnassignApartment(a.id)}
+                        disabled={aptBusy}
+                        className="text-xs text-error hover:underline disabled:opacity-50"
+                      >
+                        Odepnij
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-charcoal mb-2">Dodaj lokal</h3>
+              {freeApartments.length === 0 ? (
+                <p className="text-sm text-slate">Brak wolnych lokali.</p>
+              ) : (
+                <div className="flex gap-2">
+                  <select
+                    value={aptSelected}
+                    onChange={(e) => setAptSelected(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                  >
+                    <option value="">— wybierz lokal —</option>
+                    {freeApartments.map(a => (
+                      <option key={a.id} value={a.id}>Lokal {a.number}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAssignApartment}
+                    disabled={!aptSelected || aptBusy}
+                    className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
+                  >
+                    Przypisz
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeAptModal}
+                className="px-4 py-2 text-sm font-medium text-slate hover:text-charcoal transition-colors"
+              >
+                Zamknij
+              </button>
+            </div>
           </div>
         </div>
       )}

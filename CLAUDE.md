@@ -120,7 +120,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Migracje 001-022 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`, 021 `announcements.is_public`, 022 domyślna wartość `is_public`) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
-- `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user)
+- `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user); `POST /residents/{id}/apartments` + `DELETE /residents/{id}/apartments/{apt_id}` — przypisanie/odpięcie lokalu do istniejącego właściciela (jeden właściciel → wiele lokali)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `POST :id/votes/register` (głosy z zebrania, tylko szkic) + `DELETE :id/votes/:resident_id` (pojedynczy głos, tylko szkic); `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu); `voting_start`/`voting_end` wymagane przy zapisie; `GET /resolutions/cron/close-ended` (cron, `CRON_SECRET`) — `voting` → `closed` po `voting_end`
 - `/api/profile` — profil + `can_vote_resolutions`, zgody RODO: `needs_legal_acceptance`, wersje dokumentów; **`POST /profile/legal-consent`** — akceptacja polityki i regulaminu (wymóg przed panelem); wersje obowiązujące: env `CURRENT_PRIVACY_VERSION`, `CURRENT_TERMS_VERSION`

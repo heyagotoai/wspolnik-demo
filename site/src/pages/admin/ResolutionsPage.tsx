@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { supabase } from '../../lib/supabase'
 import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
@@ -50,6 +51,8 @@ interface VoteDetail {
   resident_id: string
   full_name: string
   apartment_number: string | null
+  apartments_count: number
+  share: number
   vote: string
   voted_at: string
 }
@@ -96,6 +99,7 @@ export default function AdminResolutionsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [meetingModal, setMeetingModal] = useState<Resolution | null>(null)
   const [meetingResidents, setMeetingResidents] = useState<ResidentOption[]>([])
+  const [meetingApartments, setMeetingApartments] = useState<Record<string, string[]>>({})
   const [meetingVoteRows, setMeetingVoteRows] = useState<VoteDetail[]>([])
   const [meetingLoading, setMeetingLoading] = useState(false)
   const [meetingResidentId, setMeetingResidentId] = useState('')
@@ -309,12 +313,27 @@ export default function AdminResolutionsPage() {
     setMeetingResidentId('')
     setMeetingLoading(true)
     try {
-      const [resList, votes] = await Promise.all([
+      const [resList, votes, aptsRes] = await Promise.all([
         api.get<ResidentOption[]>('/residents'),
         api.get<VoteDetail[]>(`/resolutions/${r.id}/votes`),
+        supabase
+          .from('apartments')
+          .select('number, owner_resident_id')
+          .not('owner_resident_id', 'is', null),
       ])
+      const aptMap: Record<string, string[]> = {}
+      for (const a of aptsRes.data || []) {
+        const oid = a.owner_resident_id as string | null
+        if (!oid) continue
+        aptMap[oid] = aptMap[oid] || []
+        aptMap[oid].push(String(a.number))
+      }
+      for (const k of Object.keys(aptMap)) {
+        aptMap[k].sort((x, y) => x.localeCompare(y, 'pl', { numeric: true }))
+      }
       setMeetingResidents(resList)
       setMeetingVoteRows(votes)
+      setMeetingApartments(aptMap)
     } catch {
       toast('Nie udało się załadować listy mieszkańców lub głosów', 'error')
       setMeetingModal(null)
@@ -326,6 +345,7 @@ export default function AdminResolutionsPage() {
   const closeMeetingModal = () => {
     setMeetingModal(null)
     setMeetingResidents([])
+    setMeetingApartments({})
     setMeetingVoteRows([])
     setMeetingResidentId('')
   }
@@ -504,8 +524,9 @@ export default function AdminResolutionsPage() {
     <table>
       <thead>
         <tr>
-          <th>Lokal</th>
+          <th>Lokal(e)</th>
           <th>Imię i nazwisko</th>
+          <th>Udział</th>
           <th>Głos</th>
           <th>Data oddania głosu</th>
         </tr>
@@ -519,9 +540,15 @@ export default function AdminResolutionsPage() {
               : v.vote === 'przeciw' ? '<span class="vote-przeciw">Przeciw</span>'
               : '<span class="vote-wstrzymuje">Wstrzymuje się</span>'
             const votedAt = new Date(v.voted_at).toLocaleString('pl-PL')
+            const count = v.apartments_count || 0
+            const aptCell = count > 1
+              ? `${escapeHtml(v.apartment_number ?? '—')} (${count} lokale)`
+              : escapeHtml(v.apartment_number ?? '—')
+            const sharePct = v.share > 0 ? `${(v.share * 100).toFixed(2)}%` : '—'
             return `<tr>
-              <td>${escapeHtml(v.apartment_number ?? '—')}</td>
+              <td>${aptCell}</td>
               <td>${escapeHtml(v.full_name)}</td>
+              <td>${sharePct}</td>
               <td>${voteLabel}</td>
               <td>${votedAt}</td>
             </tr>`
@@ -849,7 +876,11 @@ export default function AdminResolutionsPage() {
                                     {row.full_name}
                                   </span>
                                   <span className="text-xs text-outline">
-                                    lokal {row.apartment_number ?? '—'} · {voteLabel(row.vote)}
+                                    {(row.apartments_count ?? 0) > 1
+                                      ? `lokale ${row.apartment_number ?? '—'} (${row.apartments_count})`
+                                      : `lokal ${row.apartment_number ?? '—'}`}
+                                    {row.share > 0 && ` · udział ${(row.share * 100).toFixed(2)}%`}
+                                    {' · '}{voteLabel(row.vote)}
                                   </span>
                                 </span>
                                 <button
@@ -884,12 +915,22 @@ export default function AdminResolutionsPage() {
                           )
                           .slice()
                           .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
-                          .map(r => (
+                          .map(r => {
+                            const owned = meetingApartments[r.id] || []
+                            const aptLabel = owned.length > 1
+                              ? ` · lokale ${owned.join(', ')}`
+                              : owned.length === 1
+                                ? ` · lokal ${owned[0]}`
+                                : r.apartment_number
+                                  ? ` · lokal ${r.apartment_number}`
+                                  : ''
+                            return (
                             <option key={r.id} value={r.id}>
                               {r.full_name}
-                              {r.apartment_number ? ` · lokal ${r.apartment_number}` : ''}
+                              {aptLabel}
                             </option>
-                          ))}
+                            )
+                          })}
                       </select>
                       <div className="flex flex-wrap gap-2">
                         <button

@@ -42,6 +42,7 @@ vi.mock('../../components/ui/Icons', () => ({
   EditIcon: ({ className }: { className?: string }) => <span data-testid="edit-icon" className={className}>✎</span>,
   TrashIcon: ({ className }: { className?: string }) => <span data-testid="trash-icon" className={className}>🗑</span>,
   XIcon: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className}>×</span>,
+  HomeIcon: ({ className }: { className?: string }) => <span data-testid="home-icon" className={className}>🏠</span>,
 }))
 
 import ResidentsPage from './ResidentsPage'
