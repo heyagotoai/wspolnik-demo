@@ -64,8 +64,26 @@ export default function ResidentsPage() {
         .order('number', { ascending: true }),
     ])
 
-    if (resData) setResidents(resData)
     if (aptData) setApartments(aptData)
+
+    if (resData && aptData) {
+      const aptsByOwner: Record<string, string[]> = {}
+      for (const a of aptData) {
+        if (a.owner_resident_id) {
+          aptsByOwner[a.owner_resident_id] = aptsByOwner[a.owner_resident_id] || []
+          aptsByOwner[a.owner_resident_id].push(a.number)
+        }
+      }
+      const sorted = [...resData].sort((a, b) => {
+        const aNum = aptsByOwner[a.id]?.[0] ?? a.apartment_number ?? '\uffff'
+        const bNum = aptsByOwner[b.id]?.[0] ?? b.apartment_number ?? '\uffff'
+        const cmp = aNum.localeCompare(bNum, 'pl', { numeric: true })
+        return cmp !== 0 ? cmp : a.full_name.localeCompare(b.full_name, 'pl')
+      })
+      setResidents(sorted)
+    } else if (resData) {
+      setResidents(resData)
+    }
     setLoading(false)
   }
 
