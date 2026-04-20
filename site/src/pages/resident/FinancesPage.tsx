@@ -4,6 +4,7 @@ import { roundMoney2 } from '../../lib/money'
 import { useAuth } from '../../hooks/useAuth'
 import { WalletIcon } from '../../components/ui/Icons'
 import { paymentHistoryDisplay } from '../../lib/paymentDisplay'
+import { computeBalanceAsOf, formatBalanceAsOfDate } from '../../lib/balanceAsOf'
 
 interface Charge {
   id: string
@@ -62,6 +63,8 @@ export default function FinancesPage() {
   const [apartmentsData, setApartmentsData] = useState<ApartmentData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Globalne daty ostatnich importów (widok `last_import_activity`). */
+  const [lastImport, setLastImport] = useState<{ bank: string | null; excel: string | null }>({ bank: null, excel: null })
 
   // Per-apartment month selectors
   const [selectedMonths, setSelectedMonths] = useState<Record<string, string>>({})
@@ -137,9 +140,9 @@ export default function FinancesPage() {
     // Sort by apartment number
     apartments.sort((a, b) => a.number.localeCompare(b.number, 'pl', { numeric: true }))
 
-    // Fetch charges and payments for all apartments
+    // Fetch charges and payments for all apartments + globalne daty ostatnich importów
     const aptIds = apartments.map(a => a.id)
-    const [chargesRes, paymentsRes] = await Promise.all([
+    const [chargesRes, paymentsRes, lastImportRes] = await Promise.all([
       supabase
         .from('charges')
         .select('id, month, type, amount, description, apartment_id')
@@ -150,7 +153,16 @@ export default function FinancesPage() {
         .select('id, amount, payment_date, title, confirmed_by_admin, apartment_id')
         .in('apartment_id', aptIds)
         .order('payment_date', { ascending: false }),
+      supabase
+        .from('last_import_activity')
+        .select('last_bank_import_at, last_excel_import_at')
+        .maybeSingle(),
     ])
+
+    setLastImport({
+      bank: (lastImportRes.data as { last_bank_import_at: string | null } | null)?.last_bank_import_at ?? null,
+      excel: (lastImportRes.data as { last_excel_import_at: string | null } | null)?.last_excel_import_at ?? null,
+    })
 
     const allCharges = (chargesRes.data || []) as (Charge & { apartment_id: string })[]
     const allPayments = (paymentsRes.data || []) as (Payment & { apartment_id: string })[]
@@ -202,6 +214,16 @@ export default function FinancesPage() {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+    })
+
+  /** „Saldo na dzień" dla wskazanych lokali (agreguje wpłaty + globalne daty importów). */
+  const balanceAsOf = (apts: ApartmentData[]): string | null =>
+    computeBalanceAsOf({
+      paymentDates: apts.flatMap(d =>
+        d.payments.map(p => ({ payment_date: p.payment_date, confirmed_by_admin: p.confirmed_by_admin })),
+      ),
+      lastBankImportAt: lastImport.bank,
+      lastExcelImportAt: lastImport.excel,
     })
 
   const formatMonth = (monthStr: string) => {
@@ -264,7 +286,16 @@ export default function FinancesPage() {
       {apartmentsData.length > 1 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <BalanceCard label="Saldo łączne" amount={combinedBalance} formatCurrency={formatCurrency} highlight />
+            <BalanceCard
+              label="Saldo łączne"
+              amount={combinedBalance}
+              formatCurrency={formatCurrency}
+              highlight
+              asOfDate={(() => {
+                const asOf = balanceAsOf(apartmentsData)
+                return asOf ? formatBalanceAsOfDate(asOf) : null
+              })()}
+            />
             <BalanceCard label="Suma naliczeń" amount={-combinedCharges} formatCurrency={formatCurrency} />
             <BalanceCard label="Suma wpłat" amount={combinedPayments} formatCurrency={formatCurrency} />
           </div>
@@ -321,18 +352,26 @@ export default function FinancesPage() {
       {/* Per-apartment details */}
       {apartmentsData
         .filter(d => apartmentsData.length === 1 || d.apartment.id === activeAptId)
-        .map(d => (
-          <ApartmentFinanceSection
-            key={d.apartment.id}
-            data={d}
-            selectedMonth={selectedMonths[d.apartment.id] || ''}
-            onMonthChange={(m) => setSelectedMonths(prev => ({ ...prev, [d.apartment.id]: m }))}
-            showAptNumber={apartmentsData.length > 1}
-            formatCurrency={formatCurrency}
-            formatDate={formatDate}
-            formatMonth={formatMonth}
-          />
-        ))}
+        .map(d => {
+          // „Saldo na dzień" wyświetlamy przy pojedynczej karcie Saldo (bez grupy);
+          // w widoku grupy jest już pokazane pod kartą „Saldo łączne".
+          // „Saldo na dzień" przy pojedynczym lokalu (brak zbiorczej karty nad sekcjami);
+          // przy wielu lokalach data jest już pokazana w karcie „Saldo łączne".
+          const singleAsOf = apartmentsData.length === 1 ? balanceAsOf([d]) : null
+          return (
+            <ApartmentFinanceSection
+              key={d.apartment.id}
+              data={d}
+              selectedMonth={selectedMonths[d.apartment.id] || ''}
+              onMonthChange={(m) => setSelectedMonths(prev => ({ ...prev, [d.apartment.id]: m }))}
+              showAptNumber={apartmentsData.length > 1}
+              balanceAsOfText={singleAsOf ? formatBalanceAsOfDate(singleAsOf) : null}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              formatMonth={formatMonth}
+            />
+          )
+        })}
     </div>
   )
 }
@@ -342,6 +381,7 @@ function ApartmentFinanceSection({
   selectedMonth,
   onMonthChange,
   showAptNumber,
+  balanceAsOfText,
   formatCurrency,
   formatDate,
   formatMonth,
@@ -350,6 +390,7 @@ function ApartmentFinanceSection({
   selectedMonth: string
   onMonthChange: (m: string) => void
   showAptNumber: boolean
+  balanceAsOfText: string | null
   formatCurrency: (n: number) => string
   formatDate: (s: string) => string
   formatMonth: (s: string) => string
@@ -371,7 +412,13 @@ function ApartmentFinanceSection({
       {/* Balance cards for single apartment (or always if no group) */}
       {!showAptNumber && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <BalanceCard label="Saldo" amount={balance} formatCurrency={formatCurrency} highlight />
+          <BalanceCard
+            label="Saldo"
+            amount={balance}
+            formatCurrency={formatCurrency}
+            highlight
+            asOfDate={balanceAsOfText}
+          />
           <BalanceCard label="Suma naliczeń" amount={-totalCharges} formatCurrency={formatCurrency} />
           <BalanceCard label="Suma wpłat" amount={totalPayments} formatCurrency={formatCurrency} />
         </div>
@@ -479,11 +526,14 @@ function BalanceCard({
   amount,
   formatCurrency,
   highlight,
+  asOfDate,
 }: {
   label: string
   amount: number
   formatCurrency: (n: number) => string
   highlight?: boolean
+  /** Gdy podana, label staje się „{label} NA DZIEŃ: DD-MM-YYYY". */
+  asOfDate?: string | null
 }) {
   const rounded = roundMoney2(amount)
   const colorClass = highlight
@@ -492,9 +542,11 @@ function BalanceCard({
       : 'text-error'
     : 'text-charcoal'
 
+  const displayLabel = asOfDate ? `${label} na dzień: ${asOfDate}` : label
+
   return (
     <div className={`bg-white rounded-[var(--radius-card)] shadow-ambient p-5 ${highlight ? 'ring-1 ring-sage/20' : ''}`}>
-      <p className="text-xs text-outline uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-xs text-outline uppercase tracking-wide mb-1">{displayLabel}</p>
       <p className={`text-xl font-bold ${colorClass}`}>
         {formatCurrency(Math.abs(amount))}
         {highlight && rounded < 0 && (

@@ -117,7 +117,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-022 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`, 021 `announcements.is_public`, 022 domyślna wartość `is_public`) — uruchamiane przez SQL Editor w dashboardzie Supabase
+- Migracje 001-023 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`, 021 `announcements.is_public`, 022 domyślna wartość `is_public`, 023 widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
 - `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user); `POST /residents/{id}/apartments` + `DELETE /residents/{id}/apartments/{apt_id}` — przypisanie/odpięcie lokalu do istniejącego właściciela (jeden właściciel → wiele lokali)

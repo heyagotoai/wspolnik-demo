@@ -2,6 +2,13 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-20 — Finanse mieszkańca: „Saldo na dzień: DD-MM-YYYY"
+- **Migracja `023_last_import_activity_view.sql`** — widok `last_import_activity` z globalnymi `last_bank_import_at` / `last_excel_import_at` (wyliczane z `payments.title` + `created_at`); GRANT SELECT dla `authenticated` — widok obchodzi RLS `payments` (sama data, bez kwot i lokali; brak danych wrażliwych)
+- **`site/src/lib/balanceAsOf.ts`** (+ test) — pure helper: `computeBalanceAsOf({ paymentDates, lastBankImportAt, lastExcelImportAt })` → najpóźniejsza data; `formatBalanceAsOfDate` (`YYYY-MM-DD` → `DD-MM-YYYY`)
+- **`site/src/pages/resident/FinancesPage.tsx`** — fetch widoku; etykieta karty „Saldo" (pojedynczy lokal) / „Saldo łączne" (grupa rozliczeniowa) wzbogacona o `na dzień: DD-MM-YYYY`; data = max(`payment_date` zaksięgowanych wpłat widocznych lokali, globalna data importu bankowego, globalna data importu xlsx)
+- **Motywacja:** mieszkaniec wiedział tylko „jakie jest saldo", bez informacji, do kiedy system uwzględnia wpłaty (sam `max(payment_date)` nie pokrywał przypadku, gdy admin zaimportował wyciąg bez dopasowanej wpłaty na ten lokal — RLS ukrywał ten fakt)
+- **Dokumentacja:** `CLAUDE.md`, `.cursorrules`, `docs/operations/01-wdrozenie.md`, `docs/architecture/feature-map.md`
+
 ### 2026-04-17 — Jeden właściciel, wiele lokali: zarządzanie + rozbicie finansów + głosowania
 - **`api/routes/residents.py`** — `POST /residents/{id}/apartments` (przypisanie lokalu do istniejącego właściciela) + `DELETE /residents/{id}/apartments/{apartment_id}` (odpięcie); walidacja 404/409
 - **`api/models/schemas.py`** — nowy `ApartmentAssign`; `VoteDetail` rozszerzony o `apartments_count: int` + `share: float`
