@@ -78,16 +78,19 @@ def build_reminder_email(resolution_title: str, voting_end: str | None) -> tuple
 
     subject = f"[WM GABI] Przypomnienie o głosowaniu: {resolution_title}"
     end_line = (
-        f"Głosowanie trwa do {voting_end}. "
+        f"Głosowanie potrwa jeszcze do {voting_end}."
         if voting_end
-        else ""
+        else "Głosowanie jest nadal otwarte."
     )
     body = (
-        f"Przypominamy, że nie oddałeś/aś jeszcze głosu w uchwale:\n\n"
-        f"{resolution_title}\n"
-        f"{'=' * len(resolution_title)}\n\n"
-        f"{end_line}Zaloguj się do panelu mieszkańca, aby oddać głos:\n"
-        f"{PUBLIC_SITE_URL}\n"
+        f"Dzień dobry,\n\n"
+        f"przypominamy, że w panelu mieszkańca czeka na Państwa głos uchwała:\n\n"
+        f"  „{resolution_title}”\n\n"
+        f"{end_line} Prosimy o oddanie głosu — każdy głos ma znaczenie dla decyzji wspólnoty.\n\n"
+        f"Aby zagłosować, wystarczy zalogować się do panelu mieszkańca:\n"
+        f"{PUBLIC_SITE_URL}\n\n"
+        f"Dziękujemy i pozdrawiamy,\n"
+        f"Zarząd WM GABI\n"
         f"{automated_email_footer()}"
     )
     return subject, body
