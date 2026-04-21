@@ -183,6 +183,16 @@ class ResolutionOut(BaseModel):
     reminder_sent_at: str | None = None
 
 
+class ReminderSendIn(BaseModel):
+    """Opcjonalna whitelist emaili przy ręcznej wysyłce przypomnienia.
+
+    Gdy podana — wysyłka ogranicza się do przecięcia (pending voters ∩ emails).
+    Gdy None / pominięte — zachowanie domyślne (wszyscy pending).
+    """
+
+    emails: list[str] | None = None
+
+
 class VoteCreate(BaseModel):
     vote: VoteValue
 

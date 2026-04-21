@@ -115,6 +115,12 @@ export default function AdminResolutionsPage() {
   const [meetingVoteRows, setMeetingVoteRows] = useState<VoteDetail[]>([])
   const [meetingLoading, setMeetingLoading] = useState(false)
   const [meetingResidentId, setMeetingResidentId] = useState('')
+  const [remindModal, setRemindModal] = useState<{
+    resolution: Resolution
+    recipients: string[]
+    selected: Set<string>
+    sending: boolean
+  } | null>(null)
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { isAdmin } = useRole()
@@ -301,36 +307,62 @@ export default function AdminResolutionsPage() {
         toast('Wszyscy uprawnieni już oddali głos — nikt nie dostanie przypomnienia', 'success')
         return
       }
-      const list = res.recipients.join('\n')
-      const ok = await confirm({
-        title: `Przypomnienie trafi do ${res.recipients.length} osób`,
-        message: `Adresy odbiorców:\n\n${list}\n\nKliknij „Wyślij teraz", aby rozesłać przypomnienie.`,
-        confirmLabel: 'Wyślij teraz',
-        cancelLabel: 'Anuluj',
+      setRemindModal({
+        resolution: r,
+        recipients: res.recipients,
+        selected: new Set(res.recipients),
+        sending: false,
       })
-      if (!ok) return
-      await handleRemindSend(r)
     } catch (e: unknown) {
       toast(formatCaughtError(e, 'Błąd sprawdzania odbiorców'), 'error')
     }
   }
 
-  const handleRemindSend = async (r: Resolution) => {
+  const toggleRemindEmail = (email: string) => {
+    setRemindModal((m) => {
+      if (!m) return m
+      const next = new Set(m.selected)
+      if (next.has(email)) next.delete(email)
+      else next.add(email)
+      return { ...m, selected: next }
+    })
+  }
+
+  const toggleRemindAll = () => {
+    setRemindModal((m) => {
+      if (!m) return m
+      const allSelected = m.selected.size === m.recipients.length
+      return {
+        ...m,
+        selected: new Set(allSelected ? [] : m.recipients),
+      }
+    })
+  }
+
+  const handleRemindSend = async () => {
+    if (!remindModal) return
+    if (remindModal.selected.size === 0) {
+      toast('Zaznacz przynajmniej jeden adres', 'error')
+      return
+    }
+    setRemindModal((m) => (m ? { ...m, sending: true } : m))
     try {
       const res = await api.post<RemindResponse>(
-        `/resolutions/${r.id}/remind?dry_run=false`,
-        {},
+        `/resolutions/${remindModal.resolution.id}/remind?dry_run=false`,
+        { emails: Array.from(remindModal.selected) },
       )
       if (res.sent === 0 && res.failed === 0) {
-        toast('Brak odbiorców — wszyscy już zagłosowali', 'success')
+        toast('Brak odbiorców po filtrze — nikt nie otrzymał przypomnienia', 'success')
       } else if (res.failed > 0) {
         toast(`Wysłano ${res.sent}, nie udało się ${res.failed}`, 'error')
       } else {
         toast(`Wysłano przypomnienia do ${res.sent} osób`, 'success')
       }
+      setRemindModal(null)
       await fetchResolutions()
     } catch (e: unknown) {
       toast(formatCaughtError(e, 'Błąd wysyłki przypomnień'), 'error')
+      setRemindModal((m) => (m ? { ...m, sending: false } : m))
     }
   }
 
@@ -1054,6 +1086,96 @@ export default function AdminResolutionsPage() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {remindModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remind-modal-title"
+          >
+            <div className="bg-white rounded-[var(--radius-card)] shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-cream-deep shrink-0">
+                <h2 id="remind-modal-title" className="text-lg font-semibold text-charcoal pr-2">
+                  Wyślij przypomnienie
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setRemindModal(null)}
+                  className="text-outline hover:text-charcoal shrink-0"
+                  aria-label="Zamknij"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-5 py-4 space-y-3 text-sm">
+                <p className="text-slate leading-relaxed">
+                  Uchwała: <strong className="text-charcoal">{remindModal.resolution.title}</strong>
+                </p>
+                <p className="text-xs text-outline">
+                  Poniżej lista uprawnionych mieszkańców, którzy jeszcze nie oddali głosu.
+                  Odznacz osoby, do których <strong>nie</strong> chcesz wysyłać przypomnienia.
+                </p>
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={toggleRemindAll}
+                    className="text-sage hover:underline"
+                  >
+                    {remindModal.selected.size === remindModal.recipients.length
+                      ? 'Odznacz wszystkich'
+                      : 'Zaznacz wszystkich'}
+                  </button>
+                  <span className="text-outline">
+                    Zaznaczonych: {remindModal.selected.size} / {remindModal.recipients.length}
+                  </span>
+                </div>
+                <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)]">
+                  {remindModal.recipients.map((email) => {
+                    const checked = remindModal.selected.has(email)
+                    return (
+                      <li key={email} className="px-3 py-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleRemindEmail(email)}
+                            className="w-4 h-4"
+                          />
+                          <span className="font-mono text-sm text-charcoal break-all">
+                            {email}
+                          </span>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+              <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-cream-deep shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setRemindModal(null)}
+                  disabled={remindModal.sending}
+                  className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] border border-cream-deep text-slate hover:bg-cream-deep/50 disabled:opacity-50"
+                >
+                  Anuluj
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemindSend}
+                  disabled={remindModal.sending || remindModal.selected.size === 0}
+                  className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-sage text-white hover:bg-sage/90 disabled:opacity-50"
+                >
+                  {remindModal.sending
+                    ? 'Wysyłanie…'
+                    : `Wyślij do zaznaczonych (${remindModal.selected.size})`}
+                </button>
               </div>
             </div>
           </div>,

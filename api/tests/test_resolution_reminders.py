@@ -150,6 +150,52 @@ class TestRemindEndpoint:
         sent_to = send_mock.call_args[0][2]
         assert sent_to == "tlen@x.pl"
 
+    def test_whitelist_emails_ogranicza_odbiorcow(self, admin_client, fake_sb, monkeypatch):
+        """Gdy admin poda body.emails — wysyłka idzie tylko do przecięcia z pending."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_VOTING])
+        fake_sb.set_table_data("residents", [
+            {"id": "r1", "email": "tlen@x.pl", "full_name": "Tlen", "role": "resident", "is_active": True},
+            {"id": "r2", "email": "wp@x.pl", "full_name": "Wp", "role": "resident", "is_active": True},
+            {"id": "r3", "email": "onet@x.pl", "full_name": "Onet", "role": "resident", "is_active": True},
+        ])
+        fake_sb.set_table_data("votes", [])
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_ANON_KEY", "anon")
+
+        with patch("api.routes.resolutions._send_reminder_email", return_value=True) as send_mock:
+            r = admin_client.post(
+                "/api/resolutions/res-1/remind?dry_run=false",
+                json={"emails": ["tlen@x.pl"]},
+            )
+
+        assert r.status_code == 200
+        assert r.json()["sent"] == 1
+        send_mock.assert_called_once()
+        assert send_mock.call_args[0][2] == "tlen@x.pl"
+
+    def test_whitelist_pomija_adresy_spoza_pending(self, admin_client, fake_sb, monkeypatch):
+        """Adres spoza listy pending (np. już głosujący) jest pomijany mimo podania w whitelist."""
+        fake_sb.set_table_data("resolutions", [RESOLUTION_VOTING])
+        fake_sb.set_table_data("residents", [
+            {"id": "r1", "email": "tlen@x.pl", "full_name": "Tlen", "role": "resident", "is_active": True},
+            {"id": "r2", "email": "wp@x.pl", "full_name": "Wp", "role": "resident", "is_active": True},
+        ])
+        fake_sb.set_table_data("votes", [{"resident_id": "r2"}])
+        monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+        monkeypatch.setenv("SUPABASE_ANON_KEY", "anon")
+
+        with patch("api.routes.resolutions._send_reminder_email", return_value=True) as send_mock:
+            r = admin_client.post(
+                "/api/resolutions/res-1/remind?dry_run=false",
+                json={"emails": ["wp@x.pl", "tlen@x.pl"]},
+            )
+
+        assert r.status_code == 200
+        # wp@x.pl zagłosował → pomijany; tylko tlen@x.pl dostaje maila
+        assert r.json()["sent"] == 1
+        send_mock.assert_called_once()
+        assert send_mock.call_args[0][2] == "tlen@x.pl"
+
     def test_ignoruje_is_test_przy_recznym_wywolaniu(self, admin_client, fake_sb, monkeypatch):
         """Dla uchwały testowej można wysłać ręcznie — dry_run i send ignorują flagę is_test."""
         fake_sb.set_table_data("resolutions", [{**RESOLUTION_VOTING, "is_test": True}])

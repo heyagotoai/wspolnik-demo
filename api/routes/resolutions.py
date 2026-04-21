@@ -23,6 +23,7 @@ from api.models.schemas import (
     ResolutionCreate,
     ResolutionUpdate,
     ResolutionOut,
+    ReminderSendIn,
     VoteCreate,
     VoteRegisterAdmin,
     VoteOut,
@@ -240,19 +241,34 @@ def _run_reminder_for_resolution(
     *,
     dry_run: bool,
     mark_sent: bool,
+    emails_filter: list[str] | None = None,
 ) -> dict:
     """Wspólna logika: wyznaczenie odbiorców + wysyłka + zapis reminder_sent_at.
 
+    `emails_filter` — gdy podana, wysyłka ogranicza się do przecięcia
+    (pending voters ∩ emails_filter). Nie obchodzi filtrów uprawnień
+    (nie-pending / nieuprawnieni i tak są wykluczani). Dry-run zwraca
+    **pełną** listę kandydatów (bez filtra) — UI pokazuje ją do zaznaczenia.
+
     Zwraca: {recipients: [emails], sent: int, failed: int, dry_run: bool}
     """
-    recipients = find_pending_voters(sb, resolution["id"])
-    emails = [p["email"] for p in recipients]
+    pending = find_pending_voters(sb, resolution["id"])
+    all_emails = [p["email"] for p in pending]
 
     if dry_run:
-        return {"recipients": emails, "sent": 0, "failed": 0, "dry_run": True}
+        return {"recipients": all_emails, "sent": 0, "failed": 0, "dry_run": True}
+
+    if emails_filter is not None:
+        allowed = {e.strip().lower() for e in emails_filter if e and e.strip()}
+        recipients = [p for p in pending if p["email"].strip().lower() in allowed]
+    else:
+        recipients = pending
+    emails = [p["email"] for p in recipients]
 
     if not recipients:
-        if mark_sent:
+        # Ustaw reminder_sent_at tylko, gdy nie było KOGO powiadomić (pending puste),
+        # nie zaś wtedy, gdy admin świadomie zawęził listę do pustego podzbioru.
+        if mark_sent and not pending:
             now = datetime.now(timezone.utc).isoformat()
             sb.table("resolutions").update({"reminder_sent_at": now}).eq(
                 "id", resolution["id"],
@@ -287,12 +303,15 @@ def _run_reminder_for_resolution(
 def remind_pending_voters(
     resolution_id: str,
     dry_run: bool = False,
+    body: ReminderSendIn | None = None,
     _admin: dict = Depends(require_admin),
 ):
     """Wyślij przypomnienie do mieszkańców, którzy nie oddali głosu (admin).
 
-    `dry_run=true` — zwraca tylko listę adresów bez wysyłki. Ignoruje flagę `is_test`
-    (dzięki temu można ręcznie przetestować na uchwale testowej).
+    `dry_run=true` — zwraca pełną listę kandydatów (do zaznaczenia w UI) bez wysyłki.
+    `body.emails` (opcjonalne) — whitelist; wysyłka ogranicza się do przecięcia
+    z listą pending (nieuprawnieni nie przejdą, nawet jeśli podani).
+    Ignoruje flagę `is_test` (można ręcznie przetestować na uchwale testowej).
     """
     sb = get_supabase()
 
@@ -311,8 +330,12 @@ def remind_pending_voters(
             detail="Przypomnienie można wysłać tylko dla uchwały w trakcie głosowania",
         )
 
+    emails_filter = body.emails if body is not None else None
     result = _run_reminder_for_resolution(
-        sb, resolution, dry_run=dry_run, mark_sent=not resolution.get("is_test"),
+        sb, resolution,
+        dry_run=dry_run,
+        mark_sent=not resolution.get("is_test"),
+        emails_filter=emails_filter,
     )
     if dry_run:
         return {
