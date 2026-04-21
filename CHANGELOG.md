@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-21 — Uchwały: przypomnienia o nieoddanych głosach + tryb testowy (is_test)
+- **Migracja `024_resolutions_test_and_reminder.sql`** — kolumny `is_test BOOLEAN DEFAULT false`, `reminder_sent_at TIMESTAMPTZ`; indeks częściowy `idx_resolutions_reminder_pending` (status='voting' AND reminder_sent_at IS NULL AND is_test=false)
+- **`api/core/resolution_reminders.py`** (new) — `is_within_reminder_window()` (okno 2 dni przed `voting_end`), `find_pending_voters()` (aktywni, z emailem, nie oddali głosu, uprawnieni wg `voting_eligibility`), `build_reminder_email()`
+- **`api/routes/resolutions.py`** — `POST /resolutions/{id}/remind?dry_run=bool` (admin, wymaga statusu `voting`, ignoruje `is_test` przy ręcznym wywołaniu) + `GET/POST /resolutions/cron/remind-pending` (cron, `CRON_SECRET`) — pomija uchwały testowe, już wysłane i poza oknem; uchwały testowe ukryte dla mieszkańców w `list_resolutions`; skip auto-ogłoszenia przy `is_test=true`
+- **`.github/workflows/cron.yml`** — codzienny harmonogram `0 7 * * *` + `workflow_dispatch` dla `resolutions-remind`
+- **`site/src/pages/admin/ResolutionsPage.tsx`** — checkbox „Uchwała testowa" w formularzu, badge TEST, ikona „Wyślij przypomnienie" (SendIcon) przy uchwałach w głosowaniu z dry-run + potwierdzeniem listy odbiorców
+- **Testy:** `api/tests/test_resolution_reminders.py` (18 testów) + 2 nowe w `test_resolutions.py` (mieszkaniec nie widzi testowych, admin widzi); frontend mock `SendIcon`
+- **Dokumentacja:** `CLAUDE.md` / `.cursorrules` (migracja **024** + zakres **023** — widok importów), endpointy `/remind`, `/cron/remind-pending`, flaga `is_test`; feature-map, ADR-010, karty produktu, operations
+
 ### 2026-04-20 — Finanse mieszkańca: „Saldo na dzień: DD-MM-YYYY"
 - **Migracja `023_last_import_activity_view.sql`** — widok `last_import_activity` z globalnymi `last_bank_import_at` / `last_excel_import_at` (wyliczane z `payments.title` + `created_at`); GRANT SELECT dla `authenticated` — widok obchodzi RLS `payments` (sama data, bez kwot i lokali; brak danych wrażliwych)
 - **`site/src/lib/balanceAsOf.ts`** (+ test) — pure helper: `computeBalanceAsOf({ paymentDates, lastBankImportAt, lastExcelImportAt })` → najpóźniejsza data; `formatBalanceAsOfDate` (`YYYY-MM-DD` → `DD-MM-YYYY`)

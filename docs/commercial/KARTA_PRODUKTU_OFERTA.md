@@ -75,8 +75,10 @@ Ten sam zestaw tras URL co u zarządcy; pełny zakres poniżej = **administrator
 - **Uchwały i głosowania**
   - Workflow statusów: szkic → głosowanie → zamknięte
   - Rejestracja **głosów z zebrania** (osobiście) w szkicu przed publikacją — ten sam zapis co głos online, brak podwójnego głosu w panelu
-  - Panel admina: logiczny układ akcji — przycisk «Głosy z zebrania», potem ikony (reset głosów, eksport PDF, edycja, usunięcie)
+  - Panel admina: logiczny układ akcji — przycisk «Głosy z zebrania», potem ikony (reset głosów, eksport PDF, edycja, usunięcie, **wysyłka przypomnienia** do nieoddanych głosów)
   - Automatyczne ogłoszenie do mieszkańców przy otwarciu głosowania
+  - **Automatyczne przypomnienia e‑mail** o nieoddanych głosach na 2 dni przed końcem głosowania (cron codzienny, jednorazowe oznaczenie wysyłki — bez spamu)
+  - **Tryb testowy uchwały** (`is_test`) — uchwała niewidoczna dla mieszkańców, bez auto-ogłoszenia, pomijana przez cron przypomnień; umożliwia bezpieczne testy powiadomień
   - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
   - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec), także dla szkicu z już wprowadzonymi głosami
 - **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane

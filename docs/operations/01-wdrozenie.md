@@ -47,7 +47,7 @@ SQL Editor → New Query → skopiuj i uruchom **po kolei**:
 011_initial_balance_date.sql — data salda początkowego
 ```
 
-Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–023** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`, **021–022** jawność ogłoszeń `is_public` i domyślna wartość, **023** widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca).
+Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–024** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`, **021–022** jawność ogłoszeń `is_public` i domyślna wartość, **023** widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, **024** `resolutions.is_test` + `reminder_sent_at` + indeks częściowy dla przypomnień o uchwałach).
 
 **Kolejność jest ważna!** Każda migracja zależy od poprzednich.
 

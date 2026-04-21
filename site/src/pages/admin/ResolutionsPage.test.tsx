@@ -44,6 +44,7 @@ vi.mock('../../components/ui/Icons', () => ({
   TrashIcon: ({ className }: { className?: string }) => <span data-testid="trash-icon" className={className}>🗑</span>,
   XIcon: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className}>×</span>,
   DownloadIcon: ({ className }: { className?: string }) => <span data-testid="download-icon" className={className}>⬇</span>,
+  SendIcon: ({ className }: { className?: string }) => <span data-testid="send-icon" className={className}>➤</span>,
 }))
 
 import AdminResolutionsPage from './ResolutionsPage'

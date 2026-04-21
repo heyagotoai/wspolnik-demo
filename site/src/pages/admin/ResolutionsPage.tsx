@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
-import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon, SendIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
@@ -34,6 +34,16 @@ interface Resolution {
   voting_end: string | null
   status: string
   created_at: string
+  is_test?: boolean
+  reminder_sent_at?: string | null
+}
+
+interface RemindResponse {
+  detail: string
+  recipients: string[]
+  sent: number
+  failed: number
+  dry_run: boolean
 }
 
 interface VoteResults {
@@ -70,6 +80,7 @@ interface ResolutionForm {
   voting_start: string
   voting_end: string
   status: string
+  is_test: boolean
 }
 
 const emptyForm: ResolutionForm = {
@@ -78,6 +89,7 @@ const emptyForm: ResolutionForm = {
   voting_start: '',
   voting_end: '',
   status: 'draft',
+  is_test: false,
 }
 
 const statusLabels: Record<string, { label: string; bg: string; text: string }> = {
@@ -161,6 +173,7 @@ export default function AdminResolutionsPage() {
       voting_start: r.voting_start || '',
       voting_end: r.voting_end || '',
       status: r.status,
+      is_test: !!r.is_test,
     })
     setError(null)
     setShowForm(true)
@@ -213,12 +226,13 @@ export default function AdminResolutionsPage() {
     setSaving(true)
     setError(null)
 
-    const payload: Record<string, string | null> = {
+    const payload: Record<string, string | boolean | null> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
       voting_start: form.voting_start.trim(),
       voting_end: form.voting_end.trim(),
       status: form.status,
+      is_test: form.is_test,
     }
 
     try {
@@ -274,6 +288,49 @@ export default function AdminResolutionsPage() {
       await fetchResolutions()
     } catch {
       toast('Błąd resetowania głosów', 'error')
+    }
+  }
+
+  const handleRemindDryRun = async (r: Resolution) => {
+    try {
+      const res = await api.post<RemindResponse>(
+        `/resolutions/${r.id}/remind?dry_run=true`,
+        {},
+      )
+      if (res.recipients.length === 0) {
+        toast('Wszyscy uprawnieni już oddali głos — nikt nie dostanie przypomnienia', 'success')
+        return
+      }
+      const list = res.recipients.join('\n')
+      const ok = await confirm({
+        title: `Przypomnienie trafi do ${res.recipients.length} osób`,
+        message: `Adresy odbiorców:\n\n${list}\n\nKliknij „Wyślij teraz", aby rozesłać przypomnienie.`,
+        confirmLabel: 'Wyślij teraz',
+        cancelLabel: 'Anuluj',
+      })
+      if (!ok) return
+      await handleRemindSend(r)
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Błąd sprawdzania odbiorców'), 'error')
+    }
+  }
+
+  const handleRemindSend = async (r: Resolution) => {
+    try {
+      const res = await api.post<RemindResponse>(
+        `/resolutions/${r.id}/remind?dry_run=false`,
+        {},
+      )
+      if (res.sent === 0 && res.failed === 0) {
+        toast('Brak odbiorców — wszyscy już zagłosowali', 'success')
+      } else if (res.failed > 0) {
+        toast(`Wysłano ${res.sent}, nie udało się ${res.failed}`, 'error')
+      } else {
+        toast(`Wysłano przypomnienia do ${res.sent} osób`, 'success')
+      }
+      await fetchResolutions()
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Błąd wysyłki przypomnień'), 'error')
     }
   }
 
@@ -671,6 +728,23 @@ export default function AdminResolutionsPage() {
                 <option value="closed">Zamknięta</option>
               </select>
             </div>
+            <div className="pt-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_test}
+                  onChange={(e) => setForm({ ...form, is_test: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 accent-sage"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-charcoal">Uchwała testowa</span>
+                  <span className="block text-xs text-outline">
+                    Mieszkańcy nie zobaczą tej uchwały w panelu ani nie dostaną ogłoszenia.
+                    Cron przypomnień ją pomija — przypomnienie można wysłać ręcznie z listy.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
@@ -718,6 +792,14 @@ export default function AdminResolutionsPage() {
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>
                         {status.label}
                       </span>
+                      {r.is_test && (
+                        <span
+                          className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800"
+                          title="Uchwała testowa — niewidoczna dla mieszkańców, pomijana przez cron przypomnień"
+                        >
+                          TEST
+                        </span>
+                      )}
                       <span className="text-xs text-outline">{formatDate(r.created_at)}</span>
                     </div>
                     <h3 className="text-sm font-semibold text-charcoal">{r.title}</h3>
@@ -761,6 +843,20 @@ export default function AdminResolutionsPage() {
                         title="Zarejestruj głosy oddane osobiście na zebraniu — przed uruchomieniem głosowania online"
                       >
                         Głosy z zebrania
+                      </button>
+                    )}
+                    {isAdmin && r.status === 'voting' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemindDryRun(r)}
+                        className="p-2 text-outline hover:text-sage transition-colors"
+                        title={
+                          r.reminder_sent_at
+                            ? `Przypomnienie wysłane: ${new Date(r.reminder_sent_at).toLocaleString('pl-PL')}. Kliknij, aby wysłać ponownie.`
+                            : 'Wyślij przypomnienie mieszkańcom, którzy nie oddali głosu'
+                        }
+                      >
+                        <SendIcon className="w-4 h-4" />
                       </button>
                     )}
                     {isAdmin && voteData && voteData.total > 0 && (

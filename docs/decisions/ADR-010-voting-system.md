@@ -41,6 +41,14 @@ Admin ręcznie zmienia status. W przyszłości można dodać automatyczne zamyka
 - Mieszkaniec wstawia głos tylko za siebie — `votes_insert_own` (`resident_id = auth.uid()`). **Rejestracja głosu za mieszkańca** (np. głos z zebrania) jest możliwa wyłącznie przez endpoint admina z kluczem `service_role`, nie przez klienta Supabase jako zwykły użytkownik
 - Wyniki agregowane przez API; szczegółowe głosy (kto jak głosował) dostępne dla admina i zarządcy przez `GET /resolutions/:id/votes` (`require_admin_or_manager`)
 
+### Przypomnienia o nieoddanych głosach + tryb testowy (`is_test`)
+- **Kontekst:** potrzeba bezpiecznego testowania przypomnień bez spamowania mieszkańców realnymi testowymi uchwałami.
+- **Flaga `is_test`** (migracja `024_resolutions_test_and_reminder.sql`): uchwała testowa jest **ukryta** dla mieszkańców w `GET /resolutions`, **nie generuje auto-ogłoszenia**, **pomijana przez cron** przypomnień. Admin/zarządca widzą badge „TEST".
+- **Okno przypomnień:** `voting_end - 2 dni ≤ dziś ≤ voting_end`. Pomija uchwały z ustawionym `reminder_sent_at` (jednorazowe oznaczenie po udanej wysyłce cron) — po stronie prod nie dubluje się mimo codziennego cron-a.
+- **Odbiorcy:** aktywni mieszkańcy z emailem, którzy nie oddali głosu, i są uprawnieni wg `check_resolution_vote_eligibility` (mieszkaniec aktywny lub admin/manager będący właścicielem lokalu). Logika w `api/core/resolution_reminders.py`.
+- **Cron:** `GET/POST /resolutions/cron/remind-pending` (GitHub Actions `0 7 * * *`, `CRON_SECRET`). Filtr DB: `status='voting' AND reminder_sent_at IS NULL AND is_test=false` (indeks częściowy `idx_resolutions_reminder_pending`).
+- **Ręczna wysyłka:** `POST /resolutions/{id}/remind?dry_run=bool` — admin, wymaga `status='voting'`, **ignoruje `is_test`** (umożliwia test na uchwale oznaczonej `is_test=true`); przy `is_test=true` nie ustawia `reminder_sent_at` (można powtarzać). UI: ikona SendIcon w pasku akcji, dry-run → potwierdzenie listy odbiorców → send.
+
 ## Alternatywy rozważane
 - **Głosowanie z możliwością zmiany** — odrzucone; w kontekście uchwał wspólnoty głos powinien być świadomy i ostateczny
 - **Automatyczne zamykanie** — odłożone; wymaga cron job (Edge Functions lub zewnętrzny scheduler)
@@ -51,7 +59,7 @@ Admin ręcznie zmienia status. W przyszłości można dodać automatyczne zamyka
 - Endpointy: m.in. lista, CRUD uchwały, wyniki, mój głos, oddanie głosu, lista głosów (admin/zarządca), reset głosów, **rejestracja głosu z zebrania**, **usunięcie pojedynczego głosu w szkicu** — szczegóły w `api/routes/resolutions.py`
 - Strony: `/admin/uchwaly` (`ResolutionsPage.tsx` — modal głosów z zebrania, **układ paska akcji** zsynchronizowany z `CLAUDE.md`) + `/panel/glosowania`
 - Eksport PDF wyników głosowania: podsumowanie (za/przeciw/wstrzymuje + %) + lista imiennych głosów sortowana po numerze lokalu (także gdy uchwała jest jeszcze w szkicu, ale są już wpisane głosy)
-- Testy: pytest (`test_resolutions.py`, m.in. rejestracja/usunięcie w szkicu) + vitest (`ResolutionsPage.test.tsx`)
+- Testy: pytest (`test_resolutions.py`, m.in. rejestracja/usunięcie w szkicu; `test_resolution_reminders.py` — okno czasowe, filtrowanie odbiorców, cron, ręczna wysyłka) + vitest (`ResolutionsPage.test.tsx`)
 
 ## Powiązania
 - [[ADR-002-rls-bezpieczenstwo]] — polityki RLS dla votes/resolutions

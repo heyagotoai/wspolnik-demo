@@ -110,6 +110,7 @@ class ResolutionCreate(BaseModel):
     voting_start: str = Field(..., min_length=10, max_length=32)
     voting_end: str = Field(..., min_length=10, max_length=32)
     status: ResolutionStatus = "draft"
+    is_test: bool = False
 
     @field_validator("title")
     @classmethod
@@ -140,6 +141,7 @@ class ResolutionUpdate(BaseModel):
     voting_start: str | None = None
     voting_end: str | None = None
     status: ResolutionStatus | None = None
+    is_test: bool | None = None
 
     @field_validator("title")
     @classmethod
@@ -177,6 +179,8 @@ class ResolutionOut(BaseModel):
     voting_end: str | None
     status: str
     created_at: str
+    is_test: bool = False
+    reminder_sent_at: str | None = None
 
 
 class VoteCreate(BaseModel):

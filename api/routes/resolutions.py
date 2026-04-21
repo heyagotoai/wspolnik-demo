@@ -1,5 +1,9 @@
+import logging
+import os
 import re
+from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.core.config import CRON_SECRET
@@ -8,6 +12,11 @@ from api.core.supabase_client import get_supabase
 from api.core.resolution_voting_window import (
     has_voting_ended,
     is_within_voting_period,
+)
+from api.core.resolution_reminders import (
+    build_reminder_email,
+    find_pending_voters,
+    is_within_reminder_window,
 )
 from api.core.voting_eligibility import check_resolution_vote_eligibility
 from api.models.schemas import (
@@ -25,6 +34,36 @@ from api.models.schemas import (
 router = APIRouter(prefix="/resolutions", tags=["resolutions"])
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_reminder_logger = logging.getLogger(__name__)
+
+
+def _send_reminder_email(
+    supabase_url: str,
+    anon_key: str,
+    to: str,
+    subject: str,
+    body: str,
+) -> bool:
+    """Wyślij jednego maila przez Supabase Edge Function send-email."""
+    try:
+        resp = httpx.post(
+            f"{supabase_url}/functions/v1/send-email",
+            json={"to": to, "subject": subject, "body": body},
+            headers={
+                "Authorization": f"Bearer {anon_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            return True
+        _reminder_logger.warning(
+            "Edge function returned %s for %s: %s", resp.status_code, to, resp.text,
+        )
+        return False
+    except Exception as e:
+        _reminder_logger.warning("Failed to send reminder to %s: %s", to, e)
+        return False
 
 
 def _verify_cron(request: Request) -> None:
@@ -62,11 +101,23 @@ def _validate_merged_calendar(merged: dict) -> None:
 
 
 @router.get("", response_model=list[ResolutionOut])
-def list_resolutions(_user: dict = Depends(get_current_user)):
-    """List all resolutions (any logged-in user)."""
+def list_resolutions(user: dict = Depends(get_current_user)):
+    """List all resolutions. Residents don't see test resolutions."""
     sb = get_supabase()
     result = sb.table("resolutions").select("*").order("created_at", desc=True).execute()
-    return result.data
+    rows = result.data or []
+
+    # Admin/manager widzą wszystko; mieszkaniec nie widzi is_test=true
+    voter = (
+        sb.table("residents")
+        .select("role")
+        .eq("id", user["sub"])
+        .execute()
+    )
+    role = (voter.data[0].get("role") if voter.data else None) or "resident"
+    if role not in ("admin", "manager"):
+        rows = [r for r in rows if not r.get("is_test")]
+    return rows
 
 
 @router.post("", response_model=ResolutionOut, status_code=201)
@@ -81,7 +132,8 @@ def create_resolution(body: ResolutionCreate, _admin: dict = Depends(require_adm
         raise HTTPException(status_code=500, detail="Nie udało się utworzyć uchwały")
 
     # Auto-create announcement when created directly with "voting" status
-    if body.status == "voting":
+    # (testowe uchwały nie generują ogłoszenia — mieszkaniec nic nie widzi)
+    if body.status == "voting" and not body.is_test:
         end_info = f" Głosowanie trwa do {body.voting_end}."
         title = body.title
         content = f'Rozpoczęto głosowanie nad uchwałą "{title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
@@ -145,7 +197,8 @@ def update_resolution(
         sb.table("votes").delete().eq("resolution_id", resolution_id).execute()
 
     # Auto-create announcement when status changes to "voting"
-    if body.status == "voting" and old_status != "voting":
+    # (testowe uchwały nie generują ogłoszenia — mieszkaniec nic nie widzi)
+    if body.status == "voting" and old_status != "voting" and not merged.get("is_test"):
         ve = merged["voting_end"]
         end_info = f" Głosowanie trwa do {ve}."
         content = f'Rozpoczęto głosowanie nad uchwałą "{resolution_title}".{end_info} Zaloguj się do panelu mieszkańca, aby oddać głos.'
@@ -179,6 +232,142 @@ def resolutions_close_ended_cron(request: Request):
             closed += 1
 
     return {"detail": f"Zamknięto uchwał: {closed}", "closed": closed}
+
+
+def _run_reminder_for_resolution(
+    sb,
+    resolution: dict,
+    *,
+    dry_run: bool,
+    mark_sent: bool,
+) -> dict:
+    """Wspólna logika: wyznaczenie odbiorców + wysyłka + zapis reminder_sent_at.
+
+    Zwraca: {recipients: [emails], sent: int, failed: int, dry_run: bool}
+    """
+    recipients = find_pending_voters(sb, resolution["id"])
+    emails = [p["email"] for p in recipients]
+
+    if dry_run:
+        return {"recipients": emails, "sent": 0, "failed": 0, "dry_run": True}
+
+    if not recipients:
+        if mark_sent:
+            now = datetime.now(timezone.utc).isoformat()
+            sb.table("resolutions").update({"reminder_sent_at": now}).eq(
+                "id", resolution["id"],
+            ).execute()
+        return {"recipients": [], "sent": 0, "failed": 0, "dry_run": False}
+
+    supabase_url = os.getenv("SUPABASE_URL")
+    anon_key = os.getenv("SUPABASE_ANON_KEY")
+    if not supabase_url or not anon_key:
+        raise HTTPException(status_code=500, detail="Konfiguracja email nie jest ustawiona")
+
+    subject, body = build_reminder_email(resolution["title"], resolution.get("voting_end"))
+    sent = 0
+    failed = 0
+    for p in recipients:
+        ok = _send_reminder_email(supabase_url, anon_key, p["email"], subject, body)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    if mark_sent and sent > 0:
+        now = datetime.now(timezone.utc).isoformat()
+        sb.table("resolutions").update({"reminder_sent_at": now}).eq(
+            "id", resolution["id"],
+        ).execute()
+
+    return {"recipients": emails, "sent": sent, "failed": failed, "dry_run": False}
+
+
+@router.post("/{resolution_id}/remind")
+def remind_pending_voters(
+    resolution_id: str,
+    dry_run: bool = False,
+    _admin: dict = Depends(require_admin),
+):
+    """Wyślij przypomnienie do mieszkańców, którzy nie oddali głosu (admin).
+
+    `dry_run=true` — zwraca tylko listę adresów bez wysyłki. Ignoruje flagę `is_test`
+    (dzięki temu można ręcznie przetestować na uchwale testowej).
+    """
+    sb = get_supabase()
+
+    check = (
+        sb.table("resolutions")
+        .select("id, title, status, voting_end, is_test")
+        .eq("id", resolution_id)
+        .execute()
+    )
+    if not check.data:
+        raise HTTPException(status_code=404, detail="Uchwała nie znaleziona")
+    resolution = check.data[0]
+    if resolution.get("status") != "voting":
+        raise HTTPException(
+            status_code=400,
+            detail="Przypomnienie można wysłać tylko dla uchwały w trakcie głosowania",
+        )
+
+    result = _run_reminder_for_resolution(
+        sb, resolution, dry_run=dry_run, mark_sent=not resolution.get("is_test"),
+    )
+    if dry_run:
+        return {
+            "detail": f"Lista odbiorców (dry-run): {len(result['recipients'])}",
+            **result,
+        }
+    return {
+        "detail": (
+            f"Wysłano {result['sent']}, nie udało się {result['failed']}"
+            if result["failed"]
+            else f"Wysłano przypomnienia: {result['sent']}"
+        ),
+        **result,
+    }
+
+
+@router.api_route("/cron/remind-pending", methods=["GET", "POST"])
+def resolutions_remind_cron(request: Request):
+    """Codzienny cron: przypomnienia do mieszkańców, którzy nie głosowali.
+
+    Warunki: status=voting, is_test=false, reminder_sent_at IS NULL,
+    voting_end w oknie `<= REMINDER_DAYS_BEFORE_END` dni od dziś.
+    """
+    _verify_cron(request)
+    sb = get_supabase()
+    rows = (
+        sb.table("resolutions")
+        .select("id, title, status, voting_end, is_test, reminder_sent_at")
+        .eq("status", "voting")
+        .execute()
+    )
+    candidates = [
+        r for r in (rows.data or [])
+        if r.get("status") == "voting"
+        and not r.get("is_test")
+        and not r.get("reminder_sent_at")
+        and is_within_reminder_window(r.get("voting_end"))
+    ]
+
+    if not candidates:
+        return {"detail": "Brak uchwał do przypomnienia", "processed": 0, "sent": 0}
+
+    total_sent = 0
+    total_failed = 0
+    for r in candidates:
+        result = _run_reminder_for_resolution(sb, r, dry_run=False, mark_sent=True)
+        total_sent += result["sent"]
+        total_failed += result["failed"]
+
+    return {
+        "detail": f"Przetworzono uchwał: {len(candidates)}, wysłano: {total_sent}",
+        "processed": len(candidates),
+        "sent": total_sent,
+        "failed": total_failed,
+    }
 
 
 @router.delete("/{resolution_id}", response_model=MessageOut)

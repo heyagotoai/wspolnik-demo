@@ -59,7 +59,7 @@ Ten sam zestaw adresów URL co u zarządcy; **pełny zakres operacji** poniżej 
 - **Dokumenty** — upload PDF (limit rozmiaru wg konfiguracji), publiczny/prywatny
 - **Terminy** — CRUD
 - **Naliczenia miesięczne** — generowanie per lokal i miesiąc; wzory (m², osoby); regeneracja z zachowaniem pozycji ręcznych; pozycje „inne”; stawki z datą obowiązywania; podsumowania; ostrzeżenie przy kolizji z saldem początkowym; **zawiadomienia o opłatach** — podgląd PDF, wysyłka e‑mail (pojedynczo i masowo), edycja podstawy prawnej, wybór miesiąca obowiązywania
-- **Uchwały i głosowania** — stany: szkic → głosowanie → zamknięte; **głosy z zebrania** w szkicu (spójny model z głosem online); akcje w panelu (m.in. głosy z zebrania, reset, PDF, edycja, usuwanie); powiadomienie przy otwarciu; wyniki (liczby i %); **eksport PDF** (także szkic z głosami)
+- **Uchwały i głosowania** — stany: szkic → głosowanie → zamknięte; **głosy z zebrania** w szkicu (spójny model z głosem online); akcje w panelu (m.in. głosy z zebrania, reset, PDF, edycja, usuwanie, **wysyłka przypomnienia** do nieoddanych głosów); **automatyczne przypomnienia e‑mail** na 2 dni przed końcem głosowania (cron; pomija uchwały testowe i już wysłane); **tryb testowy** (`is_test`) — uchwała niewidoczna dla mieszkańców, bez auto-ogłoszenia, pomijana przez cron; powiadomienie przy otwarciu; wyniki (liczby i %); **eksport PDF** (także szkic z głosami)
 - **Wiadomości** — wiadomości z formularza kontaktowego, oznaczanie przeczytanych
 - **Dziennik operacji** — historia zmian finansowych i głosowań, filtry, szczegóły
 - **Wydruk salda** — pismo z saldem, danymi konta, terminem lub informacją o nadpłacie

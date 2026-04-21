@@ -12,6 +12,8 @@ on:
     - cron: "0 4 1 1,4,7,10 *"
     # Uchwały — automatyczne zamknięcie po voting_end (06:30 UTC)
     - cron: "30 6 * * *"
+    # Uchwały — przypomnienia o nieoddanych głosach (07:00 UTC, 2 dni przed końcem)
+    - cron: "0 7 * * *"
   workflow_dispatch:
     inputs:
       job:
@@ -24,6 +26,7 @@ on:
           - contact-cleanup
           - financial-retention
           - resolutions-close
+          - resolutions-remind
           - all
 
 jobs:
@@ -124,5 +127,25 @@ jobs:
           echo "HTTP status: $response"
           if [ "$response" -ne 200 ]; then
             echo "::error::Cron uchwał zwrócił HTTP $response"
+            exit 1
+          fi
+
+  resolutions-remind:
+    name: Przypomnienia o nieoddanych głosach
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'wmgabi/gabi-site' && (
+      github.event.schedule == '0 7 * * *' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'resolutions-remind' || github.event.inputs.job == 'all')))
+    steps:
+      - name: Wywołaj endpoint przypomnień
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/resolutions/cron/remind-pending")
+          echo "HTTP status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "::error::Cron przypomnień uchwał zwrócił HTTP $response"
             exit 1
           fi

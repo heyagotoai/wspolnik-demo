@@ -26,6 +26,8 @@ RESOLUTION_DATA = {
     "voting_end": "2026-04-15",
     "status": "voting",
     "created_at": "2026-03-20T10:00:00",
+    "is_test": False,
+    "reminder_sent_at": None,
 }
 
 VOTE_DATA = {
@@ -66,6 +68,29 @@ class TestListResolutions:
     def test_lista_niedostepna_bez_logowania(self, client):
         response = client.get("/api/resolutions")
         assert response.status_code == 401
+
+    def test_mieszkaniec_nie_widzi_uchwal_testowych(self, resident_client, fake_sb):
+        """Uchwała z is_test=true jest ukryta przed mieszkańcem."""
+        test_res = {**RESOLUTION_DATA, "id": "res-test", "is_test": True}
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA, test_res])
+        fake_sb.set_table_data("residents", [{"id": "res-1", "role": "resident"}])
+
+        response = resident_client.get("/api/resolutions")
+        assert response.status_code == 200
+        ids = [r["id"] for r in response.json()]
+        assert "res-1" in ids
+        assert "res-test" not in ids
+
+    def test_admin_widzi_uchwaly_testowe(self, resident_client, fake_sb):
+        """Resident_client nadpisuje get_current_user — tabela residents określa rolę listy."""
+        test_res = {**RESOLUTION_DATA, "id": "res-test", "is_test": True}
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA, test_res])
+        fake_sb.set_table_data("residents", [{"id": "res-1", "role": "admin"}])
+
+        response = resident_client.get("/api/resolutions")
+        assert response.status_code == 200
+        ids = [r["id"] for r in response.json()]
+        assert "res-test" in ids
 
 
 # --- POST /api/resolutions --------------------------------------------------
