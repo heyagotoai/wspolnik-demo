@@ -59,10 +59,12 @@ def send_announcement_email(
     if ann.data.get("email_sent_at"):
         raise HTTPException(status_code=400, detail="Email już został wysłany dla tego ogłoszenia")
 
-    # Fetch active residents with emails
+    # Fetch active residents (pomijamy „bez konta" — brak email — w pętli poniżej)
     residents = sb.table("residents").select("email, full_name").eq("is_active", True).execute()
     if not residents.data:
         raise HTTPException(status_code=400, detail="Brak aktywnych mieszkańców")
+    if not any((r.get("email") or "").strip() for r in residents.data):
+        raise HTTPException(status_code=400, detail="Brak aktywnych mieszkańców z adresem email")
 
     # Check email config
     supabase_url = os.getenv("SUPABASE_URL")
@@ -86,7 +88,11 @@ def send_announcement_email(
     sent = 0
     failed = 0
     for resident in residents.data:
-        ok = _send_one_email(supabase_url, anon_key, resident["email"], subject, body)
+        email = (resident.get("email") or "").strip()
+        if not email:
+            # Safety net: mieszkańcy „bez konta" (rejestr do głosów z zebrania)
+            continue
+        ok = _send_one_email(supabase_url, anon_key, email, subject, body)
         if ok:
             sent += 1
         else:

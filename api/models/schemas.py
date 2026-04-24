@@ -30,15 +30,24 @@ def _validate_password_strength(v: str) -> str:
 
 
 class ResidentCreate(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)
+    """Tworzenie mieszkańca.
+
+    Email i hasło są opcjonalne — brak email = mieszkaniec „bez konta"
+    (rejestrowany np. do głosów z zebrania, bez możliwości logowania).
+    Gdy email podany, hasło też musi być podane.
+    """
+
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
     apartment_number: str | None = Field(default=None, max_length=20)
     role: RoleType = "resident"
 
     @field_validator("password")
     @classmethod
-    def password_strength(cls, v: str) -> str:
+    def password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         return _validate_password_strength(v)
 
     @field_validator("full_name")
@@ -48,12 +57,28 @@ class ResidentCreate(BaseModel):
             raise ValueError("Imię i nazwisko nie może być puste")
         return v.strip()
 
+    @model_validator(mode="after")
+    def email_and_password_pair(self):
+        if self.email and not self.password:
+            raise ValueError("Hasło jest wymagane gdy podany jest email")
+        if self.password and not self.email:
+            raise ValueError("Email jest wymagany gdy podane jest hasło")
+        return self
+
 
 class ResidentUpdate(BaseModel):
+    """Aktualizacja mieszkańca.
+
+    `email` + `password` pozwalają „nadać konto" mieszkańcowi bez konta
+    (has_account=false → true). Oba pola muszą być podane razem.
+    """
+
     full_name: str | None = Field(default=None, min_length=2, max_length=255)
     apartment_number: str | None = Field(default=None, max_length=20)
     role: RoleType | None = None
     is_active: bool | None = None
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
     @field_validator("full_name")
     @classmethod
@@ -62,14 +87,28 @@ class ResidentUpdate(BaseModel):
             raise ValueError("Imię i nazwisko nie może być puste")
         return v.strip() if v else v
 
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return _validate_password_strength(v)
+
+    @model_validator(mode="after")
+    def email_and_password_pair(self):
+        if (self.email and not self.password) or (self.password and not self.email):
+            raise ValueError("Email i hasło muszą być podane razem")
+        return self
+
 
 class ResidentOut(BaseModel):
     id: str
-    email: str
+    email: str | None = None
     full_name: str
     apartment_number: str | None
     role: str
     is_active: bool
+    has_account: bool = True
     created_at: str
 
 

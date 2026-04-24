@@ -50,12 +50,12 @@ import ResidentsPage from './ResidentsPage'
 const mockResidents = [
   {
     id: 'r1', email: 'jan@gabi.pl', full_name: 'Jan Kowalski',
-    apartment_number: '1A', role: 'resident', is_active: true,
+    apartment_number: '1A', role: 'resident', is_active: true, has_account: true,
     created_at: '2025-01-01T00:00:00',
   },
   {
     id: 'r2', email: 'anna@gabi.pl', full_name: 'Anna Nowak',
-    apartment_number: '2B', role: 'admin', is_active: true,
+    apartment_number: '2B', role: 'admin', is_active: true, has_account: true,
     created_at: '2025-01-02T00:00:00',
   },
 ]
@@ -125,8 +125,11 @@ describe('ResidentsPage', () => {
     await user.click(screen.getByText('Dodaj'))
     expect(screen.getByText('Nowy mieszkaniec')).toBeInTheDocument()
     expect(screen.getByText('Imię i nazwisko *')).toBeInTheDocument()
-    expect(screen.getByText('Email *')).toBeInTheDocument()
-    expect(screen.getByText('Hasło *')).toBeInTheDocument()
+    // Email jest opcjonalny — można dodać mieszkańca „bez konta" (np. do głosów z zebrania)
+    expect(screen.getByText('Email (opcjonalnie)')).toBeInTheDocument()
+    expect(screen.getByText(/Hasło \(wymagane gdy podany email\)/)).toBeInTheDocument()
+    // Hint: pozostaw puste = bez konta
+    expect(screen.getByText(/bez zakładania konta logowania/)).toBeInTheDocument()
   })
 
   it('waliduje wymagane pola przy zapisie', async () => {
@@ -141,8 +144,52 @@ describe('ResidentsPage', () => {
     await user.click(screen.getByText('Zapisz'))
 
     await waitFor(() => {
-      expect(screen.getByText('Imię i email są wymagane.')).toBeInTheDocument()
+      expect(screen.getByText('Imię i nazwisko jest wymagane.')).toBeInTheDocument()
     })
+  })
+
+  it('pozwala dodać mieszkańca „bez konta" (bez email/hasła)', async () => {
+    const user = userEvent.setup()
+    const { api } = await import('../../lib/api')
+    const postSpy = vi.mocked(api.post)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan Kowalski')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Dodaj'))
+    // Inputy nie są powiązane z labelami przez htmlFor/id — wybieramy po roli + kolejności w formularzu
+    const textboxes = screen.getAllByRole('textbox')
+    // [0] full_name, [1] email, [2] apartment_number
+    await user.type(textboxes[0], 'Adam Bez-Konta')
+    // Celowo nie wypełniamy email ani hasła
+    await user.click(screen.getByText('Zapisz'))
+
+    await waitFor(() => {
+      expect(postSpy).toHaveBeenCalled()
+    })
+    const [path, payload] = postSpy.mock.calls[0]
+    expect(path).toBe('/residents')
+    expect((payload as Record<string, unknown>).full_name).toBe('Adam Bez-Konta')
+    expect((payload as Record<string, unknown>).email).toBeUndefined()
+    expect((payload as Record<string, unknown>).password).toBeUndefined()
+  })
+
+  it('pokazuje badge „bez konta" dla mieszkańca bez email', async () => {
+    mockOrder.mockResolvedValue({
+      data: [
+        { id: 'r3', email: null, full_name: 'Piotr Bez-Konta', apartment_number: '3C', role: 'resident', is_active: true, has_account: false, created_at: '2026-04-01T00:00:00' },
+      ],
+      error: null,
+    })
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Piotr Bez-Konta')).toBeInTheDocument()
+    })
+    expect(screen.getByText('bez konta')).toBeInTheDocument()
   })
 
   it('zamyka formularz po kliknięciu Anuluj', async () => {

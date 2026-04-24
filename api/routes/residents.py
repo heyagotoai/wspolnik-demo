@@ -1,3 +1,6 @@
+import secrets
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.core.security import require_admin
@@ -5,6 +8,21 @@ from api.core.supabase_client import get_supabase
 from api.models.schemas import ResidentCreate, ResidentUpdate, ResidentOut, MessageOut, ApartmentAssign
 
 router = APIRouter(prefix="/residents", tags=["residents"])
+
+# Placeholder-email dla mieszkańców „bez konta" — nigdy nie dostarczalny,
+# nieużywany do logowania (auth user jest dodatkowo banowany).
+_PLACEHOLDER_EMAIL_DOMAIN = "no-login.wmgabi.local"
+# ~100 lat; Supabase GoTrue akceptuje godziny/minuty w formacie `<N>h`
+_LONG_BAN_DURATION = "876000h"
+
+
+def _make_placeholder_email() -> str:
+    return f"no-login-{uuid.uuid4().hex}@{_PLACEHOLDER_EMAIL_DOMAIN}"
+
+
+def _make_random_password() -> str:
+    # 32 znaki URL-safe base64 — spełnia wymagania siły hasła
+    return secrets.token_urlsafe(32) + "Aa1"
 
 
 @router.get("", response_model=list[ResidentOut])
@@ -17,23 +35,32 @@ def list_residents(_admin: dict = Depends(require_admin)):
 
 @router.post("", response_model=ResidentOut, status_code=201)
 def create_resident(body: ResidentCreate, _admin: dict = Depends(require_admin)):
-    """Create a new auth user and corresponding resident record.
+    """Create a new resident record (admin only).
 
-    Uses Supabase Admin API (service_role key) to create the auth user,
-    then inserts a row into the residents table.
+    Dwa tryby:
+    - z kontem: body.email + body.password → pełny auth user + login.
+    - bez konta: brak email/password → placeholder auth user (email wewnętrzny,
+      losowe hasło, ban na 100 lat), has_account=false, residents.email=NULL.
+      Mieszkaniec istnieje w bazie (np. do głosów z zebrania) ale nie może się zalogować.
     """
     sb = get_supabase()
 
+    has_account = bool(body.email)
+    auth_email = body.email if has_account else _make_placeholder_email()
+    auth_password = body.password if has_account else _make_random_password()
+
     # 1. Create auth user via Supabase Admin API
     try:
-        auth_response = sb.auth.admin.create_user(
-            {
-                "email": body.email,
-                "password": body.password,
-                "email_confirm": True,  # auto-confirm so user can log in immediately
-                "user_metadata": {"full_name": body.full_name},
-            }
-        )
+        create_payload: dict = {
+            "email": auth_email,
+            "password": auth_password,
+            "email_confirm": True,  # auto-confirm so user can log in immediately
+            "user_metadata": {"full_name": body.full_name},
+        }
+        if not has_account:
+            # Ban na ~100 lat — user nie zaloguje się nigdy, nawet gdyby ktoś poznał placeholder-email.
+            create_payload["ban_duration"] = _LONG_BAN_DURATION
+        auth_response = sb.auth.admin.create_user(create_payload)
     except Exception as e:
         # Wyciągnij szczegóły błędu
         detail = str(e)
@@ -50,11 +77,12 @@ def create_resident(body: ResidentCreate, _admin: dict = Depends(require_admin))
     # 2. Insert into residents table
     resident_data = {
         "id": user.id,
-        "email": body.email,
+        "email": body.email if has_account else None,
         "full_name": body.full_name,
         "apartment_number": body.apartment_number,
         "role": body.role,
         "is_active": True,
+        "has_account": has_account,
     }
 
     try:
@@ -82,10 +110,66 @@ def update_resident(
     body: ResidentUpdate,
     _admin: dict = Depends(require_admin),
 ):
-    """Update resident data (admin only)."""
+    """Update resident data (admin only).
+
+    Podanie `email` + `password` dla mieszkańca bez konta „nadaje mu konto":
+    aktualizujemy auth.users.email, ustawiamy hasło, zdejmujemy ban i zapisujemy
+    residents.email + has_account=true.
+    """
     sb = get_supabase()
 
+    grant_account = bool(body.email and body.password)
+
+    # Przygotuj dane do aktualizacji tabeli residents
     update_data = body.model_dump(exclude_none=True)
+    # Hasło nie jest kolumną w residents — zostaje po stronie auth
+    update_data.pop("password", None)
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Brak danych do aktualizacji")
+
+    # Sprawdź czy mieszkaniec istnieje + ustal obecny stan has_account
+    existing_res = (
+        sb.table("residents")
+        .select("id, has_account")
+        .eq("id", resident_id)
+        .execute()
+    )
+    if not existing_res.data:
+        raise HTTPException(status_code=404, detail="Mieszkaniec nie znaleziony")
+    currently_has_account = bool(existing_res.data[0].get("has_account", True))
+
+    if grant_account:
+        if currently_has_account:
+            raise HTTPException(
+                status_code=400,
+                detail="Mieszkaniec ma już konto — zmiana emaila/hasła przez ten endpoint niedozwolona.",
+            )
+        # Zaktualizuj auth usera: email + password + usunięcie bana
+        try:
+            sb.auth.admin.update_user_by_id(
+                resident_id,
+                {
+                    "email": body.email,
+                    "password": body.password,
+                    "email_confirm": True,
+                    "ban_duration": "none",
+                },
+            )
+        except Exception as e:
+            detail = str(e)
+            if hasattr(e, "message"):
+                detail = e.message
+            raise HTTPException(
+                status_code=400,
+                detail=f"Błąd aktywacji konta: {detail}",
+            )
+        update_data["has_account"] = True
+        # email już jest w update_data z body.model_dump
+    else:
+        # Nie pozwalaj zmieniać samego emaila bez hasła (ani bez pełnej procedury)
+        update_data.pop("email", None)
+
     if not update_data:
         raise HTTPException(status_code=400, detail="Brak danych do aktualizacji")
 

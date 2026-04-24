@@ -10,11 +10,12 @@ import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 
 interface Resident {
   id: string
-  email: string
+  email: string | null
   full_name: string
   apartment_number: string | null
   role: string
   is_active: boolean
+  has_account: boolean
   created_at: string
 }
 
@@ -56,7 +57,7 @@ export default function ResidentsPage() {
     const [{ data: resData }, { data: aptData }] = await Promise.all([
       supabase
         .from('residents')
-        .select('id, email, full_name, apartment_number, role, is_active, created_at')
+        .select('id, email, full_name, apartment_number, role, is_active, has_account, created_at')
         .order('full_name', { ascending: true }),
       supabase
         .from('apartments')
@@ -149,7 +150,7 @@ export default function ResidentsPage() {
   const openEdit = (r: Resident) => {
     setEditingId(r.id)
     setForm({
-      email: r.email,
+      email: r.email || '',
       password: '',
       full_name: r.full_name,
       apartment_number: r.apartment_number || '',
@@ -167,8 +168,8 @@ export default function ResidentsPage() {
   }
 
   const handleSave = async () => {
-    if (!form.full_name.trim() || !form.email.trim()) {
-      setError('Imię i email są wymagane.')
+    if (!form.full_name.trim()) {
+      setError('Imię i nazwisko jest wymagane.')
       return
     }
     if (form.full_name.trim().length < 2) {
@@ -176,46 +177,67 @@ export default function ResidentsPage() {
       return
     }
 
+    const email = form.email.trim()
+    const editingResident = editingId ? residents.find(r => r.id === editingId) : null
+    const grantingAccount = !!(editingResident && !editingResident.has_account && email)
+
+    // Walidacja hasła: przy tworzeniu konta (email podany) i przy nadawaniu konta.
+    const passwordRequired = !editingId ? !!email : grantingAccount
+    if (passwordRequired) {
+      if (!form.password || form.password.length < 8) {
+        setError('Hasło musi mieć min. 8 znaków.')
+        return
+      }
+      if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/\d/.test(form.password)) {
+        setError('Hasło musi zawierać wielką literę, małą literę i cyfrę.')
+        return
+      }
+    }
+
     setSaving(true)
     setError(null)
 
     try {
       if (editingId) {
-        // Update via Supabase (RLS allows admin)
-        const { error: updateError } = await supabase
-          .from('residents')
-          .update({
+        if (grantingAccount) {
+          // Aktywacja konta (has_account: false → true) — email + hasło + ewentualnie inne pola.
+          await api.patch(`/residents/${editingId}`, {
+            email,
+            password: form.password,
             full_name: form.full_name.trim(),
             apartment_number: form.apartment_number.trim() || null,
             role: form.role,
           })
-          .eq('id', editingId)
+        } else {
+          // Zwykły update przez Supabase (RLS admin). Email niezmienialny.
+          const { error: updateError } = await supabase
+            .from('residents')
+            .update({
+              full_name: form.full_name.trim(),
+              apartment_number: form.apartment_number.trim() || null,
+              role: form.role,
+            })
+            .eq('id', editingId)
 
-        if (updateError) {
-          setError(mapSupabaseError(updateError))
-          setSaving(false)
-          return
+          if (updateError) {
+            setError(mapSupabaseError(updateError))
+            setSaving(false)
+            return
+          }
         }
       } else {
-        // Create via FastAPI backend (uses service_role to create auth user)
-        if (!form.password || form.password.length < 8) {
-          setError('Hasło musi mieć min. 8 znaków.')
-          setSaving(false)
-          return
-        }
-        if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/\d/.test(form.password)) {
-          setError('Hasło musi zawierać wielką literę, małą literę i cyfrę.')
-          setSaving(false)
-          return
-        }
-
-        await api.post('/residents', {
-          email: form.email.trim(),
-          password: form.password,
+        // Create via FastAPI backend (uses service_role to create auth user).
+        // Email + password opcjonalne — brak = mieszkaniec „bez konta" (rejestr do głosów z zebrania).
+        const payload: Record<string, unknown> = {
           full_name: form.full_name.trim(),
           apartment_number: form.apartment_number.trim() || null,
           role: form.role,
-        })
+        }
+        if (email) {
+          payload.email = email
+          payload.password = form.password
+        }
+        await api.post('/residents', payload)
       }
 
       await fetchResidents()
@@ -330,29 +352,49 @@ export default function ResidentsPage() {
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-charcoal mb-1">Email *</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                disabled={!!editingId}
-                className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
-              />
-            </div>
-            {!editingId && (
-              <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Hasło *</label>
-                <input
-                  type="password"
-                  maxLength={128}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="min. 8 znaków, wielka/mała litera, cyfra"
-                  className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
-                />
-              </div>
-            )}
+            {(() => {
+              const editingResident = editingId ? residents.find(r => r.id === editingId) : null
+              const isGrantAccountMode = editingResident ? !editingResident.has_account : false
+              const emailDisabled = !!editingId && !isGrantAccountMode
+              const emailLabel = editingId
+                ? (isGrantAccountMode ? 'Email (nadaj konto)' : 'Email')
+                : 'Email (opcjonalnie)'
+              const showPasswordField = !editingId || isGrantAccountMode
+              const passwordLabel = isGrantAccountMode ? 'Hasło (nadaj konto) *' : 'Hasło (wymagane gdy podany email)'
+              return (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-charcoal mb-1">{emailLabel}</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      disabled={emailDisabled}
+                      placeholder={!editingId ? 'puste = mieszkaniec bez konta (tylko rejestr)' : ''}
+                      className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
+                    />
+                    {!editingId && (
+                      <p className="text-xs text-outline mt-1">
+                        Pozostaw puste, jeśli chcesz dodać właściciela do rejestru (np. do głosów z zebrania) bez zakładania konta logowania.
+                      </p>
+                    )}
+                  </div>
+                  {showPasswordField && (
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1">{passwordLabel}</label>
+                      <input
+                        type="password"
+                        maxLength={128}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="min. 8 znaków, wielka/mała litera, cyfra"
+                        className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                      />
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Nr lokalu</label>
               <input
@@ -419,7 +461,18 @@ export default function ResidentsPage() {
                 {residents.map((r) => (
                   <tr key={r.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-charcoal">{r.full_name}</td>
-                    <td className="px-5 py-3 text-slate">{r.email}</td>
+                    <td className="px-5 py-3 text-slate">
+                      {r.email ? (
+                        r.email
+                      ) : (
+                        <span
+                          className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-cream-deep text-outline"
+                          title="Mieszkaniec w rejestrze bez konta logowania (np. do głosów z zebrania). Można nadać konto: edytuj i podaj email + hasło."
+                        >
+                          bez konta
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-slate">
                       {(() => {
                         const owned = apartmentsOf(r.id)
