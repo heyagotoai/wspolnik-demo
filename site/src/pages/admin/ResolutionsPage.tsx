@@ -8,6 +8,7 @@ import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
 import { formatCaughtError } from '../../lib/userFacingErrors'
+import { compareApartmentLabels } from '../../lib/apartmentLabelSort'
 import {
   hasWeightedVoteShares,
   pctDisplayPrzeciw,
@@ -623,7 +624,7 @@ export default function AdminResolutionsPage() {
       <tbody>
         ${voteDetails
           .slice()
-          .sort((a, b) => (a.apartment_number ?? '').localeCompare(b.apartment_number ?? '', 'pl'))
+          .sort((a, b) => compareApartmentLabels(a.apartment_number, b.apartment_number))
           .map(v => {
             const voteLabel = v.vote === 'za' ? '<span class="vote-za">Za</span>'
               : v.vote === 'przeciw' ? '<span class="vote-przeciw">Przeciw</span>'
@@ -989,10 +990,7 @@ export default function AdminResolutionsPage() {
                           {meetingVoteRows
                             .slice()
                             .sort((a, b) =>
-                              (a.apartment_number ?? '').localeCompare(
-                                b.apartment_number ?? '',
-                                'pl',
-                              ),
+                              compareApartmentLabels(a.apartment_number, b.apartment_number),
                             )
                             .map(row => (
                               <li
