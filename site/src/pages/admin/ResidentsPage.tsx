@@ -245,7 +245,7 @@ export default function ResidentsPage() {
     } catch (err) {
       const msg = formatCaughtError(err, '')
       if (msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('already registered')) {
-        const existing = residents.find(r => r.email.toLowerCase() === form.email.trim().toLowerCase())
+        const existing = residents.find(r => (r.email ?? '').toLowerCase() === form.email.trim().toLowerCase())
         if (existing) {
           setError(`Konto z tym emailem już istnieje (${existing.full_name}). Aby dodać kolejny lokal, zamknij ten formularz i kliknij ikonę 🏠 przy wierszu tego mieszkańca.`)
         } else {
