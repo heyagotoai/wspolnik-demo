@@ -983,9 +983,9 @@ export default function AdminResolutionsPage() {
                     {meetingVoteRows.length > 0 && (
                       <div>
                         <h3 className="text-xs font-semibold text-outline uppercase tracking-wide mb-2">
-                          Zarejestrowane głosy
+                          Zarejestrowane głosy ({meetingVoteRows.length})
                         </h3>
-                        <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)]">
+                        <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)] max-h-80 overflow-y-auto">
                           {meetingVoteRows
                             .slice()
                             .sort((a, b) =>
