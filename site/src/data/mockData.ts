@@ -1,3 +1,15 @@
+/**
+ * Imię i nazwisko lub firma — właściciel praw do oprogramowania (stopka, obok ©).
+ * Ustaw w `site/.env`: `VITE_APP_SOFTWARE_RIGHTS_HOLDER=...` (dla Vercel: Environment Variables).
+ */
+export function getSoftwareRightsHolderName(): string | null {
+  const v =
+    typeof import.meta.env.VITE_APP_SOFTWARE_RIGHTS_HOLDER === 'string'
+      ? import.meta.env.VITE_APP_SOFTWARE_RIGHTS_HOLDER.trim()
+      : ''
+  return v.length > 0 ? v : null
+}
+
 /** Dane demonstracyjne (fikcyjne) — repozytorium wspolnik-demo */
 export const communityInfo = {
   name: 'Wspólnota Mieszkaniowa „Zielone Tarasy”',

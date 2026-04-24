@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
-import { communityInfo, navLinks } from '../../data/mockData'
+import { communityInfo, getSoftwareRightsHolderName, navLinks } from '../../data/mockData'
 import { useAuth } from '../../hooks/useAuth'
 
 export default function Footer() {
   const { user } = useAuth()
   const navLinksVisible = user ? navLinks : navLinks.filter((l) => l.path !== '/dokumenty')
+  const year = new Date().getFullYear()
+  const rightsHolder = getSoftwareRightsHolderName()
 
   return (
     <footer className="bg-cream-dark mt-auto">
@@ -59,10 +61,21 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline space-y-1">
-          <p>{communityInfo.name}</p>
+          <p>{communityInfo.name} — dane wspólnoty przykładowe w tej wersji demonstracyjnej</p>
           <p>
-            Wersja demonstracyjna &middot; oprogramowanie wykorzystywane na podstawie licencji &middot; wszelkie prawa do
-            oprogramowania zastrzeżone
+            {rightsHolder ? (
+              <>
+                &copy; {year} {rightsHolder}. Prawa autorskie do oprogramowania portalu przysługują wskazanemu podmiotowi.
+                Wersja demonstracyjna; korzystanie w środowisku produkcyjnym albo dalsze rozpowszechnianie — wyłącznie na
+                zasadach udzielonej licencji. Wszelkie prawa zastrzeżone.
+              </>
+            ) : (
+              <>
+                &copy; {year}. Prawa autorskie do oprogramowania portalu zastrzeżone. Wersja demonstracyjna;
+                korzystanie w środowisku produkcyjnym albo dalsze rozpowszechnianie — wyłącznie na zasadach udzielonej
+                licencji.
+              </>
+            )}
           </p>
         </div>
       </div>
