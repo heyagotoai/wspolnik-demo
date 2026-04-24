@@ -17,7 +17,7 @@ export default function Footer() {
             </h4>
             <nav className="space-y-2">
               <a href="/docs/polityka-prywatnosci-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności i RODO</a>
-              <a href="/docs/regulamin-portalu-wmgabi.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin portalu WM GABI</a>
+              <a href="/docs/regulamin-portalu-wmgabi.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin portalu</a>
             </nav>
           </div>
 
@@ -59,8 +59,13 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline space-y-1">
-          <p>&copy; {new Date().getFullYear()} {communityInfo.name}</p>
-          <p>Oprogramowanie WM GABI &copy; {new Date().getFullYear()} &middot; wszelkie prawa zastrzeżone &middot; używane na podstawie licencji</p>
+          <p>
+            &copy; {new Date().getFullYear()} {communityInfo.name}
+          </p>
+          <p>
+            Wersja demonstracyjna &middot; oprogramowanie wykorzystywane na podstawie licencji &middot; wszelkie prawa do
+            oprogramowania zastrzeżone
+          </p>
         </div>
       </div>
     </footer>
