@@ -59,8 +59,13 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline space-y-1">
-          <p>&copy; {new Date().getFullYear()} {communityInfo.name}</p>
-          <p>Oprogramowanie WM GABI &copy; {new Date().getFullYear()} &middot; wszelkie prawa zastrzeżone &middot; używane na podstawie licencji</p>
+          <p>
+            {new Date().getFullYear()} {communityInfo.name}
+          </p>
+          <p>
+            &copy; {new Date().getFullYear()} &middot; wszelkie prawa zastrzeżone &middot; korzystanie oraz
+            dalsze rozpowszechnianie wyłącznie na zasadach udzielonej licencji
+          </p>
         </div>
       </div>
     </footer>
