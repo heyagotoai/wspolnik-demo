@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-24 — Mieszkańcy bez konta logowania (głosy z zebrania bez email)
+- **Migracja `025_residents_optional_email.sql`** — `email` nullable, partial unique index `residents_email_unique_not_null` (WHERE email IS NOT NULL), kolumna `has_account BOOLEAN DEFAULT true`
+- **`api/models/schemas.py`** — `ResidentCreate.email/password` opcjonalne (validator wymusza parę); `ResidentUpdate` dostaje `email/password` do „nadawania konta"; `ResidentOut.has_account`
+- **`api/routes/residents.py`** — `POST /residents` bez email: placeholder auth user `no-login-<uuid>@no-login.wmgabi.local`, ban ~100 lat, `residents.email=NULL`, `has_account=false`; `PATCH /residents/:id` z email+password przy `has_account=false`: `auth.admin.update_user_by_id` + `ban_duration: "none"` + `has_account=true`; ponowna zmiana → 400
+- **`api/routes/announcements.py`** — filtr pustych emaili w wysyłce (safety net + weryfikacja listy)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — email opcjonalny z hintem, badge „bez konta" w tabeli, tryb „nadaj konto" w edycji (email + hasło dla `has_account=false`)
+- **Testy:** +4 pytest (tworzenie bez konta, walidacja par, nadanie konta, blokada zmiany), +2 vitest (dodanie bez konta, badge); 390/390 pytest, 148/148 vitest
+
 ### 2026-04-21 — Uchwały: przypomnienia o nieoddanych głosach + tryb testowy (is_test)
 - **Migracja `024_resolutions_test_and_reminder.sql`** — kolumny `is_test BOOLEAN DEFAULT false`, `reminder_sent_at TIMESTAMPTZ`; indeks częściowy `idx_resolutions_reminder_pending` (status='voting' AND reminder_sent_at IS NULL AND is_test=false)
 - **`api/core/resolution_reminders.py`** (new) — `is_within_reminder_window()` (okno 2 dni przed `voting_end`), `find_pending_voters()` (aktywni, z emailem, nie oddali głosu, uprawnieni wg `voting_eligibility`), `build_reminder_email()`
