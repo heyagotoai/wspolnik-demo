@@ -59,9 +59,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline space-y-1">
-          <p>
-            &copy; {new Date().getFullYear()} {communityInfo.name}
-          </p>
+          <p>{communityInfo.name}</p>
           <p>
             Wersja demonstracyjna &middot; oprogramowanie wykorzystywane na podstawie licencji &middot; wszelkie prawa do
             oprogramowania zastrzeżone
