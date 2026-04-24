@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
 import { communityInfo, navLinks } from '../../data/mockData'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function Footer() {
+  const { user } = useAuth()
+  const navLinksVisible = user ? navLinks : navLinks.filter((l) => l.path !== '/dokumenty')
+
   return (
     <footer className="bg-cream-dark mt-auto">
       <div className="mx-auto max-w-[1280px] px-6 py-16">
@@ -12,24 +16,8 @@ export default function Footer() {
               Dokumenty prawne
             </h4>
             <nav className="space-y-2">
-              <Link
-                to="/polityka-prywatnosci"
-                className="block text-sm text-slate hover:text-sage transition-colors"
-              >
-                Polityka prywatności
-              </Link>
-              <Link
-                to="/klauzula-rodo"
-                className="block text-sm text-slate hover:text-sage transition-colors"
-              >
-                Klauzula informacyjna RODO
-              </Link>
-              <Link
-                to="/regulamin-wspolnoty"
-                className="block text-sm text-slate hover:text-sage transition-colors"
-              >
-                Regulamin wspólnoty
-              </Link>
+              <a href="/docs/polityka-prywatnosci-rodo.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Polityka prywatności i RODO</a>
+              <a href="/docs/regulamin-portalu-wmgabi.pdf" target="_blank" rel="noopener noreferrer" className="block text-sm text-slate hover:text-sage transition-colors">Regulamin portalu WM GABI</a>
             </nav>
           </div>
 
@@ -39,7 +27,7 @@ export default function Footer() {
               Nawigacja
             </h4>
             <nav className="space-y-2">
-              {navLinks.map((link) => (
+              {navLinksVisible.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -70,8 +58,9 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline">
-          &copy; {new Date().getFullYear()} {communityInfo.name}. Wszelkie prawa zastrzeżone.
+        <div className="mt-12 pt-8 border-t border-cream-medium text-center text-xs text-outline space-y-1">
+          <p>&copy; {new Date().getFullYear()} {communityInfo.name}</p>
+          <p>Oprogramowanie WM GABI &copy; {new Date().getFullYear()} &middot; wszelkie prawa zastrzeżone &middot; używane na podstawie licencji</p>
         </div>
       </div>
     </footer>

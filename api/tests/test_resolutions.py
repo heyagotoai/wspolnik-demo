@@ -15,6 +15,7 @@ Pokryte scenariusze:
 """
 
 import pytest
+from datetime import date
 
 RESOLUTION_DATA = {
     "id": "res-1",
@@ -25,6 +26,8 @@ RESOLUTION_DATA = {
     "voting_end": "2026-04-15",
     "status": "voting",
     "created_at": "2026-03-20T10:00:00",
+    "is_test": False,
+    "reminder_sent_at": None,
 }
 
 VOTE_DATA = {
@@ -66,6 +69,29 @@ class TestListResolutions:
         response = client.get("/api/resolutions")
         assert response.status_code == 401
 
+    def test_mieszkaniec_nie_widzi_uchwal_testowych(self, resident_client, fake_sb):
+        """Uchwała z is_test=true jest ukryta przed mieszkańcem."""
+        test_res = {**RESOLUTION_DATA, "id": "res-test", "is_test": True}
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA, test_res])
+        fake_sb.set_table_data("residents", [{"id": "res-1", "role": "resident"}])
+
+        response = resident_client.get("/api/resolutions")
+        assert response.status_code == 200
+        ids = [r["id"] for r in response.json()]
+        assert "res-1" in ids
+        assert "res-test" not in ids
+
+    def test_admin_widzi_uchwaly_testowe(self, resident_client, fake_sb):
+        """Resident_client nadpisuje get_current_user — tabela residents określa rolę listy."""
+        test_res = {**RESOLUTION_DATA, "id": "res-test", "is_test": True}
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA, test_res])
+        fake_sb.set_table_data("residents", [{"id": "res-1", "role": "admin"}])
+
+        response = resident_client.get("/api/resolutions")
+        assert response.status_code == 200
+        ids = [r["id"] for r in response.json()]
+        assert "res-test" in ids
+
 
 # --- POST /api/resolutions --------------------------------------------------
 
@@ -76,6 +102,8 @@ class TestCreateResolution:
         response = admin_client.post("/api/resolutions", json={
             "title": "Wymiana windy",
             "description": "Głosowanie nad wymianą windy",
+            "voting_start": "2026-05-01",
+            "voting_end": "2026-05-20",
             "status": "draft",
         })
         assert response.status_code == 201
@@ -88,9 +116,19 @@ class TestCreateResolution:
 
         response = admin_client.post("/api/resolutions", json={
             "title": "Nowa uchwała",
+            "voting_start": "2026-04-01",
+            "voting_end": "2026-04-15",
             "status": "voting",
         })
         assert response.status_code == 201
+
+    def test_tworzenie_bez_dat_422(self, admin_client, fake_sb):
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        response = admin_client.post("/api/resolutions", json={
+            "title": "Bez dat",
+            "status": "draft",
+        })
+        assert response.status_code == 422
 
     def test_tworzenie_wymaga_admina(self, resident_client, fake_sb):
         """Resident (non-admin) cannot create resolutions."""
@@ -98,6 +136,9 @@ class TestCreateResolution:
         # so the require_admin dep will fail because the role check won't pass
         response = resident_client.post("/api/resolutions", json={
             "title": "Test",
+            "voting_start": "2026-04-01",
+            "voting_end": "2026-04-15",
+            "status": "draft",
         })
         assert response.status_code == 403
 
@@ -225,6 +266,13 @@ class TestVoteResults:
 # --- POST /api/resolutions/:id/vote ----------------------------------------
 
 class TestCastVote:
+    @pytest.fixture(autouse=True)
+    def _freeze_pl_today_w_oknie_glosowania(self, monkeypatch):
+        """Stała data w [voting_start, voting_end] z RESOLUTION_DATA (testy niezależne od roku)."""
+        from api.core import resolution_voting_window
+
+        monkeypatch.setattr(resolution_voting_window, "local_today_pl", lambda: date(2026, 4, 10))
+
     def test_duplikat_glosu_zwraca_409(self, resident_client, fake_sb):
         """Resident who already voted gets 409."""
         fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
@@ -341,6 +389,18 @@ class TestCastVote:
         response = resident_client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
         assert response.status_code == 403
         assert "nieaktywne" in response.json()["detail"].lower()
+
+    def test_glos_po_zakonczonym_okresie_dat(self, resident_client, fake_sb, monkeypatch):
+        from api.core import resolution_voting_window
+
+        monkeypatch.setattr(resolution_voting_window, "local_today_pl", lambda: date(2026, 4, 20))
+        fake_sb.set_table_data("resolutions", [RESOLUTION_DATA])
+        fake_sb.set_table_data("votes", [])
+        fake_sb.set_table_data("residents", [RESIDENT_FOR_VOTE])
+
+        response = resident_client.post("/api/resolutions/res-1/vote", json={"vote": "za"})
+        assert response.status_code == 400
+        assert "okres" in response.json()["detail"].lower()
 
 
 # --- GET /api/resolutions/:id/votes ----------------------------------------
@@ -500,3 +560,44 @@ class TestMyVote:
         response = resident_client.get("/api/resolutions/res-1/my-vote")
         assert response.status_code == 200
         assert response.json() is None
+
+
+# --- GET/POST /api/resolutions/cron/close-ended ------------------------------
+
+class TestResolutionsCloseEndedCron:
+    def test_wymaga_sekretu(self, client):
+        assert client.get("/api/resolutions/cron/close-ended").status_code == 401
+
+    def test_zamyka_po_terminie(self, client, fake_sb, monkeypatch):
+        from unittest.mock import patch
+
+        from api.core import resolution_voting_window
+
+        monkeypatch.setattr(resolution_voting_window, "local_today_pl", lambda: date(2026, 5, 1))
+        fake_sb.set_table_data("resolutions", [
+            {**RESOLUTION_DATA, "status": "voting"},
+        ])
+        with patch("api.routes.resolutions.CRON_SECRET", "test-secret"):
+            r = client.get(
+                "/api/resolutions/cron/close-ended",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+        assert r.status_code == 200
+        assert r.json()["closed"] == 1
+
+    def test_w_trakcie_okresu_nie_zamyka(self, client, fake_sb, monkeypatch):
+        from unittest.mock import patch
+
+        from api.core import resolution_voting_window
+
+        monkeypatch.setattr(resolution_voting_window, "local_today_pl", lambda: date(2026, 4, 10))
+        fake_sb.set_table_data("resolutions", [
+            {**RESOLUTION_DATA, "status": "voting"},
+        ])
+        with patch("api.routes.resolutions.CRON_SECRET", "test-secret"):
+            r = client.get(
+                "/api/resolutions/cron/close-ended",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+        assert r.status_code == 200
+        assert r.json()["closed"] == 0

@@ -16,6 +16,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 from api.core.config import CRON_SECRET, SUPABASE_URL
+from api.core.email_disclaimer import automated_email_footer
 from api.core.supabase_client import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -176,9 +177,9 @@ def _send_notification(subject: str, body: str) -> None:
             logger.warning("Backup: nie udało się wysłać powiadomienia do %s: %s", email, e)
 
 
-@router.post("/cron")
+@router.api_route("/cron", methods=["GET", "POST"])
 def backup_cron(request: Request):
-    """Weekly backup cron — exports DB tables + auth users + documents to Supabase Storage."""
+    """Weekly backup cron (GET from Vercel Cron). Exports DB tables + auth users + documents to Supabase Storage."""
     _verify_cron(request)
 
     sb = get_supabase()
@@ -222,6 +223,7 @@ def backup_cron(request: Request):
                 f"Tygodniowy backup z {today.isoformat()} nie powiódł się.\n\n"
                 f"Błąd: {e}\n\n"
                 f"Sprawdź logi w Vercel Dashboard."
+                f"{automated_email_footer()}"
             ),
         )
         raise HTTPException(status_code=500, detail=f"Backup upload failed: {e}")
@@ -243,6 +245,7 @@ def backup_cron(request: Request):
             f"Dokumenty PDF: {len(documents)}\n"
             f"Usunięto starych backupów: {deleted}\n\n"
             f"Retencja: {RETENTION_WEEKS} tygodni"
+            f"{automated_email_footer()}"
         ),
     )
 

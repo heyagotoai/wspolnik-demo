@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
@@ -43,6 +44,7 @@ vi.mock('../../components/ui/Icons', () => ({
   TrashIcon: ({ className }: { className?: string }) => <span data-testid="trash-icon" className={className}>🗑</span>,
   XIcon: ({ className }: { className?: string }) => <span data-testid="x-icon" className={className}>×</span>,
   DownloadIcon: ({ className }: { className?: string }) => <span data-testid="download-icon" className={className}>⬇</span>,
+  SendIcon: ({ className }: { className?: string }) => <span data-testid="send-icon" className={className}>➤</span>,
 }))
 
 import AdminResolutionsPage from './ResolutionsPage'
@@ -63,20 +65,22 @@ const mockResolutions = [
     title: 'Remont klatki',
     description: null,
     document_id: null,
-    voting_start: null,
-    voting_end: null,
+    voting_start: '2026-05-01',
+    voting_end: '2026-05-31',
     status: 'draft',
     created_at: '2026-03-19T10:00:00',
   },
 ]
 
-function renderPage() {
+function renderPage(initialEntries?: string[]) {
   return render(
-    <ToastProvider>
-      <ConfirmProvider>
-        <AdminResolutionsPage />
-      </ConfirmProvider>
-    </ToastProvider>,
+    <MemoryRouter initialEntries={initialEntries}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AdminResolutionsPage />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   )
 }
 

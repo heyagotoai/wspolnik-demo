@@ -1,13 +1,11 @@
-# Karta Produktu — Zapytanie ofertowe
-## System zarządzania wspólnotą mieszkaniową
+# Karta produktu: 
+## **System zarządzania wspólnotą mieszkaniową**
 
----
+## 1. Przeznaczenie
 
-## 1. Cel projektu
+Aplikacja webowa do obsługi małej wspólnoty mieszkaniowej: zastępuje rozproszone arkusze, papierowe głosowania i ręczne powiadomienia. Trzy warstwy: strona publiczna, panel mieszkańca, panel administracyjny (administrator i — w ograniczonym zakresie — zarządca). Typowo wdrażana na **dedykowanej domenie** wspólnoty.
 
-Potrzebuję webowej aplikacji do zarządzania małą wspólnotą mieszkaniową. System ma zastąpić arkusze Excel, papierowe głosowania i ręczne powiadomienia. Trzy warstwy dostępu: strona publiczna, panel mieszkańca, panel administratora. Aplikacja na własnej domenie wspólnoty.
-
-**Skala:** wspólnota ~50 lokali/mieszkańców, administrator + zarządca.
+**Skala docelowa:** rząd wielkości ~50 lokali/mieszkańców; administrator i rola zarządcy (ograniczony dostęp operacyjny).
 
 ---
 
@@ -15,178 +13,107 @@ Potrzebuję webowej aplikacji do zarządzania małą wspólnotą mieszkaniową. 
 
 | Rola | Kto | Uprawnienia |
 |------|-----|-------------|
-| Gość | Każdy bez logowania | Przeglądanie strony publicznej, formularz kontaktowy |
-| Mieszkaniec | Właściciel lokalu | Panel z finansami, głosowaniami, dokumentami. Widzi TYLKO swoje dane |
-| Zarządca | Osoba zarządzająca (ograniczone prawa) | Podgląd finansów, ogłoszenia, terminy. Bez edycji stawek, bez zarządzania kontami |
-| Administrator | Pełne zarządzanie | Wszystko: CRUD mieszkańców, lokali, naliczeń, stawek, uchwał, dokumentów |
+| Gość | Odwiedzający bez logowania | Strona publiczna, formularz kontaktowy |
+| Mieszkaniec | Właściciel lokalu | Panel: finanse, głosowania, dokumenty itd. **Wyłącznie własne dane** |
+| Zarządca | Osoba z ograniczonym mandatem | **Podgląd** (read-only): finanse, lokale, mieszkańcy, dokumenty, uchwały, wiadomości z kontaktu, dziennik operacji. **Pełny CRUD:** ogłoszenia (w tym jawność, wysyłka e‑mail ogłoszenia) i terminy. **Bez** m.in.: kont mieszkańców, edycji stawek, generowania/regeneracji naliczeń, importów, wysyłki salda PDF e‑mail i zawiadomień o opłatach |
+| Administrator | Pełne prowadzenie systemu | CRUD mieszkańców, lokali, naliczeń, stawek, uchwał, dokumentów |
 
-Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zaproszenie emailem).
+Konta mieszkańców **nie rejestrują się samodzielnie** — administrator tworzy konta (np. zaproszenie e‑mailem).
 
 ---
 
-## 3. Wymagane funkcjonalności
+## 3. Zakres funkcjonalny
 
 ### 3.1 Strona publiczna (bez logowania)
 
-- **Strona główna** — prezentacja wspólnoty, szybki dostęp do najważniejszych sekcji, ostatnie ogłoszenia
-- **Aktualności** — lista ogłoszeń (z możliwością przypięcia ważnych na górze), ważne terminy z odliczaniem dni
-- **Dokumenty** — publiczne dokumenty do pobrania (regulaminy, protokoły, formularze) z filtrowaniem po kategorii
-- **Kontakt** — formularz kontaktowy (imię, email, nr mieszkania, temat, treść), dane kontaktowe wspólnoty, numery alarmowe
-- **Stopka** — linki do dokumentów prawnych
+- **Strona główna** — prezentacja wspólnoty (hero: logowanie, aktualności, kontakt), sekcja aktualności z ogłoszeniami oznaczonymi jako jawne (`is_public`); adresy `http(s)://` w treści jako klikalne linki
+- **Aktualności** — lista tych samych jawnych ogłoszeń co na stronie głównej (pełniejsza); przypinanie ważnych
+- **Dokumenty** — dokumenty publiczne do pobrania (kategorie); link „Dokumenty” w menu/stopce **dopiero po zalogowaniu** (gość może wejść z adresu URL)
+- **Kontakt** — formularz (imię, e‑mail, nr mieszkania, temat, treść), dane wspólnoty, numery alarmowe
+- **Stopka** — m.in. odniesienia do dokumentów prawnych
 
-### 3.2 Panel mieszkańca (wymaga zalogowania)
+### 3.2 Panel mieszkańca
 
-- **Dashboard** — aktualne saldo (nadpłata/zaległość), ostatnie ogłoszenia, nadchodzące terminy, aktywne głosowania
+- **Dashboard** — saldo (nadpłata/zaległość), ogłoszenia, terminy, aktywne głosowania
 - **Finanse**
-  - Saldo bieżące = saldo początkowe + suma wpłat − suma naliczeń (przy grupie rozliczeniowej: saldo łączne + rozbicie per lokal)
-  - Lista naliczeń miesięcznych z wyborem miesiąca
-  - Historia wpłat
-  - Wizualne rozróżnienie: nadpłata (zielone), zaległość (czerwone), rozliczone
-- **Ogłoszenia** — pełna lista z rozwijaniem długich treści, oznaczanie nowych (badge "Nowe")
-- **Dokumenty** — pobieranie dokumentów prywatnych i publicznych
-- **Terminy** — nadchodzące daty z odliczaniem + terminy aktywnych głosowań
-- **Głosowania** — lista uchwał (aktywne/zamknięte), oddawanie głosów (za/przeciw/wstrzymuję się), pasek wyników w czasie rzeczywistym
-- **Profil** — edycja danych osobowych, zmiana hasła
+  - Saldo: saldo początkowe + wpłaty − naliczenia (przy grupie rozliczeniowej: saldo łączne + rozbicie per lokal)
+  - Naliczenia miesięczne (wybór miesiąca), historia wpłat
+  - Wyróżnienie stanów: nadpłata / zaległość / rozliczone
+- **Ogłoszenia** — pełna lista, rozwijanie treści, oznaczenie „nowe”
+- **Dokumenty** — publiczne i prywatne
+- **Terminy** — z odliczaniem; terminy aktywnych głosowań
+- **Głosowania** — uchwały (aktywne/zamknięte), głosy (za/przeciw/wstrzymuję się), podgląd wyników
+- **Profil** — dane osobowe, zmiana hasła; przy pierwszej sesji (lub po zmianie wersji dokumentów) akceptacja polityki prywatności i regulaminu; na profilu: zapisane wersje dokumentów, linki do PDF, informacja o kontakcie w sprawie danych osobowych
 
 ### 3.3 Panel administratora
 
-- **Dashboard** — statystyki: liczba mieszkańców, lokali, ogłoszeń, dokumentów
-- **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem
-- **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, saldo początkowe + data obowiązywania salda. Możliwość hurtowego ustawiania daty salda
-- **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
-- **Import wpłat z Excela** — arkusz Dopasowania: kolumny Lokal, Data wpłaty, Kwota (inne ignorowane); wiele dat/kwot po średniku; wpłata zbiorcza = parent + automatyczne rozbicie per lokal; **deduplikacja** po parze (lokal, data) względem bazy i w obrębie tego samego pliku (ponowny import nie dubluje wpłat)
-- **Grupy rozliczeniowe** — łączenie lokali w grupę, wpłaty grupowe z podziałem, saldo łączne u mieszkańca
-- **Ogłoszenia** — CRUD + przypinanie na górze + wysyłka emailem do wszystkich aktywnych mieszkańców
-- **Dokumenty** — upload plików PDF (max 10MB), przełącznik publiczny/prywatny
-- **Terminy** — CRUD ważnych dat z opisami
-- **Naliczenia miesięczne**
-  - Automatyczne generowanie naliczeń per lokal na wybrany miesiąc
-  - Wzory naliczania: eksploatacja i fundusz remontowy = m² × stawka; śmieci = liczba osób × stawka
-  - Możliwość regeneracji (aktualizacja po zmianie stawek) z zachowaniem pozycji ręcznych
-  - Pozycje ręczne typu "inne" (np. indywidualna dopłata)
-  - Zarządzanie stawkami z wersjonowaniem (data obowiązywania "od")
-  - Podsumowania per typ naliczenia + suma zbiorcza
-  - Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym (ochrona przed podwójnym naliczeniem)
-- **Uchwały i głosowania**
-  - Workflow statusów: szkic → głosowanie → zamknięte
-  - Rejestracja **głosów z zebrania** (osobiście) w szkicu przed publikacją — ten sam zapis co głos online, brak podwójnego głosu w panelu
-  - Panel admina: logiczny układ akcji — przycisk «Głosy z zebrania», potem ikony (reset głosów, eksport PDF, edycja, usunięcie)
-  - Automatyczne ogłoszenie do mieszkańców przy otwarciu głosowania
-  - Podgląd wyników: za / przeciw / wstrzymał się (liczba i procent)
-  - Eksport wyniku głosowania do PDF (podsumowanie + lista głosów per mieszkaniec), także dla szkicu z już wprowadzonymi głosami
-- **Wiadomości** — podgląd wiadomości z formularza kontaktowego, oznaczanie jako przeczytane
-- **Dziennik operacji** — historia wszystkich operacji finansowych i głosowań (kto, co, kiedy), filtrowanie po obszarze systemu i zakresie dat, podgląd szczegółów zmian
-- **Wydruk salda** — formalne pismo z aktualnym saldem lokalu, danymi konta i (wg salda) terminem spłaty lub informacją o nadpłacie; jedna strona
-- **Powiadomienie email o saldzie** — wysyłka informacji o saldzie na email mieszkańca jednym kliknięciem
-- **Import zestawienia bankowego (.xls)** — plik zestawienia z banku (stary Excel); automatyczne dopasowanie przelewów do lokali po **nazwisku rozliczeniowym** (`billing_surname`) i numerze lokalu z opisu/adresu; podgląd (dry-run) i zapis; **deduplikacja** po parze (lokal, data) jak przy imporcie z Excela; niedopasowane pozycje w raporcie. Format **MT940** — opcjonalnie, gdy bank go dostarczy (osobna ścieżka)
+Ten sam zestaw adresów URL co u zarządcy; **pełny zakres operacji** poniżej ma **administrator**. Szczegóły ograniczeń zarządcy — w tabeli ról (pkt 2).
 
-### 3.4 Powiadomienia email
+- **Dashboard** — statystyki (mieszkańcy, lokale, ogłoszenia, dokumenty)
+- **Mieszkańcy** — dodawanie (konto e‑mail/hasło), edycja, dezaktywacja, usuwanie; powiązanie z lokalem
+- **Lokale** — CRUD: numer, m², udział %, liczba zameldowanych, właściciel, opcjonalna grupa rozliczeniowa, **nazwisko rozliczeniowe** (dopasowanie importu bankowego), saldo początkowe + data; zbiorcza data salda; **podgląd listy wpłat** lokalu; skrót **ostatnich importów** wpłat (bank / Excel)
+- **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), dopasowanie numerów (także złożone przypadki)
+- **Import wpłat (Excel)** — arkusz dopasowań; wiele dat/kwot; wpłaty zbiorcze z podziałem; **deduplikacja** po parze (lokal, data)
+- **Grupy rozliczeniowe** — zgrupowanie lokali, wpłaty grupowe, saldo łączne u mieszkańca
+- **Ogłoszenia** — CRUD, przypinanie, **jawność na stronie głównej /aktualnosci** (pole `is_public`; domyślnie wyłączone — treść tylko w panelu mieszkańca; auto-ogłoszenia o głosowaniu — niepubliczne), **wysyłka e‑mail** do aktywnych mieszkańców
+- **Dokumenty** — upload PDF (limit rozmiaru wg konfiguracji), publiczny/prywatny
+- **Terminy** — CRUD
+- **Naliczenia miesięczne** — generowanie per lokal i miesiąc; wzory (m², osoby); regeneracja z zachowaniem pozycji ręcznych; pozycje „inne”; stawki z datą obowiązywania; podsumowania; ostrzeżenie przy kolizji z saldem początkowym; **zawiadomienia o opłatach** — podgląd PDF, wysyłka e‑mail (pojedynczo i masowo), edycja podstawy prawnej, wybór miesiąca obowiązywania
+- **Uchwały i głosowania** — stany: szkic → głosowanie → zamknięte; **głosy z zebrania** w szkicu (spójny model z głosem online); akcje w panelu (m.in. głosy z zebrania, reset, PDF, edycja, usuwanie, **wysyłka przypomnienia** do nieoddanych głosów); **automatyczne przypomnienia e‑mail** na 2 dni przed końcem głosowania (cron; pomija uchwały testowe i już wysłane); **tryb testowy** (`is_test`) — uchwała niewidoczna dla mieszkańców, bez auto-ogłoszenia, pomijana przez cron; powiadomienie przy otwarciu; wyniki (liczby i %); **eksport PDF** (także szkic z głosami)
+- **Wiadomości** — wiadomości z formularza kontaktowego, oznaczanie przeczytanych
+- **Dziennik operacji** — historia zmian finansowych i głosowań, filtry, szczegóły
+- **Wydruk salda** — pismo z saldem, danymi konta, terminem lub informacją o nadpłacie
+- **Powiadomienie e‑mail o saldzie** — wysyłka per mieszkaniec (załącznik PDF) oraz **masowa** z zaznaczeniem lokali
+- **Import zestawienia bankowego (.xls)** — dopasowanie po **nazwisku rozliczeniowym** i numerze lokalu z opisu; dry-run; deduplikacja jak przy imporcie Excel; raport niedopasowań. **MT940** — opcjonalnie, gdy bank udostępnia (osobna ścieżka; status zależy od potwierdzenia formatu)
 
-- Wysyłka ogłoszeń emailem do wszystkich mieszkańców
-- Powiadomienie o saldzie (indywidualnie per mieszkaniec)
-- Powiadomienie z formularza kontaktowego do admina
-- Konfiguracja SMTP na domenie wspólnoty (np. powiadomienia@wspolnota.pl)
+### 3.4 Powiadomienia e‑mail
 
----
+- Masowa wysyłka ogłoszeń
+- Saldo (indywidualnie i masowo, załącznik PDF)
+- Zawiadomienia o opłatach (PDF, pojedynczo i masowo)
+- Formularz kontaktowy → administrator
+- Powiadomienie o wyniku **tygodniowego backupu** do administratorów (powodzenie / niepowodzenie)
+- SMTP na domenie wspólnoty (konfiguracja wdrożeniowa)
 
-## 4. Wymagania bezpieczeństwa
+<div style="break-before: page; page-break-before: always;"></div>
 
-| Wymaganie | Szczegóły |
-|-----------|-----------|
-| Autentykacja | Email + hasło. Brak publicznej rejestracji — tylko admin tworzy konta |
-| Autoryzacja | Podział na role (admin, zarządca, mieszkaniec). Każdy endpoint zabezpieczony |
-| Izolacja danych | Mieszkaniec widzi TYLKO swoje dane: swój lokal, swoje naliczenia, swoje wpłaty, swoje głosy. Nie może zobaczyć danych innego mieszkańca |
-| RODO/GDPR | Minimalizacja danych osobowych, prawo do usunięcia konta i danych, pseudonimizacja w logach |
-| Audit log | Logowanie operacji finansowych (kto, co, kiedy) — wymóg prawny |
-| Retencja danych | Automatyczne usuwanie danych finansowych starszych niż 5 lat |
-| Ochrona formularzy | Rate limiting na formularzu kontaktowym, ochrona przed XSS i injection |
-| Testy bezpieczeństwa | Testy jednostkowe + testy izolacji danych + pentest przed wdrożeniem |
+## 4. Bezpieczeństwo i zgodność
 
----
-
-## 5. Wymagania niefunkcjonalne
-
-| Obszar | Wymaganie |
+| Obszar | Założenia |
 |--------|-----------|
-| Responsywność | Pełna obsługa mobile (mieszkańcy będą korzystać głównie z telefonów) |
-| Wydajność | Czas ładowania strony < 2s. System obsługuje ~30 użytkowników jednocześnie |
-| Dostępność | Hosting z SLA 99.9%+, automatyczne SSL |
-| Koszty utrzymania | Minimalne — darmowe/tanie plany hostingu (Vercel free, Supabase free wystarczą dla tej skali) |
-| Domena | System na własnej domenie wspólnoty (np. wspolnota.pl) |
-| Backup | Automatyczne backupy bazy danych, procedura przywracania |
-| CI/CD | Automatyczne testy przy każdym pushu, blokowanie deploy przy błędach |
-| Testy E2E | Automatyczne testy kluczowych ścieżek (logowanie, głosowanie, finanse) |
+| Autentykacja | E‑mail + hasło; brak publicznej samodzielnej rejestracji |
+| Autoryzacja | Role (admin, zarządca, mieszkaniec); zabezpieczenie API |
+| Izolacja danych | Mieszkaniec widzi wyłącznie dane swojego lokalu i powiązane rekordy |
+| RODO/GDPR | Minimalizacja, prawo do usunięcia, ograniczenie danych w logach |
+| Audit log | Rejestracja operacji finansowych i głosowań |
+| Retencja | Usuwanie danych finansowych starszych niż uzgodniony horyzont (np. 5 lat), w ramach **zautomatyzowanego procesu** (cron) |
+| Formularze publiczne | Ograniczenie nadużyć (rate limiting), ochrona przed typowymi atakami web |
 
 ---
 
-## 6. Deliverables (co oczekuję na wyjściu)
+## 5. Wymagania niefunkcjonalne (typowe)
 
-1. **Działająca aplikacja** wdrożona na hostingu z własną domeną
-2. **Kod źródłowy** w repozytorium Git z pełną historią commitów
-3. **Baza danych** z migracjami SQL (powtarzalny setup od zera)
-4. **Testy**
-   - Testy jednostkowe backend (API, bezpieczeństwo, logika biznesowa)
-   - Testy jednostkowe frontend (komponenty, integracja)
-   - Testy izolacji danych (czy mieszkaniec A nie widzi danych B)
-   - Testy E2E kluczowych ścieżek
-5. **Dokumentacja**
-   - Instrukcja wdrożeniowa (deploy od zera)
-   - Instrukcja utrzymania (monitoring, migracje, debugowanie)
-   - Instrukcja dla administratora (nietechniczny użytkownik)
-   - Procedury awaryjne
-6. **Konfiguracja email** — działająca wysyłka z domeny wspólnoty
+| Obszar | Kierunek |
+|--------|----------|
+| Mobile | Responsywność (priorytet dla mieszkańców na telefonach) |
+| Wydajność | Krótki czas pierwszego widoku; ruch rzędu kilkudziesięciu równoczesnych użytkowników dla małej wspólnoty |
+| Dostępność usługi | Hosting z certyfikatem TLS; SLA zależne od wybranego dostawcy |
+| Koszty | Możliwość utrzymania na warstwach darmowych lub niskich dla małej skali (np. hosting aplikacji + baza w modelu chmurowym) |
+| Domena | Własna domena wspólnoty |
+| Backup | Kopie po stronie dostawcy bazy; dodatkowo **tygodniowy eksport** wybranych tabel + metadanych do **magazynu plików** (np. JSON w bucketze), retencja plików np. **12 ostatnich tygodni**, powiadomienie e‑mail do adminów; udokumentowana procedura odtworzenia |
+| Jakość | Testy automatyczne w pipeline; testy izolacji danych; przed produkcją zalecany przegląd bezpieczeństwa |
 
 ---
 
-## 7. Kontekst do wyceny
+<div style="break-before: page; page-break-before: always;"></div>
 
-Proszę o wycenę w wariantach:
+## 6. Stack technologiczny (przykład wdrożenia)
 
-### Wariant A — MVP (minimum viable product)
-Strona publiczna + panel mieszkańca (finanse, dokumenty, profil) + panel admina (mieszkańcy, lokale, ogłoszenia, dokumenty, naliczenia). Bez głosowań, bez importu bankowego, bez roli zarządcy.
+System może być zrealizowany m.in. w następującym zestawie (konkretny wariant zależy od projektu wdrożeniowego):
 
-### Wariant B — Pełny produkt
-Wszystko z sekcji 3 (strona publiczna, panel mieszkańca, panel admina z głosowaniami, naliczeniami, eksportem PDF, powiadomieniami email, wydrukiem salda).
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, React Router
+- **Backend:** FastAPI (Python), hosting serverless
+- **Dane:** Supabase — PostgreSQL z Row Level Security, uwierzytelnianie z białą listą e‑mail, magazyn plików
+- **E‑mail:** funkcja brzegowa jako relay SMTP do skrzynki na domenie wspólnoty
 
-**W każdym wariancie proszę o podanie:**
-- Szacunek godzin pracy
-- Stawka godzinowa lub cena ryczałtowa
-- Czas realizacji (tygodnie)
-- Stack technologiczny, który zaproponujecie (lub potwierdzenie pracy w podanym stacku)
-- Ile osób w zespole
-
----
-
-## 8. Preferowany stack (opcjonalny)
-
-Nie narzucam technologii, ale jeśli potrzebujecie wskazówki — poniższy stack sprawdził się w prototypie:
-
-```
-Frontend:  React + TypeScript + Tailwind CSS
-Backend:   Python (FastAPI) lub Node.js
-Baza:      PostgreSQL z Row Level Security (np. Supabase)
-Auth:      Supabase Auth lub Auth0 lub własne JWT
-Storage:   Supabase Storage lub S3-compatible
-Hosting:   Vercel / Netlify / Railway
-Email:     SMTP relay lub Resend / SendGrid
-```
-
-Jestem otwarty na inne propozycje, jeśli uzasadnione.
-
----
-
-## 9. Harmonogram (pożądany)
-
-| Etap | Zakres | Termin |
-|------|--------|--------|
-| Kick-off + MVP | Architektura, setup, strona publiczna, auth, panel admina (mieszkańcy, lokale, ogłoszenia) | Tydzień 1-2 |
-| Finanse + naliczenia | Stawki, generowanie naliczeń, saldo, wydruk, import bankowy | Tydzień 2-3 |
-| Głosowania + email | Uchwały, głosy, eksport PDF, powiadomienia email | Tydzień 3-4 |
-| Hardening + wdrożenie | Testy, security audit, CI/CD, dokumentacja, deploy, szkolenie | Tydzień 5-6 |
-
-Łączny czas: **4-6 tygodni**.
-
----
-
-*Zapytanie ofertowe — marzec 2026*
-*Kontakt: [do uzupełnienia]*
+<p style="margin-top: 1.25em; page-break-inside: avoid; break-inside: avoid;"><em>Przygotował: Marcin Szczęsny<br>Karta informacyjna — kwiecień 2026</em></p>

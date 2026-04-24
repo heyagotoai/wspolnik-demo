@@ -1,7 +1,9 @@
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # --- Shared types ---
@@ -14,12 +16,39 @@ ChargeRateType = Literal["eksploatacja", "fundusz_remontowy", "smieci"]
 
 # --- Residents ---
 
+def _validate_password_strength(v: str) -> str:
+    """Min 8 chars, at least one uppercase, one lowercase, one digit."""
+    if len(v) < 8:
+        raise ValueError("Hasło musi mieć minimum 8 znaków")
+    if not re.search(r"[A-Z]", v):
+        raise ValueError("Hasło musi zawierać wielką literę")
+    if not re.search(r"[a-z]", v):
+        raise ValueError("Hasło musi zawierać małą literę")
+    if not re.search(r"\d", v):
+        raise ValueError("Hasło musi zawierać cyfrę")
+    return v
+
+
 class ResidentCreate(BaseModel):
-    email: EmailStr
-    password: str = Field(..., min_length=6, max_length=128)
+    """Tworzenie mieszkańca.
+
+    Email i hasło są opcjonalne — brak email = mieszkaniec „bez konta"
+    (rejestrowany np. do głosów z zebrania, bez możliwości logowania).
+    Gdy email podany, hasło też musi być podane.
+    """
+
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
     apartment_number: str | None = Field(default=None, max_length=20)
     role: RoleType = "resident"
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return _validate_password_strength(v)
 
     @field_validator("full_name")
     @classmethod
@@ -28,12 +57,28 @@ class ResidentCreate(BaseModel):
             raise ValueError("Imię i nazwisko nie może być puste")
         return v.strip()
 
+    @model_validator(mode="after")
+    def email_and_password_pair(self):
+        if self.email and not self.password:
+            raise ValueError("Hasło jest wymagane gdy podany jest email")
+        if self.password and not self.email:
+            raise ValueError("Email jest wymagany gdy podane jest hasło")
+        return self
+
 
 class ResidentUpdate(BaseModel):
+    """Aktualizacja mieszkańca.
+
+    `email` + `password` pozwalają „nadać konto" mieszkańcowi bez konta
+    (has_account=false → true). Oba pola muszą być podane razem.
+    """
+
     full_name: str | None = Field(default=None, min_length=2, max_length=255)
     apartment_number: str | None = Field(default=None, max_length=20)
     role: RoleType | None = None
     is_active: bool | None = None
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
     @field_validator("full_name")
     @classmethod
@@ -42,15 +87,33 @@ class ResidentUpdate(BaseModel):
             raise ValueError("Imię i nazwisko nie może być puste")
         return v.strip() if v else v
 
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return _validate_password_strength(v)
+
+    @model_validator(mode="after")
+    def email_and_password_pair(self):
+        if (self.email and not self.password) or (self.password and not self.email):
+            raise ValueError("Email i hasło muszą być podane razem")
+        return self
+
 
 class ResidentOut(BaseModel):
     id: str
-    email: str
+    email: str | None = None
     full_name: str
     apartment_number: str | None
     role: str
     is_active: bool
+    has_account: bool = True
     created_at: str
+
+
+class ApartmentAssign(BaseModel):
+    apartment_id: str = Field(..., min_length=1)
 
 
 class MessageOut(BaseModel):
@@ -76,13 +139,17 @@ class ContactMessageCreate(BaseModel):
 
 # --- Resolutions (Uchwały) ---
 
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 class ResolutionCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=500)
     description: str | None = Field(default=None, max_length=5000)
     document_id: str | None = None
-    voting_start: str | None = None
-    voting_end: str | None = None
+    voting_start: str = Field(..., min_length=10, max_length=32)
+    voting_end: str = Field(..., min_length=10, max_length=32)
     status: ResolutionStatus = "draft"
+    is_test: bool = False
 
     @field_validator("title")
     @classmethod
@@ -91,13 +158,19 @@ class ResolutionCreate(BaseModel):
             raise ValueError("Tytuł nie może być pusty")
         return v.strip()
 
-    @field_validator("voting_end")
+    @field_validator("voting_start", "voting_end")
     @classmethod
-    def voting_end_after_start(cls, v: str | None, info) -> str | None:
-        start = info.data.get("voting_start")
-        if v and start and v < start:
-            raise ValueError("Data końca głosowania musi być późniejsza niż data początku")
-        return v
+    def iso_date_format(cls, v: str) -> str:
+        s = v.strip()
+        if not _ISO_DATE.match(s):
+            raise ValueError("Oczekiwany format daty: RRRR-MM-DD")
+        return s
+
+    @model_validator(mode="after")
+    def voting_end_after_start(self):
+        if self.voting_end < self.voting_start:
+            raise ValueError("Data końca głosowania musi być taka sama lub późniejsza niż początek")
+        return self
 
 
 class ResolutionUpdate(BaseModel):
@@ -107,6 +180,7 @@ class ResolutionUpdate(BaseModel):
     voting_start: str | None = None
     voting_end: str | None = None
     status: ResolutionStatus | None = None
+    is_test: bool | None = None
 
     @field_validator("title")
     @classmethod
@@ -115,13 +189,24 @@ class ResolutionUpdate(BaseModel):
             raise ValueError("Tytuł nie może być pusty")
         return v.strip() if v else v
 
-    @field_validator("voting_end")
+    @field_validator("voting_start", "voting_end")
     @classmethod
-    def voting_end_after_start(cls, v: str | None, info) -> str | None:
-        start = info.data.get("voting_start")
-        if v and start and v < start:
-            raise ValueError("Data końca głosowania musi być późniejsza niż data początku")
-        return v
+    def optional_iso_date(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        s = v.strip()
+        if not _ISO_DATE.match(s):
+            raise ValueError("Oczekiwany format daty: RRRR-MM-DD")
+        return s
+
+    @model_validator(mode="after")
+    def patch_dates_order(self):
+        if self.voting_start is not None and self.voting_end is not None:
+            if self.voting_end < self.voting_start:
+                raise ValueError(
+                    "Data końca głosowania musi być taka sama lub późniejsza niż początek",
+                )
+        return self
 
 
 class ResolutionOut(BaseModel):
@@ -133,6 +218,18 @@ class ResolutionOut(BaseModel):
     voting_end: str | None
     status: str
     created_at: str
+    is_test: bool = False
+    reminder_sent_at: str | None = None
+
+
+class ReminderSendIn(BaseModel):
+    """Opcjonalna whitelist emaili przy ręcznej wysyłce przypomnienia.
+
+    Gdy podana — wysyłka ogranicza się do przecięcia (pending voters ∩ emails).
+    Gdy None / pominięte — zachowanie domyślne (wszyscy pending).
+    """
+
+    emails: list[str] | None = None
 
 
 class VoteCreate(BaseModel):
@@ -170,6 +267,8 @@ class VoteDetail(BaseModel):
     resident_id: str
     full_name: str
     apartment_number: str | None
+    apartments_count: int = 0
+    share: float = 0.0
     vote: str
     voted_at: str
 
@@ -185,6 +284,18 @@ class ProfileOut(BaseModel):
     is_active: bool
     created_at: str
     can_vote_resolutions: bool = False
+    needs_legal_acceptance: bool = False
+    current_privacy_version: str = ""
+    current_terms_version: str = ""
+    privacy_accepted_at: str | None = None
+    terms_accepted_at: str | None = None
+    privacy_version: str | None = None
+    terms_version: str | None = None
+
+
+class LegalConsentBody(BaseModel):
+    accept_privacy: bool = False
+    accept_terms: bool = False
 
 
 class ProfileUpdate(BaseModel):
@@ -200,7 +311,12 @@ class ProfileUpdate(BaseModel):
 
 class ChangePassword(BaseModel):
     current_password: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=6, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        return _validate_password_strength(v)
 
 
 # --- Charge Rates (Stawki naliczeń) ---

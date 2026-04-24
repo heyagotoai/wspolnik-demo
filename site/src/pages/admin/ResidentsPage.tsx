@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, HomeIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
@@ -11,12 +11,19 @@ import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Resident {
   id: string
-  email: string
+  email: string | null
   full_name: string
   apartment_number: string | null
   role: string
   is_active: boolean
+  has_account: boolean
   created_at: string
+}
+
+interface Apartment {
+  id: string
+  number: string
+  owner_resident_id: string | null
 }
 
 interface ResidentForm {
@@ -32,6 +39,7 @@ const emptyForm: ResidentForm = { email: '', password: '', full_name: '', apartm
 export default function ResidentsPage() {
   const { isAdmin, isAdminOrManager, loading: roleLoading } = useRole()
   const [residents, setResidents] = useState<Resident[]>([])
+  const [apartments, setApartments] = useState<Apartment[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -39,23 +47,93 @@ export default function ResidentsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [aptModalResident, setAptModalResident] = useState<Resident | null>(null)
+  const [aptSelected, setAptSelected] = useState<string>('')
+  const [aptBusy, setAptBusy] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
 
   const fetchResidents = async () => {
-    const { data } = await supabase
-      .from('residents')
-      .select('id, email, full_name, apartment_number, role, is_active, created_at')
-      .order('full_name', { ascending: true })
+    const [{ data: resData }, { data: aptData }] = await Promise.all([
+      supabase
+        .from('residents')
+        .select('id, email, full_name, apartment_number, role, is_active, has_account, created_at')
+        .order('full_name', { ascending: true }),
+      supabase
+        .from('apartments')
+        .select('id, number, owner_resident_id')
+        .order('number', { ascending: true }),
+    ])
 
-    if (data) setResidents(data)
+    if (aptData) setApartments(aptData)
+
+    if (resData && aptData) {
+      const aptsByOwner: Record<string, string[]> = {}
+      for (const a of aptData) {
+        if (a.owner_resident_id) {
+          aptsByOwner[a.owner_resident_id] = aptsByOwner[a.owner_resident_id] || []
+          aptsByOwner[a.owner_resident_id].push(a.number)
+        }
+      }
+      const sorted = [...resData].sort((a, b) => {
+        const aNum = aptsByOwner[a.id]?.[0] ?? a.apartment_number ?? '\uffff'
+        const bNum = aptsByOwner[b.id]?.[0] ?? b.apartment_number ?? '\uffff'
+        const cmp = aNum.localeCompare(bNum, 'pl', { numeric: true })
+        return cmp !== 0 ? cmp : a.full_name.localeCompare(b.full_name, 'pl')
+      })
+      setResidents(sorted)
+    } else if (resData) {
+      setResidents(resData)
+    }
     setLoading(false)
   }
 
   useEffect(() => {
     fetchResidents()
   }, [])
+
+  const apartmentsOf = (residentId: string) =>
+    apartments.filter(a => a.owner_resident_id === residentId)
+
+  const freeApartments = apartments.filter(a => !a.owner_resident_id)
+
+  const openAptModal = (r: Resident) => {
+    setAptModalResident(r)
+    setAptSelected('')
+  }
+
+  const closeAptModal = () => {
+    setAptModalResident(null)
+    setAptSelected('')
+  }
+
+  const handleAssignApartment = async () => {
+    if (!aptModalResident || !aptSelected) return
+    setAptBusy(true)
+    try {
+      await api.post(`/residents/${aptModalResident.id}/apartments`, { apartment_id: aptSelected })
+      await fetchResidents()
+      setAptSelected('')
+      toast('Lokal przypisany', 'success')
+    } catch (err) {
+      toast(formatCaughtError(err, 'Błąd przypisania lokalu'), 'error')
+    }
+    setAptBusy(false)
+  }
+
+  const handleUnassignApartment = async (apartmentId: string) => {
+    if (!aptModalResident) return
+    setAptBusy(true)
+    try {
+      await api.delete(`/residents/${aptModalResident.id}/apartments/${apartmentId}`)
+      await fetchResidents()
+      toast('Lokal odpięty', 'success')
+    } catch (err) {
+      toast(formatCaughtError(err, 'Błąd odpinania lokalu'), 'error')
+    }
+    setAptBusy(false)
+  }
 
   useEffect(() => {
     if (showForm) {
@@ -73,7 +151,7 @@ export default function ResidentsPage() {
   const openEdit = (r: Resident) => {
     setEditingId(r.id)
     setForm({
-      email: r.email,
+      email: r.email || '',
       password: '',
       full_name: r.full_name,
       apartment_number: r.apartment_number || '',
@@ -91,8 +169,8 @@ export default function ResidentsPage() {
   }
 
   const handleSave = async () => {
-    if (!form.full_name.trim() || !form.email.trim()) {
-      setError('Imię i email są wymagane.')
+    if (!form.full_name.trim()) {
+      setError('Imię i nazwisko jest wymagane.')
       return
     }
     if (form.full_name.trim().length < 2) {
@@ -100,47 +178,83 @@ export default function ResidentsPage() {
       return
     }
 
+    const email = form.email.trim()
+    const editingResident = editingId ? residents.find(r => r.id === editingId) : null
+    const grantingAccount = !!(editingResident && !editingResident.has_account && email)
+
+    // Walidacja hasła: przy tworzeniu konta (email podany) i przy nadawaniu konta.
+    const passwordRequired = !editingId ? !!email : grantingAccount
+    if (passwordRequired) {
+      if (!form.password || form.password.length < 8) {
+        setError('Hasło musi mieć min. 8 znaków.')
+        return
+      }
+      if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/\d/.test(form.password)) {
+        setError('Hasło musi zawierać wielką literę, małą literę i cyfrę.')
+        return
+      }
+    }
+
     setSaving(true)
     setError(null)
 
     try {
       if (editingId) {
-        // Update via Supabase (RLS allows admin)
-        const { error: updateError } = await supabase
-          .from('residents')
-          .update({
+        if (grantingAccount) {
+          // Aktywacja konta (has_account: false → true) — email + hasło + ewentualnie inne pola.
+          await api.patch(`/residents/${editingId}`, {
+            email,
+            password: form.password,
             full_name: form.full_name.trim(),
             apartment_number: form.apartment_number.trim() || null,
             role: form.role,
           })
-          .eq('id', editingId)
+        } else {
+          // Zwykły update przez Supabase (RLS admin). Email niezmienialny.
+          const { error: updateError } = await supabase
+            .from('residents')
+            .update({
+              full_name: form.full_name.trim(),
+              apartment_number: form.apartment_number.trim() || null,
+              role: form.role,
+            })
+            .eq('id', editingId)
 
-        if (updateError) {
-          setError(mapSupabaseError(updateError))
-          setSaving(false)
-          return
+          if (updateError) {
+            setError(mapSupabaseError(updateError))
+            setSaving(false)
+            return
+          }
         }
       } else {
-        // Create via FastAPI backend (uses service_role to create auth user)
-        if (!form.password || form.password.length < 6) {
-          setError('Hasło musi mieć min. 6 znaków.')
-          setSaving(false)
-          return
-        }
-
-        await api.post('/residents', {
-          email: form.email.trim(),
-          password: form.password,
+        // Create via FastAPI backend (uses service_role to create auth user).
+        // Email + password opcjonalne — brak = mieszkaniec „bez konta" (rejestr do głosów z zebrania).
+        const payload: Record<string, unknown> = {
           full_name: form.full_name.trim(),
           apartment_number: form.apartment_number.trim() || null,
           role: form.role,
-        })
+        }
+        if (email) {
+          payload.email = email
+          payload.password = form.password
+        }
+        await api.post('/residents', payload)
       }
 
       await fetchResidents()
       closeForm()
     } catch (err) {
-      setError(formatCaughtError(err, 'Wystąpił błąd'))
+      const msg = formatCaughtError(err, '')
+      if (msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('already registered')) {
+        const existing = residents.find(r => (r.email ?? '').toLowerCase() === form.email.trim().toLowerCase())
+        if (existing) {
+          setError(`Konto z tym emailem już istnieje (${existing.full_name}). Aby dodać kolejny lokal, zamknij ten formularz i kliknij ikonę 🏠 przy wierszu tego mieszkańca.`)
+        } else {
+          setError('Konto z tym adresem email już istnieje. Znajdź tego mieszkańca na liście i kliknij ikonę 🏠 przy jego wierszu, aby przypisać kolejny lokal.')
+        }
+      } else {
+        setError(formatCaughtError(err, 'Wystąpił błąd'))
+      }
     }
 
     setSaving(false)
@@ -196,7 +310,7 @@ export default function ResidentsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Mieszkańcy</h1>
         {isAdmin && (
@@ -244,29 +358,49 @@ export default function ResidentsPage() {
                 className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-charcoal mb-1">Email *</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                disabled={!!editingId}
-                className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
-              />
-            </div>
-            {!editingId && (
-              <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Hasło *</label>
-                <input
-                  type="password"
-                  maxLength={128}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="min. 6 znaków"
-                  className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
-                />
-              </div>
-            )}
+            {(() => {
+              const editingResident = editingId ? residents.find(r => r.id === editingId) : null
+              const isGrantAccountMode = editingResident ? !editingResident.has_account : false
+              const emailDisabled = !!editingId && !isGrantAccountMode
+              const emailLabel = editingId
+                ? (isGrantAccountMode ? 'Email (nadaj konto)' : 'Email')
+                : 'Email (opcjonalnie)'
+              const showPasswordField = !editingId || isGrantAccountMode
+              const passwordLabel = isGrantAccountMode ? 'Hasło (nadaj konto) *' : 'Hasło (wymagane gdy podany email)'
+              return (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-charcoal mb-1">{emailLabel}</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      disabled={emailDisabled}
+                      placeholder={!editingId ? 'puste = mieszkaniec bez konta (tylko rejestr)' : ''}
+                      className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
+                    />
+                    {!editingId && (
+                      <p className="text-xs text-outline mt-1">
+                        Pozostaw puste, jeśli chcesz dodać właściciela do rejestru (np. do głosów z zebrania) bez zakładania konta logowania.
+                      </p>
+                    )}
+                  </div>
+                  {showPasswordField && (
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1">{passwordLabel}</label>
+                      <input
+                        type="password"
+                        maxLength={128}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="min. 8 znaków, wielka/mała litera, cyfra"
+                        className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                      />
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Nr lokalu</label>
               <input
@@ -333,8 +467,25 @@ export default function ResidentsPage() {
                 {residents.map((r) => (
                   <tr key={r.id} className="border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-charcoal">{r.full_name}</td>
-                    <td className="px-5 py-3 text-slate">{r.email}</td>
-                    <td className="px-5 py-3 text-slate">{r.apartment_number || '—'}</td>
+                    <td className="px-5 py-3 text-slate">
+                      {r.email ? (
+                        r.email
+                      ) : (
+                        <span
+                          className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-cream-deep text-outline"
+                          title="Mieszkaniec w rejestrze bez konta logowania (np. do głosów z zebrania). Można nadać konto: edytuj i podaj email + hasło."
+                        >
+                          bez konta
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-slate">
+                      {(() => {
+                        const owned = apartmentsOf(r.id)
+                        if (owned.length > 0) return owned.map(a => a.number).join(', ')
+                        return r.apartment_number || '—'
+                      })()}
+                    </td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         r.role === 'admin'
@@ -358,6 +509,13 @@ export default function ResidentsPage() {
                     {isAdmin && (
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openAptModal(r)}
+                            className="p-1.5 text-outline hover:text-sage transition-colors"
+                            title="Zarządzaj lokalami"
+                          >
+                            <HomeIcon className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openEdit(r)}
                             className="p-1.5 text-outline hover:text-sage transition-colors"
@@ -390,6 +548,81 @@ export default function ResidentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Apartments modal */}
+      {isAdmin && aptModalResident && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4">
+          <div className="bg-white rounded-[var(--radius-card)] shadow-ambient w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-charcoal">Lokale — {aptModalResident.full_name}</h2>
+                <p className="text-xs text-outline mt-0.5">{aptModalResident.email}</p>
+              </div>
+              <button onClick={closeAptModal} className="text-outline hover:text-charcoal">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <h3 className="text-sm font-medium text-charcoal mb-2">Przypisane lokale</h3>
+              {apartmentsOf(aptModalResident.id).length === 0 ? (
+                <p className="text-sm text-slate">Brak przypisanych lokali.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {apartmentsOf(aptModalResident.id).map(a => (
+                    <li key={a.id} className="flex items-center justify-between px-3 py-2 bg-cream/50 rounded-[var(--radius-input)]">
+                      <span className="text-sm text-charcoal">Lokal {a.number}</span>
+                      <button
+                        onClick={() => handleUnassignApartment(a.id)}
+                        disabled={aptBusy}
+                        className="text-xs text-error hover:underline disabled:opacity-50"
+                      >
+                        Odepnij
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-charcoal mb-2">Dodaj lokal</h3>
+              {freeApartments.length === 0 ? (
+                <p className="text-sm text-slate">Brak wolnych lokali.</p>
+              ) : (
+                <div className="flex gap-2">
+                  <select
+                    value={aptSelected}
+                    onChange={(e) => setAptSelected(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                  >
+                    <option value="">— wybierz lokal —</option>
+                    {freeApartments.map(a => (
+                      <option key={a.id} value={a.id}>Lokal {a.number}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAssignApartment}
+                    disabled={!aptSelected || aptBusy}
+                    className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors disabled:opacity-50"
+                  >
+                    Przypisz
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeAptModal}
+                className="px-4 py-2 text-sm font-medium text-slate hover:text-charcoal transition-colors"
+              >
+                Zamknij
+              </button>
+            </div>
           </div>
         </div>
       )}

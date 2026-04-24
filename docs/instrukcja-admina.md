@@ -61,6 +61,8 @@ Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) 
 
 ## Lokale
 
+Na górze strony **Lokale** (widoczne także dla **zarządcy**) jest zwijany panel **Ostatnie importy wpłat** (domyślnie zwinięty; klik w nagłówek rozwija): zestawienie `.xls` z banku, import z arkusza Excel, **najpóźniejszą zaksięgowaną datę wpłaty** oraz **lokal (lub wpłata zbiorcza)** i **kwotę** — ułatwia planowanie kolejnego eksportu z banku bez dublowania okresu.
+
 **Dodawanie lokalu:**
 1. Kliknij **Dodaj lokal**
 2. Wypełnij: numer lokalu, powierzchnia (m²), udział w nieruchomości wspólnej (%), liczba domowników

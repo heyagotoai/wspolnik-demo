@@ -3,7 +3,7 @@ import type { User, Session } from '@supabase/supabase-js'
 import { getSupabase } from '../lib/supabase'
 import { hasSupabaseCredentials, isDemoApp } from '../demo/isDemoApp'
 
-interface AuthState {
+export interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
@@ -55,13 +55,17 @@ export function useAuthProvider(): AuthState {
     })
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
+      (event, nextSession) => {
+        setSession(nextSession)
+        setUser((prev) => {
+          const nextUser = nextSession?.user ?? null
+          if (prev && nextUser && prev.id === nextUser.id) return prev
+          return nextUser
+        })
         if (event === 'SIGNED_OUT' && !signingOut.current) {
           sessionStorage.setItem('session_expired', '1')
         }
-      }
+      },
     )
 
     return () => subscription.unsubscribe()

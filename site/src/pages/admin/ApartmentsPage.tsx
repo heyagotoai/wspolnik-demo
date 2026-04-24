@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon, WalletIcon } from '../../components/ui/Icons'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, PrinterIcon, SendIcon, WalletIcon, ChevronDownIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useRole } from '../../hooks/useRole'
@@ -54,6 +54,41 @@ interface ApartmentForm {
 
 const emptyForm: ApartmentForm = { number: '', area_m2: '', share: '', declared_occupants: '', initial_balance: '', initial_balance_date: '', owner_resident_id: '', billing_surname: '' }
 
+/** Etykiety tytułów wpłat z importów — muszą być zsynchronizowane z `api/routes/import_routes.py` */
+const PAYMENT_TITLE_BANK_IMPORT = 'Wpłata z zestawienia bankowego'
+const PAYMENT_TITLES_EXCEL_IMPORT = ['Wpłata z dnia', 'Import zbiorczy'] as const
+
+function formatDateTimePl(iso: string) {
+  return new Date(iso).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function formatDatePl(iso: string) {
+  return new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function formatCurrencyPl(n: number) {
+  return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(roundMoney2(n))
+}
+
+function labelForLatestPaymentRow(
+  row: {
+    apartment_id: string | null
+    billing_group_id: string | null
+  },
+  aptNumberById: Record<string, string>,
+  groupNameById: Record<string, string>,
+): string {
+  if (row.apartment_id) {
+    const num = aptNumberById[row.apartment_id]
+    return num ? `lokal ${num}` : 'lokal (nieznany)'
+  }
+  if (row.billing_group_id) {
+    const gn = groupNameById[row.billing_group_id]
+    return gn ? `wpłata zbiorcza — ${gn}` : 'wpłata zbiorcza'
+  }
+  return 'wpłata nadrzędna (bez lokalu)'
+}
+
 export default function ApartmentsPage() {
   const [apartments, setApartments] = useState<Apartment[]>([])
   const [residents, setResidents] = useState<Resident[]>([])
@@ -78,13 +113,31 @@ export default function ApartmentsPage() {
   const [showImportPaymentsModal, setShowImportPaymentsModal] = useState(false)
   const [showBankStatementModal, setShowBankStatementModal] = useState(false)
   const [paymentsModalApt, setPaymentsModalApt] = useState<Apartment | null>(null)
+  const [importActivity, setImportActivity] = useState<{
+    lastBankImportAt: string | null
+    lastExcelPaymentsImportAt: string | null
+    latestConfirmedPaymentDate: string | null
+    latestPaymentAmount: number | null
+    latestPaymentLocalLabel: string | null
+  } | null>(null)
+  /** Panel „Ostatnie importy wpłat” — domyślnie zwinięty */
+  const [importSummaryExpanded, setImportSummaryExpanded] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { isAdmin, isAdminOrManager } = useRole()
 
   const fetchData = async () => {
-    const [aptsRes, resRes, chargesRes, paymentsRes, groupsRes] = await Promise.all([
+    const [
+      aptsRes,
+      resRes,
+      chargesRes,
+      paymentsRes,
+      groupsRes,
+      bankImportRes,
+      excelImportRes,
+      latestPayDateRes,
+    ] = await Promise.all([
       supabase
         .from('apartments')
         .select('id, number, area_m2, share, declared_occupants, initial_balance, initial_balance_date, owner_resident_id, billing_group_id, billing_surname')
@@ -104,6 +157,28 @@ export default function ApartmentsPage() {
       supabase
         .from('billing_groups')
         .select('id, name'),
+      supabase
+        .from('payments')
+        .select('created_at')
+        .eq('title', PAYMENT_TITLE_BANK_IMPORT)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('payments')
+        .select('created_at')
+        .in('title', [...PAYMENT_TITLES_EXCEL_IMPORT])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('payments')
+        .select('payment_date, amount, apartment_id, billing_group_id, created_at')
+        .eq('confirmed_by_admin', true)
+        .order('payment_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ])
 
     if (resRes.data) setResidents(resRes.data)
@@ -139,6 +214,34 @@ export default function ApartmentsPage() {
     }
 
     setBalances(balMap)
+
+    const aptNumberById: Record<string, string> = {}
+    for (const a of aptsRes.data || []) aptNumberById[a.id] = a.number
+
+    const groupNameById: Record<string, string> = {}
+    for (const g of groupsRes.data || []) groupNameById[g.id] = g.name
+
+    const lp = latestPayDateRes.data as {
+      payment_date: string
+      amount: string | number
+      apartment_id: string | null
+      billing_group_id: string | null
+    } | null
+
+    let latestPaymentAmount: number | null = null
+    let latestPaymentLocalLabel: string | null = null
+    if (lp) {
+      latestPaymentAmount = roundMoney2(Number(lp.amount))
+      latestPaymentLocalLabel = labelForLatestPaymentRow(lp, aptNumberById, groupNameById)
+    }
+
+    setImportActivity({
+      lastBankImportAt: bankImportRes.data?.created_at ?? null,
+      lastExcelPaymentsImportAt: excelImportRes.data?.created_at ?? null,
+      latestConfirmedPaymentDate: lp?.payment_date ?? null,
+      latestPaymentAmount,
+      latestPaymentLocalLabel,
+    })
     setLoading(false)
   }
 
@@ -485,7 +588,7 @@ export default function ApartmentsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-charcoal">Lokale</h1>
         {isAdmin && (
@@ -536,6 +639,65 @@ export default function ApartmentsPage() {
         Lokale: numery, powierzchnia, właściciel, saldo początkowe. Przyciski importu w pełnej wersji wczytują pliki z
         banku lub stanów — tutaj otwierają okna tylko do pokazania, bez zapisu poza demo.
       </DemoHelpCallout>
+      {isAdminOrManager && importActivity && (
+        <div className="bg-sage-pale/30 border border-sage/25 rounded-[var(--radius-card)] text-sm text-charcoal overflow-hidden">
+          <button
+            type="button"
+            id="import-payments-summary-toggle"
+            aria-expanded={importSummaryExpanded}
+            aria-controls="import-payments-summary-panel"
+            onClick={() => setImportSummaryExpanded((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left font-medium text-charcoal hover:bg-sage-pale/50 transition-colors"
+          >
+            <span>Ostatnie importy wpłat</span>
+            <ChevronDownIcon
+              className={`w-5 h-5 shrink-0 text-slate transition-transform duration-200 ${importSummaryExpanded ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {importSummaryExpanded && (
+            <div
+              id="import-payments-summary-panel"
+              role="region"
+              aria-labelledby="import-payments-summary-toggle"
+              className="px-4 pb-4 pt-0 border-t border-sage/20 space-y-3"
+            >
+              <ul className="space-y-1.5 text-slate">
+                <li>
+                  <span className="text-charcoal">Zestawienie bankowe (.xls):</span>{' '}
+                  {importActivity.lastBankImportAt
+                    ? formatDateTimePl(importActivity.lastBankImportAt)
+                    : '— jeszcze nie importowano'}
+                </li>
+                <li>
+                  <span className="text-charcoal">Arkusz Excel (Dopasowania / wpłaty):</span>{' '}
+                  {importActivity.lastExcelPaymentsImportAt
+                    ? formatDateTimePl(importActivity.lastExcelPaymentsImportAt)
+                    : '— jeszcze nie importowano'}
+                </li>
+                <li>
+                  <span className="text-charcoal">Najpóźniejsza zaksięgowana data wpłaty:</span>{' '}
+                  {!importActivity.latestConfirmedPaymentDate && '— brak wpłat'}
+                  {importActivity.latestConfirmedPaymentDate &&
+                    importActivity.latestPaymentLocalLabel != null &&
+                    importActivity.latestPaymentAmount != null && (
+                      <>
+                        {formatDatePl(importActivity.latestConfirmedPaymentDate)}
+                        {' - '}
+                        {importActivity.latestPaymentLocalLabel}
+                        {' - '}
+                        <span className="tabular-nums">{formatCurrencyPl(importActivity.latestPaymentAmount)}</span>
+                      </>
+                    )}
+                </li>
+              </ul>
+              <p className="text-xs text-outline leading-relaxed">
+                Przy pobieraniu kolejnego zestawienia z banku wybierz okres <strong>po</strong> ostatnich już uwzględnionych operacjach
+                (najpóźniejsza data wpłaty). Data importu to moment zapisu w systemie, nie dzień operacji na koncie.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bulk balance date banner */}
       {isAdmin && aptsWithBalanceNoDate.length > 0 && !showBulkDateForm && (

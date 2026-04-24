@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { api } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
@@ -8,6 +9,13 @@ import { PlusIcon, EditIcon, TrashIcon, XIcon, MailIcon } from '../../components
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { formatCaughtError, mapSupabaseError } from '../../lib/userFacingErrors'
 import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
+import {
+  buildVotingAnnouncementBody,
+  findResolutionForVotingAnnouncement,
+  findResolutionIdByTitle,
+  resolutionTitleFromVotingAnnouncement,
+} from '../../lib/votingAnnouncement'
+import type { ResolutionSnapshotForAnnouncement } from '../../lib/votingAnnouncement'
 
 interface Announcement {
   id: string
@@ -15,24 +23,35 @@ interface Announcement {
   content: string
   excerpt: string | null
   is_pinned: boolean
+  is_public: boolean
   email_sent_at: string | null
   created_at: string
 }
+
+type ResolutionRow = ResolutionSnapshotForAnnouncement
 
 interface AnnouncementForm {
   title: string
   content: string
   excerpt: string
   is_pinned: boolean
+  is_public: boolean
 }
 
-const emptyForm: AnnouncementForm = { title: '', content: '', excerpt: '', is_pinned: false }
+const emptyForm: AnnouncementForm = {
+  title: '',
+  content: '',
+  excerpt: '',
+  is_pinned: false,
+  is_public: false,
+}
 
 export default function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const { isAdmin } = useRole()
   const { toast } = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [resolutions, setResolutions] = useState<ResolutionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -44,12 +63,16 @@ export default function AdminAnnouncementsPage() {
   const { confirm } = useConfirm()
 
   const fetchAnnouncements = async () => {
-    const { data } = await supabase
-      .from('announcements')
-      .select('id, title, content, excerpt, is_pinned, email_sent_at, created_at')
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
+    const [{ data }, { data: resData }] = await Promise.all([
+      supabase
+        .from('announcements')
+        .select('id, title, content, excerpt, is_pinned, is_public, email_sent_at, created_at')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase.from('resolutions').select('id, title, status, voting_start, voting_end'),
+    ])
 
+    if (resData) setResolutions(resData as ResolutionRow[])
     if (data) setAnnouncements(data)
     setLoading(false)
   }
@@ -72,6 +95,7 @@ export default function AdminAnnouncementsPage() {
       content: a.content,
       excerpt: a.excerpt || '',
       is_pinned: a.is_pinned,
+      is_public: a.is_public ?? false,
     })
     setError(null)
     setShowForm(true)
@@ -102,6 +126,7 @@ export default function AdminAnnouncementsPage() {
       content: form.content.trim(),
       excerpt: form.excerpt.trim() || null,
       is_pinned: form.is_pinned,
+      is_public: form.is_public,
     }
 
     if (editingId) {
@@ -261,6 +286,17 @@ export default function AdminAnnouncementsPage() {
               />
               <span className="text-sm text-charcoal">Przypnij na górze (ważne)</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_public}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+                className="w-4 h-4 rounded border-cream-deep text-sage focus:ring-sage/30"
+              />
+              <span className="text-sm text-charcoal">
+                Aktualności - widoczne na stronie głównej bez logowania
+              </span>
+            </label>
           </div>
 
           <div className="flex justify-end gap-3 mt-6">
@@ -294,17 +330,47 @@ export default function AdminAnnouncementsPage() {
             <div key={a.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     {a.is_pinned && (
                       <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full shrink-0">
                         Ważne
                       </span>
                     )}
+                    {a.is_public === false && (
+                      <span className="px-2 py-0.5 bg-cream-deep text-slate text-xs font-medium rounded-full shrink-0">
+                        Tylko panel
+                      </span>
+                    )}
                     <span className="text-xs text-outline">{formatDate(a.created_at)}</span>
                   </div>
-                  <h3 className="text-sm font-semibold text-charcoal">{a.title}</h3>
+                  {(() => {
+                    const resTitle = resolutionTitleFromVotingAnnouncement(a.title)
+                    const resId = resTitle ? findResolutionIdByTitle(resTitle, resolutions) : null
+                    if (resId) {
+                      return (
+                        <h3 className="text-sm font-semibold">
+                          <Link
+                            to={`/admin/uchwaly#resolution-${resId}`}
+                            className="text-sage hover:text-sage-light"
+                          >
+                            {a.title}
+                          </Link>
+                        </h3>
+                      )
+                    }
+                    return <h3 className="text-sm font-semibold text-charcoal">{a.title}</h3>
+                  })()}
                   <p className="text-sm text-slate mt-1 line-clamp-2">
-                    {a.excerpt || a.content.slice(0, 150)}{a.content.length > 150 ? '...' : ''}
+                    {(() => {
+                      const r = findResolutionForVotingAnnouncement(a.title, resolutions)
+                      if (r) {
+                        const body = buildVotingAnnouncementBody(r, formatDate)
+                        const line = body.split('\n')[0]
+                        return line.length > 150 ? `${line.slice(0, 150)}…` : line
+                      }
+                      const raw = a.excerpt || a.content.slice(0, 150)
+                      return `${raw}${a.content.length > 150 && !a.excerpt ? '…' : ''}`
+                    })()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

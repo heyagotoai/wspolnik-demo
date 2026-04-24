@@ -12,6 +12,7 @@ from api.routes.audit import router as audit_router
 from api.routes.backup import router as backup_router
 from api.routes.billing_groups import router as billing_groups_router
 from api.routes.import_routes import router as import_router
+from api.routes.retention import router as retention_router
 
 app = FastAPI(
     title="GABI API",
@@ -42,6 +43,7 @@ app.include_router(audit_router, prefix="/api")
 app.include_router(backup_router, prefix="/api")
 app.include_router(billing_groups_router, prefix="/api")
 app.include_router(import_router, prefix="/api")
+app.include_router(retention_router, prefix="/api")
 
 
 @app.get("/api/health")

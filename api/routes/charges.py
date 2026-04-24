@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
 from api.core.config import CRON_SECRET
+from api.core.email_disclaimer import automated_email_footer
 from api.core.saldo_letter import COMMUNITY_NAME
 from api.core.saldo_pdf import build_saldo_pdf
 from api.core.security import get_current_user, require_admin, require_admin_or_manager
@@ -322,9 +323,9 @@ def update_auto_config(body: AutoChargesConfigUpdate, _admin: dict = Depends(req
 # ── Cron endpoint ──────────────────────────────────────────
 
 
-@router.post("/cron")
+@router.api_route("/cron", methods=["GET", "POST"])
 def cron_generate(request: Request):
-    """Called daily by Vercel Cron. Generates charges if auto-enabled and day matches."""
+    """Called daily by Vercel Cron (GET). Generates charges if auto-enabled and day matches."""
     # Verify cron secret
     auth = request.headers.get("Authorization", "")
     if not CRON_SECRET or not auth.startswith("Bearer "):
@@ -497,6 +498,7 @@ def _send_balance_notification_for_apartment(sb, apartment_id: str) -> tuple[str
         f"Dzień dobry.\n\n"
         f"Aktualne saldo w załączonym pliku.\n\n"
         f"Z poważaniem,\n{COMMUNITY_NAME}"
+        f"{automated_email_footer()}"
     )
 
     supabase_url = os.environ.get("SUPABASE_URL", "")
@@ -757,6 +759,7 @@ def _send_charge_notification_for_apartment(
         f"Dzień dobry.\n\n"
         f"Zawiadomienie o opłatach w załączonym pliku.\n\n"
         f"Z poważaniem,\n{COMMUNITY_NAME}"
+        f"{automated_email_footer()}"
     )
 
     supabase_url = os.environ.get("SUPABASE_URL", "")

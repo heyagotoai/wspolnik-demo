@@ -1,11 +1,32 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 
+from supabase import create_client
+
+from api.core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION
 from api.core.security import get_current_user
 from api.core.supabase_client import get_supabase
 from api.core.voting_eligibility import check_resolution_vote_eligibility
-from api.models.schemas import ProfileOut, ProfileUpdate, ChangePassword, MessageOut
+from api.models.schemas import (
+    ProfileOut,
+    ProfileUpdate,
+    ChangePassword,
+    MessageOut,
+    LegalConsentBody,
+)
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+
+
+def _needs_legal_acceptance(row: dict) -> bool:
+    pv = row.get("privacy_version")
+    tv = row.get("terms_version")
+    pa = row.get("privacy_accepted_at")
+    ta = row.get("terms_accepted_at")
+    if not pa or not ta or not pv or not tv:
+        return True
+    return pv != CURRENT_PRIVACY_VERSION or tv != CURRENT_TERMS_VERSION
 
 
 def _profile_out(sb, row: dict, user_id: str) -> ProfileOut:
@@ -19,6 +40,13 @@ def _profile_out(sb, row: dict, user_id: str) -> ProfileOut:
         is_active=row.get("is_active", True),
         created_at=row["created_at"],
         can_vote_resolutions=ok,
+        needs_legal_acceptance=_needs_legal_acceptance(row),
+        current_privacy_version=CURRENT_PRIVACY_VERSION,
+        current_terms_version=CURRENT_TERMS_VERSION,
+        privacy_accepted_at=row.get("privacy_accepted_at"),
+        terms_accepted_at=row.get("terms_accepted_at"),
+        privacy_version=row.get("privacy_version"),
+        terms_version=row.get("terms_version"),
     )
 
 
@@ -53,22 +81,57 @@ def update_profile(body: ProfileUpdate, user: dict = Depends(get_current_user)):
     return _profile_out(sb, result.data[0], user["sub"])
 
 
+@router.post("/legal-consent", response_model=ProfileOut)
+def accept_legal_consent(body: LegalConsentBody, user: dict = Depends(get_current_user)):
+    """Zapisz akceptację aktualnych wersji polityki prywatności i regulaminu."""
+    if not body.accept_privacy or not body.accept_terms:
+        raise HTTPException(
+            status_code=400,
+            detail="Akceptacja polityki prywatności i regulaminu jest wymagana do korzystania z portalu.",
+        )
+
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    sb = get_supabase()
+    patch = {
+        "privacy_accepted_at": now,
+        "terms_accepted_at": now,
+        "privacy_version": CURRENT_PRIVACY_VERSION,
+        "terms_version": CURRENT_TERMS_VERSION,
+    }
+    result = (
+        sb.table("residents")
+        .update(patch)
+        .eq("id", user["sub"])
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Profil nie znaleziony")
+
+    row = result.data[0] if isinstance(result.data, list) else result.data
+    return _profile_out(sb, row, user["sub"])
+
+
 @router.post("/change-password", response_model=MessageOut)
 def change_password(body: ChangePassword, user: dict = Depends(get_current_user)):
     """Change current user's password. Verifies old password first."""
     # password length validation (min 6) handled by Pydantic
 
-    sb = get_supabase()
+    # Use a temporary client for sign_in to avoid tainting the global
+    # singleton's auth state (sign_in_with_password switches session
+    # from service_role to user, breaking subsequent admin calls).
+    tmp = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     # Verify current password by attempting sign-in
     try:
-        sb.auth.sign_in_with_password(
+        tmp.auth.sign_in_with_password(
             {"email": user["email"], "password": body.current_password}
         )
     except Exception:
         raise HTTPException(status_code=400, detail="Obecne hasło jest nieprawidłowe")
 
-    # Update password via admin API
+    # Update password via admin API (use the global client — its state is clean)
+    sb = get_supabase()
     try:
         sb.auth.admin.update_user_by_id(
             user["sub"], {"password": body.new_password}

@@ -353,7 +353,7 @@ class TestAutoConfig:
         assert response.status_code == 403
 
 
-# --- POST /api/charges/cron --------------------------------------------------
+# --- /api/charges/cron (GET + POST) -------------------------------------------
 
 
 class TestCron:
@@ -383,3 +383,19 @@ class TestCron:
             assert response.status_code == 200
             assert response.json()["status"] == "skipped"
             assert "disabled" in response.json()["reason"]
+
+    def test_get_dziala_jak_vercel_cron(self, client, fake_sb):
+        """Vercel Cron wysyła GET — endpoint musi go akceptować."""
+        from unittest.mock import patch
+        with patch("api.routes.charges.CRON_SECRET", "test-secret"):
+            fake_sb.set_table_data("system_settings", [
+                {"key": "auto_charges_enabled", "value": "false"},
+                {"key": "auto_charges_day", "value": "1"},
+            ])
+
+            response = client.get(
+                "/api/charges/cron",
+                headers={"Authorization": "Bearer test-secret"},
+            )
+            assert response.status_code == 200
+            assert response.json()["status"] == "skipped"

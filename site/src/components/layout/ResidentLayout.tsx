@@ -17,6 +17,7 @@ import {
   HomeIcon,
   SettingsIcon,
   UserIcon,
+  MailIcon,
 } from '../ui/Icons'
 
 const sidebarLinks = [
@@ -26,6 +27,7 @@ const sidebarLinks = [
   { label: 'Terminy', path: '/panel/terminy', icon: CalendarIcon },
   { label: 'Finanse', path: '/panel/finanse', icon: WalletIcon },
   { label: 'Głosowania', path: '/panel/glosowania', icon: VoteIcon },
+  { label: 'Kontakt', path: '/kontakt', icon: MailIcon },
 ]
 
 export default function ResidentLayout() {

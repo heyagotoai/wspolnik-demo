@@ -3,9 +3,9 @@
 ## Strona publiczna (bez logowania)
 | Strona | Route | Opis |
 |--------|-------|------|
-| Strona główna | `/` | Hero, karty szybkiego dostępu, ostatnie ogłoszenia |
-| Aktualności | `/aktualnosci` | Przypięte + zwykłe ogłoszenia, ważne daty |
-| Dokumenty | `/dokumenty` | Publiczne dokumenty z filtrowaniem kategorii |
+| Strona główna | `/` | Hero (logowanie, aktualności ↓, kontakt), sekcja **Aktualności** — skrót z ogłoszeń **`is_public`** (Supabase), linki `http(s)://` w treści jako klikalne |
+| Aktualności | `/aktualnosci` | Lista ogłoszeń z **`is_public`** (to samo źródło co strona główna; bez sidebaru terminów); linki w treści automatycznie |
+| Dokumenty | `/dokumenty` | Publiczne dokumenty z filtrowaniem kategorii — **link w nawigacji i stopce tylko po zalogowaniu** (gość może wejść z adresu URL) |
 | Kontakt | `/kontakt` | Formularz, dane kontaktowe, numery alarmowe |
 
 ## Panel mieszkańca (wymaga logowania → [[ADR-003-auth-pattern|ProtectedRoute]])
@@ -15,9 +15,9 @@
 | Ogłoszenia | `/panel/ogloszenia` | Pełna lista z rozwijaniem treści; badge "Nowe" (localStorage); krótkie → przeczytane od razu, długie → po rozwinięciu; tytuły typu „Nowe głosowanie: …” (auto z API uchwał) → **link** do `/panel/glosowania#resolution-{id}` z przewinięciem do uchwały |
 | Dokumenty | `/panel/dokumenty` | Download z Supabase Storage |
 | Terminy | `/panel/terminy` | Nadchodzące daty z odliczaniem + terminy głosowań (nieodgłosowane uchwały), wyróżnione wizualnie |
-| Finanse | `/panel/finanse` | Saldo (łączne przy wielu lokalach / grupie rozliczeniowej), naliczenia (kolejność typów: eksploatacja → fundusz → śmieci), historia wpłat (ujednolicony „Wpłata z dnia” bez znaczników źródła dla mieszkańca); zakładki per-lokal; lookup przez `my_apartment_ids` (właściciel + grupa rozliczeniowa); wyświetlanie salda z zaokrągleniem do groszy (`roundMoney2`) — bez artefaktu „-0,00 zł” z floatów |
+| Finanse | `/panel/finanse` | Saldo (łączne przy wielu lokalach / grupie rozliczeniowej) z etykietą **„Saldo na dzień: DD-MM-YYYY"** — data = max(`payment_date` zaksięgowanych wpłat lokalu/grupy, globalna data ostatniego importu bankowego, globalna data ostatniego importu xlsx — widok `last_import_activity`); naliczenia (kolejność typów: eksploatacja → fundusz → śmieci), historia wpłat (ujednolicony „Wpłata z dnia” bez znaczników źródła dla mieszkańca); zakładki per-lokal; lookup przez `owner_resident_id` (właściciel + fallback `apartment_number` + grupa rozliczeniowa); **rozbicie per lokal** (tabela Naliczenia/Wpłaty/Saldo) wyświetlane zawsze gdy > 1 lokal; wyświetlanie salda z zaokrągleniem do groszy (`roundMoney2`) — bez artefaktu „-0,00 zł” z floatów |
 | Głosowania | `/panel/glosowania` | Lista uchwał (voting/closed), oddawanie głosów (wg `can_vote_resolutions` z `/profile`), wyniki: udziały (`apartments.share` + właściciel) lub fallback % wg liczby głosów — [[ADR-010-voting-system]]; wejście z ogłoszenia/pulpitu z hashem `#resolution-{id}` przewija do karty uchwały |
-| Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła |
+| Profil | `/panel/profil` | Dane mieszkańca, zmiana hasła; sekcja dokumentów prawnych (zaakceptowane wersje, linki PDF, kontakt w sprawie danych). **Wejście do panelu:** przy `needs_legal_acceptance` z `GET /api/profile` modal zgód (oba dokumenty + `POST /api/profile/legal-consent`) — [[ADR-015-legal-consent-rodo|ADR-015]] |
 
 ## Panel administratora / zarządcy (wymaga roli **admin** lub **manager** → [[ADR-003-auth-pattern|AdminRoute]])
 
@@ -26,28 +26,30 @@
 | Strona | Route | Operacje |
 |--------|-------|----------|
 | Dashboard | `/admin` | Statystyki: mieszkańcy, lokale, ogłoszenia, dokumenty |
-| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji |
-| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, **saldo bieżące** z zaokrągleniem do groszy (bez „-0,00 zł”), przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge), pole **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy. **Podgląd wpłat lokalu** (modal z listą wpłat, sumy vs tabela — admin i zarządca). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie; **deduplikacja** `(lokal, data)` względem bazy i w obrębie pliku — [[ADR-014-payment-import-deduplication|ADR-014]]. **Import z banku (.xls)** (`POST /payments-bank-statement`): zestawienie bankowe, dopasowanie po nazwisku rozliczeniowym i numerze z opisu; ta sama deduplikacja; modal `ImportBankStatementModal`. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
-| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie |
+| Mieszkańcy | `/admin/mieszkancy` | CRUD przez [[FastAPI]] (tworzenie/usuwanie) + Supabase (edycja). Auto-sync owner_resident_id przy tworzeniu/usuwaniu. Auto-scroll do formularza edycji. **Email opcjonalny** (migracja 025): brak email = mieszkaniec „bez konta" — placeholder auth user z banem ~100 lat, `has_account=false`, badge „bez konta" w tabeli; admin może nadać konto później (edycja: email + hasło → `ban_duration: none`, `has_account=true`). **Zarządzanie lokalami** (modal 🏠): lista lokali właściciela z odpinaniem + dropdown wolnych lokali do przypisania (`POST/DELETE /residents/{id}/apartments`); kolumna „Lokal" wyświetla wszystkie lokale |
+| Lokale | `/admin/lokale` | CRUD lokali: numer, m², udział, mieszkańcy, saldo początkowe + data salda, **saldo bieżące** z zaokrągleniem do groszy (bez „-0,00 zł”), przypisanie właściciela, opcjonalna grupa rozliczeniowa (badge), pole **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy. **Podgląd wpłat lokalu** (modal z listą wpłat, sumy vs tabela — admin i zarządca). Hurtowe ustawianie daty salda. **Import stanu z Excel** (`GET/POST /api/import`, szablon, dry-run): dopasowanie pełnego numeru (lokale zbiorcze np. `3,4A`) lub wiele lokali w jednej komórce; walidacja wierszy. **Import wpłat z Excel** (`GET /payments-template`, `POST /payments`): arkusz Dopasowania — Lokal, Data wpłaty, Kwota (inne kolumny ignorowane); wpłata zbiorcza = parent + rozbicie; **deduplikacja** `(lokal, data)` względem bazy i w obrębie pliku — [[ADR-014-payment-import-deduplication|ADR-014]]. **Import z banku (.xls)** (`POST /payments-bank-statement`): zestawienie bankowe, dopasowanie po nazwisku rozliczeniowym i numerze z opisu; ta sama deduplikacja; modal `ImportBankStatementModal`. **Skrót „Ostatnie importy wpłat”** (zwijany panel, domyślnie zwinięty; data ostatniego importu z banku i z Excela, najpóźniejsza zaksięgowana data wpłaty + lokal/kwota) — admin i zarządca. Wydruk salda (portal + `saldo-printing`, jedna strona). Wysyłka salda PDF emailem (załącznik z logo, krótki cover text). **Masowa wysyłka**: tryb bulk z checkboxami, "zaznacz wszystkie", ostrzeżenie o lokalach bez emaila, wyniki z opcją ponowienia błędów. Auto-scroll do formularza edycji |
+| Ogłoszenia | `/admin/ogloszenia` | CRUD + przypinanie + **jawność** (`is_public`: widoczność na `/` i `/aktualnosci` bez logowania; domyślnie wyłączona; auto-ogłoszenia o głosowaniu — tylko panel) |
 | Dokumenty | `/admin/dokumenty` | Upload PDF (max 10MB) + public/private toggle |
 | Terminy | `/admin/terminy` | CRUD ręcznych terminów + automatyczne daty głosowań z uchwał (voting_start/voting_end), scalona lista sortowana malejąco, link do Uchwał |
 | Naliczenia | `/admin/naliczenia` | Zakładki: Naliczenia (generowanie + regeneracja z force, ręczne) / Stawki (CRUD z wersjonowaniem) / **Zawiadomienia** (PDF + email: jednostkowy i masowy, edycja podstawy prawnej, wybór miesiąca obowiązywania). Wzory: eksploatacja/fundusz = m² × stawka, śmieci = osoby × stawka. Sumy per typ + zbiorcza. Ostrzeżenie przy generowaniu za miesiąc objęty saldem początkowym |
 | Grupy rozliczeniowe | `/admin/grupy-rozliczeniowe` | CRUD grup, przypisywanie lokali, rejestracja wpłat grupowych z auto-rozbiciem, podgląd salda łącznego (admin; backend `/api/billing-groups`) |
-| Uchwały | `/admin/uchwaly` | CRUD uchwał, workflow statusów (draft→voting→closed), **głosy z zebrania** (modal przy szkicu — rejestracja głosów osobistych przed publikacją; API `POST /resolutions/:id/votes/register`, korekta `DELETE .../votes/:resident_id` tylko w szkicu, tylko **admin**), wyniki (agregacja wg udziałów + fallback w UI/PDF), eksport PDF także dla szkicu z głosami; **pasek akcji:** „Głosy z zebrania” → ikony (reset głosów, PDF, edycja, usuń) — [[ADR-010-voting-system]] |
-| Wiadomości | `/admin/wiadomosci` | Podgląd wiadomości kontaktowych, oznaczanie jako przeczytane |
+| Uchwały | `/admin/uchwaly` | CRUD uchwał, **flaga `is_test`** (ukrywa uchwałę dla mieszkańców i blokuje auto-ogłoszenie), **przypomnienia o nieoddanych głosach** (cron `0 7 * * *`, okno 2 dni przed `voting_end`, pomija testowe/już wysłane; ręczny `POST /:id/remind?dry_run=bool` — ikona SendIcon w pasku akcji), workflow statusów (draft→voting→closed), **głosy z zebrania** (modal przy szkicu — rejestracja głosów osobistych przed publikacją; API `POST /resolutions/:id/votes/register`, korekta `DELETE .../votes/:resident_id` tylko w szkicu, tylko **admin**); dropdown „Dodaj głos” pokazuje wszystkie lokale właściciela (z `apartments.owner_resident_id`); lista zarejestrowanych głosów z udział% + listą lokali dla wielolokalowców; wyniki (agregacja wg udziałów + fallback w UI/PDF); eksport PDF: kolumna „Udział”, format „lokale X, Y (N)” dla wielolokalowców; **pasek akcji:** „Głosy z zebrania” → ikony (reset głosów, PDF, edycja, usuń) — [[ADR-010-voting-system]] |
+| Wiadomości | `/admin/wiadomosci` | Wiadomości z **formularza kontaktowego** (`contact_messages` — zapis przez `POST /api/contact`), podgląd, oznaczanie jako przeczytane |
 
 ## Roadmapa — przed produkcją
 
 ### Faza: Hardening (wymagane przed wdrożeniem)
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
+| Auto-wylogowanie po bezczynności | ✅ done | WYSOKI | `useIdleLogout`: admin 15 min (ostrzeżenie 60 s + modal), mieszkaniec 30 min; timer niezależny od widoczności karty |
+| Stabilna referencja user (TOKEN_REFRESHED) | ✅ done | WYSOKI | `useAuth.onAuthStateChange` — brak odmontowania widoków przy odświeżeniu tokenu; formularze zachowują stan |
 | Testy izolacji RLS (FastAPI) | ✅ done | KRYTYCZNY | 55 testów: auth, role, izolacja danych, privilege escalation, reset głosów |
 | Pentest RLS na żywej bazie | ✅ done | KRYTYCZNY | 2026-03-27: 19/19 testów zaliczonych. RLS, IDOR, autentykacja, XSS, Storage — brak luk. Raport: `docs/security/pentest-2026-03-27.md` |
 | Pentest IDOR frontend | ✅ done | KRYTYCZNY | 2026-03-27: admin endpointy (5/5 → 403), głosowanie IDOR (resident_id z JWT), brak dangerouslySetInnerHTML — patrz raport |
 | Audyt XSS/injection | ✅ done | KRYTYCZNY | escapeHtml() w PDF uchwał, CSP + security headers w vercel.json (2026-03-25) |
 | Naprawa: votes DELETE policy | ✅ done | WYSOKI | RLS policy `votes_delete_admin` + endpoint `DELETE /resolutions/:id/votes` + UI z podwójnym potwierdzeniem (wymóg wpisania "USUŃ") |
 | Naprawa: contact_messages spam | ✅ done | WYSOKI | Rate limiting: max 5 wiadomości/godz per email — RLS policy + FastAPI check, komunikat 429 |
-| CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (.github/workflows/ci.yml) |
+| CI/CD pipeline | ✅ done | WYSOKI | GitHub Actions: npm test + pytest na push/PR do main (`ci.yml`); crony przeniesione z Vercel do GitHub Actions (`cron.yml`) |
 | Testy E2E | ✅ done | WYSOKI | Playwright (Chromium): 13 testów — logowanie (4), głosowanie (4), finanse (5). Konta testowe: e2e_admin/e2e_resident@wmgabi.pl. `site/e2e/` |
 | Testy obciążeniowe | ✅ done | ŚREDNI | Locust: 10 userów, prod (wmgabi.pl), 0 błędów aplikacji, median 460-630ms. `api/tests/load/locustfile.py` + `api/tests/test_concurrency.py` (4 testy race condition) |
 | Backup & recovery | ✅ done | WYSOKI | Supabase auto-backup (7 dni) + tygodniowy cron backup do Storage (12 tyg. retencji): 9 tabel + auth.users + PDF-y. Email notification do adminów (OK/NIEUDANY). `POST /api/backup/cron` (niedziela 2:00 UTC). `docs/operations/02-utrzymanie.md` + `03-procedury-awaryjne.md` |
@@ -65,17 +67,19 @@
 |---------|--------|-----------|------|
 | SMTP email | ✅ done | WYSOKI | Edge Function send-email działa, SMTP az.pl skonfigurowany, test wysyłki potwierdzony (2026-03-24) |
 | Import z zestawienia bankowego (.xls) | ✅ done | WYSOKI | `POST /api/import/payments-bank-statement`; dopasowanie po `billing_surname` i numerach lokali z opisu/adresu; deduplikacja `(lokal, data)` — [[ADR-014-payment-import-deduplication|ADR-014]]; parser: `api/services/bank_statement_parser.py` |
-| Import bankowy (MT940) | ⏸ czeka | ŚREDNI | Czeka na format eksportu z banku (opcjonalnie, jeśli .xls nie wystarczy) |
+| Import bankowy (MT940) | ❌ odrzucono | — | Niewymagane; pozostajemy przy `.xls` (zestawienia) i `.xlsx` (import ręczny) |
 | Import Excel — saldo / stan początkowy lokali | ✅ done | WYSOKI | Szablon + upload z panelu Lokale; `GET/POST /api/import/*`; nie zastępuje importu wyciągów bankowych |
 | Import Excel — wpłaty (dopasowania) | ✅ done | WYSOKI | `GET/POST /api/import/payments*`; Lokal, Data wpłaty, Kwota; wiele dat/kwot po `;`; deduplikacja `(lokal, data)` jak w imporcie bankowym — [[ADR-014-payment-import-deduplication|ADR-014]] |
 | Audit log | ✅ done | WYSOKI | Triggery PostgreSQL na charges, payments, charge_rates, apartments, bank_statements (migracja 013) |
-| Retencja danych | ⬜ todo | ŚREDNI | Automatyczne usuwanie danych finansowych >5 lat |
+| Zgody RODO (polityka + regulamin) | ✅ done | WYSOKI | Migracja 020 (`residents`); gate przy `/panel/*` i `/admin/*`; wersjonowanie przez env backendu; ADR-015 |
+| Retencja danych | ✅ done | ŚREDNI | Kwartalny cron (GitHub Actions): carry-forward salda → usuwanie charges, payments, bank_statements, audit_log starszych niż 5 lat; powiadomienia email |
 
 ### Faza: Komercjalizacja (po wdrożeniu u siebie)
 | Zadanie | Status | Priorytet | Opis |
 |---------|--------|-----------|------|
 | Plan sprzedaży SaaS | ⬜ todo | ŚREDNI | Strategia multi-tenant: izolacja danych, onboarding, pricing, kanały dotarcia |
 | Multi-tenancy | ⬜ todo | ŚREDNI | Architektura wielu wspólnot: osobne schematy / tenant_id / osobne projekty Supabase |
+| Jeden właściciel, wiele lokali | ✅ done | WYSOKI | Modal „Zarządzaj lokalami" w panelu Mieszkańcy; `POST/DELETE /residents/{id}/apartments`; finanse per lokal; głosy z zebrania ze wszystkimi lokalami właściciela |
 | Wielu mieszkańców na lokal | ⬜ todo | ŚREDNI | Współwłaściciele: kilku mieszkańców przypisanych do jednego lokalu (wymaga zmiany my_apartment_ids() i RLS) |
 | Rola zarządcy | ✅ done | WYSOKI | Rola "manager": podgląd read-only (finanse, mieszkańcy, dokumenty, uchwały, wiadomości, audit log), pełny CRUD ogłoszeń i terminów. Migracja 017, RLS policies, FastAPI guards, React conditional UI. |
 | Landing page B2B | ⬜ todo | NISKI | Strona sprzedażowa dla zarządców wspólnot |
@@ -92,4 +96,6 @@
 - [[ADR-012-charge-generation]] — automatyczne generowanie naliczeń
 - [[ADR-013-billing-groups]] — grupy rozliczeniowe
 - [[ADR-014-payment-import-deduplication]] — deduplikacja importów wpłat (Excel + bank)
+- [[ADR-015-legal-consent-rodo]] — zgody polityki i regulaminu w portalu
+- [[ADR-016-public-announcements-visibility]] — jawność ogłoszeń na stronie publicznej (`is_public`, RLS)
 - [[system-overview]] — architektura techniczna

@@ -141,7 +141,7 @@ Administrator danych to zarządca wspólnoty. Baza danych hostowana na serwerach
 
 43. Jakie dokumenty prawne musimy przygotować przed uruchomieniem systemu?
     - Polityka prywatności na stronie publicznej?
-    - Regulamin korzystania z systemu dla mieszkańców?
+    - Regulamin portalu WM GABI dla mieszkańców?
     - Klauzula informacyjna wręczana mieszkańcowi przy zakładaniu konta, czy wystarczy informacja wyświetlona podczas pierwszego logowania(później dostępna w systemie)?
     - Umowy powierzenia przetwarzania z dostawcami IT?
     - Rejestr czynności przetwarzania?

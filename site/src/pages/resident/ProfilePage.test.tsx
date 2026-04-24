@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../../components/ui/Toast'
 import { ConfirmProvider } from '../../components/ui/ConfirmDialog'
 
@@ -41,15 +42,24 @@ const mockProfile = {
   role: 'resident',
   is_active: true,
   created_at: '2026-01-15T10:00:00Z',
+  needs_legal_acceptance: false,
+  current_privacy_version: '2026-04-03',
+  current_terms_version: '2026-04-03',
+  privacy_accepted_at: '2026-01-20T10:00:00Z',
+  terms_accepted_at: '2026-01-20T10:00:00Z',
+  privacy_version: '2026-04-03',
+  terms_version: '2026-04-03',
 }
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <ConfirmProvider>
-        <ProfilePage />
-      </ConfirmProvider>
-    </ToastProvider>,
+    <MemoryRouter>
+      <ToastProvider>
+        <ConfirmProvider>
+          <ProfilePage />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   )
 }
 
@@ -140,16 +150,16 @@ describe('ProfilePage', () => {
     const inputs = screen.getAllByDisplayValue('')
     // password inputs: current, new, confirm
     const passwordInputs = inputs.filter((el) => el.tagName === 'INPUT')
-    await user.type(passwordInputs[0], 'stare123')
-    await user.type(passwordInputs[1], 'nowe123')
-    await user.type(passwordInputs[2], 'nowe123')
+    await user.type(passwordInputs[0], 'Stare123')
+    await user.type(passwordInputs[1], 'Nowe1234')
+    await user.type(passwordInputs[2], 'Nowe1234')
 
     await user.click(screen.getByText('Zmień hasło'))
 
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith('/profile/change-password', {
-        current_password: 'stare123',
-        new_password: 'nowe123',
+        current_password: 'Stare123',
+        new_password: 'Nowe1234',
       })
     })
   })

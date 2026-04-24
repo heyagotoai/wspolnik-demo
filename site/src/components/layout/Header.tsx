@@ -10,6 +10,7 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user, signOut } = useAuth()
   const { isAdmin, isAdminOrManager } = useRole()
+  const navLinksVisible = user ? navLinks : navLinks.filter((l) => l.path !== '/dokumenty')
 
   return (
     <header className="sticky top-0 z-50 bg-cream/80 backdrop-blur-xl">
@@ -21,7 +22,7 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {navLinksVisible.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -86,7 +87,7 @@ export default function Header() {
       {/* Mobile menu */}
       {mobileOpen && (
         <nav className="md:hidden bg-white/95 backdrop-blur-xl border-t border-cream-medium px-6 py-4 space-y-3">
-          {navLinks.map((link) => (
+          {navLinksVisible.map((link) => (
             <Link
               key={link.path}
               to={link.path}

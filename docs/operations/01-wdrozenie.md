@@ -47,6 +47,8 @@ SQL Editor → New Query → skopiuj i uruchom **po kolei**:
 011_initial_balance_date.sql — data salda początkowego
 ```
 
+Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–024** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`, **021–022** jawność ogłoszeń `is_public` i domyślna wartość, **023** widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, **024** `resolutions.is_test` + `reminder_sent_at` + indeks częściowy dla przypomnień o uchwałach).
+
 **Kolejność jest ważna!** Każda migracja zależy od poprzednich.
 
 ### 2.4 Wyłącz publiczną rejestrację
@@ -88,6 +90,10 @@ Project Settings → Environment Variables:
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGci...` | Production |
 | `FRONTEND_URL` | `https://twojadomena.pl` | Production |
 | `CRON_SECRET` | dowolny losowy string | Production |
+| `CURRENT_PRIVACY_VERSION` | np. `2026-04-03` (zgoda z datą obowiązywania polityki) | Production |
+| `CURRENT_TERMS_VERSION` | np. `2026-04-03` (wersja regulaminu) | Production |
+
+**Zgody RODO:** po uruchomieniu migracji `020_residents_legal_consent.sql` nowi użytkownicy mają puste zgody — przy pierwszym wejściu do panelu zobaczą modal. **Przy każdej zmianie treści polityki lub regulaminu (nowe PDF)** musisz podbić odpowiednio `CURRENT_PRIVACY_VERSION` i/lub `CURRENT_TERMS_VERSION` oraz wdrożyć backend — inaczej system nie wymusi ponownej zgody. Pełna procedura operacyjna: [[02-utrzymanie]] (sekcja *Zmiana polityki prywatności lub regulaminu*).
 
 ### 3.3 Podłącz domenę
 Project Settings → Domains → Add → wpisz domenę

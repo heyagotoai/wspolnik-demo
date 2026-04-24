@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
-import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon } from '../../components/ui/Icons'
+import { supabase } from '../../lib/supabase'
+import { PlusIcon, EditIcon, TrashIcon, XIcon, DownloadIcon, SendIcon } from '../../components/ui/Icons'
 import { useConfirm } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useRole } from '../../hooks/useRole'
@@ -33,6 +35,16 @@ interface Resolution {
   voting_end: string | null
   status: string
   created_at: string
+  is_test?: boolean
+  reminder_sent_at?: string | null
+}
+
+interface RemindResponse {
+  detail: string
+  recipients: string[]
+  sent: number
+  failed: number
+  dry_run: boolean
 }
 
 interface VoteResults {
@@ -50,6 +62,8 @@ interface VoteDetail {
   resident_id: string
   full_name: string
   apartment_number: string | null
+  apartments_count: number
+  share: number
   vote: string
   voted_at: string
 }
@@ -67,6 +81,7 @@ interface ResolutionForm {
   voting_start: string
   voting_end: string
   status: string
+  is_test: boolean
 }
 
 const emptyForm: ResolutionForm = {
@@ -75,6 +90,7 @@ const emptyForm: ResolutionForm = {
   voting_start: '',
   voting_end: '',
   status: 'draft',
+  is_test: false,
 }
 
 const statusLabels: Record<string, { label: string; bg: string; text: string }> = {
@@ -96,12 +112,20 @@ export default function AdminResolutionsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [meetingModal, setMeetingModal] = useState<Resolution | null>(null)
   const [meetingResidents, setMeetingResidents] = useState<ResidentOption[]>([])
+  const [meetingApartments, setMeetingApartments] = useState<Record<string, string[]>>({})
   const [meetingVoteRows, setMeetingVoteRows] = useState<VoteDetail[]>([])
   const [meetingLoading, setMeetingLoading] = useState(false)
   const [meetingResidentId, setMeetingResidentId] = useState('')
+  const [remindModal, setRemindModal] = useState<{
+    resolution: Resolution
+    recipients: string[]
+    selected: Set<string>
+    sending: boolean
+  } | null>(null)
   const { confirm } = useConfirm()
   const { toast } = useToast()
   const { isAdmin } = useRole()
+  const location = useLocation()
 
   const fetchResolutions = async () => {
     try {
@@ -129,6 +153,17 @@ export default function AdminResolutionsPage() {
     fetchResolutions()
   }, [])
 
+  useEffect(() => {
+    if (loading) return
+    const raw = location.hash.replace(/^#/, '')
+    if (!raw.startsWith('resolution-')) return
+    const id = raw.slice('resolution-'.length)
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(`resolution-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [loading, location.hash, resolutions])
+
   const openAdd = () => {
     setEditingId(null)
     setForm(emptyForm)
@@ -145,6 +180,7 @@ export default function AdminResolutionsPage() {
       voting_start: r.voting_start || '',
       voting_end: r.voting_end || '',
       status: r.status,
+      is_test: !!r.is_test,
     })
     setError(null)
     setShowForm(true)
@@ -166,8 +202,12 @@ export default function AdminResolutionsPage() {
       setError('Tytuł musi mieć min. 3 znaki.')
       return
     }
-    if (form.voting_start && form.voting_end && form.voting_end < form.voting_start) {
-      setError('Data końca głosowania musi być późniejsza niż data początku.')
+    if (!form.voting_start.trim() || !form.voting_end.trim()) {
+      setError('Początek i koniec głosowania są wymagane.')
+      return
+    }
+    if (form.voting_end < form.voting_start) {
+      setError('Data końca głosowania musi być taka sama lub późniejsza niż początek.')
       return
     }
 
@@ -193,12 +233,13 @@ export default function AdminResolutionsPage() {
     setSaving(true)
     setError(null)
 
-    const payload: Record<string, string | null> = {
+    const payload: Record<string, string | boolean | null> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      voting_start: form.voting_start || null,
-      voting_end: form.voting_end || null,
+      voting_start: form.voting_start.trim(),
+      voting_end: form.voting_end.trim(),
       status: form.status,
+      is_test: form.is_test,
     }
 
     try {
@@ -257,6 +298,75 @@ export default function AdminResolutionsPage() {
     }
   }
 
+  const handleRemindDryRun = async (r: Resolution) => {
+    try {
+      const res = await api.post<RemindResponse>(
+        `/resolutions/${r.id}/remind?dry_run=true`,
+        {},
+      )
+      if (res.recipients.length === 0) {
+        toast('Wszyscy uprawnieni już oddali głos — nikt nie dostanie przypomnienia', 'success')
+        return
+      }
+      setRemindModal({
+        resolution: r,
+        recipients: res.recipients,
+        selected: new Set(res.recipients),
+        sending: false,
+      })
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Błąd sprawdzania odbiorców'), 'error')
+    }
+  }
+
+  const toggleRemindEmail = (email: string) => {
+    setRemindModal((m) => {
+      if (!m) return m
+      const next = new Set(m.selected)
+      if (next.has(email)) next.delete(email)
+      else next.add(email)
+      return { ...m, selected: next }
+    })
+  }
+
+  const toggleRemindAll = () => {
+    setRemindModal((m) => {
+      if (!m) return m
+      const allSelected = m.selected.size === m.recipients.length
+      return {
+        ...m,
+        selected: new Set(allSelected ? [] : m.recipients),
+      }
+    })
+  }
+
+  const handleRemindSend = async () => {
+    if (!remindModal) return
+    if (remindModal.selected.size === 0) {
+      toast('Zaznacz przynajmniej jeden adres', 'error')
+      return
+    }
+    setRemindModal((m) => (m ? { ...m, sending: true } : m))
+    try {
+      const res = await api.post<RemindResponse>(
+        `/resolutions/${remindModal.resolution.id}/remind?dry_run=false`,
+        { emails: Array.from(remindModal.selected) },
+      )
+      if (res.sent === 0 && res.failed === 0) {
+        toast('Brak odbiorców po filtrze — nikt nie otrzymał przypomnienia', 'success')
+      } else if (res.failed > 0) {
+        toast(`Wysłano ${res.sent}, nie udało się ${res.failed}`, 'error')
+      } else {
+        toast(`Wysłano przypomnienia do ${res.sent} osób`, 'success')
+      }
+      setRemindModal(null)
+      await fetchResolutions()
+    } catch (e: unknown) {
+      toast(formatCaughtError(e, 'Błąd wysyłki przypomnień'), 'error')
+      setRemindModal((m) => (m ? { ...m, sending: false } : m))
+    }
+  }
+
   const handleDelete = async (id: string) => {
     const ok = await confirm({
       title: 'Usuń uchwałę',
@@ -293,12 +403,27 @@ export default function AdminResolutionsPage() {
     setMeetingResidentId('')
     setMeetingLoading(true)
     try {
-      const [resList, votes] = await Promise.all([
+      const [resList, votes, aptsRes] = await Promise.all([
         api.get<ResidentOption[]>('/residents'),
         api.get<VoteDetail[]>(`/resolutions/${r.id}/votes`),
+        supabase
+          .from('apartments')
+          .select('number, owner_resident_id')
+          .not('owner_resident_id', 'is', null),
       ])
+      const aptMap: Record<string, string[]> = {}
+      for (const a of aptsRes.data || []) {
+        const oid = a.owner_resident_id as string | null
+        if (!oid) continue
+        aptMap[oid] = aptMap[oid] || []
+        aptMap[oid].push(String(a.number))
+      }
+      for (const k of Object.keys(aptMap)) {
+        aptMap[k].sort((x, y) => x.localeCompare(y, 'pl', { numeric: true }))
+      }
       setMeetingResidents(resList)
       setMeetingVoteRows(votes)
+      setMeetingApartments(aptMap)
     } catch {
       toast('Nie udało się załadować listy mieszkańców lub głosów', 'error')
       setMeetingModal(null)
@@ -310,6 +435,7 @@ export default function AdminResolutionsPage() {
   const closeMeetingModal = () => {
     setMeetingModal(null)
     setMeetingResidents([])
+    setMeetingApartments({})
     setMeetingVoteRows([])
     setMeetingResidentId('')
   }
@@ -488,8 +614,9 @@ export default function AdminResolutionsPage() {
     <table>
       <thead>
         <tr>
-          <th>Lokal</th>
+          <th>Lokal(e)</th>
           <th>Imię i nazwisko</th>
+          <th>Udział</th>
           <th>Głos</th>
           <th>Data oddania głosu</th>
         </tr>
@@ -503,9 +630,15 @@ export default function AdminResolutionsPage() {
               : v.vote === 'przeciw' ? '<span class="vote-przeciw">Przeciw</span>'
               : '<span class="vote-wstrzymuje">Wstrzymuje się</span>'
             const votedAt = new Date(v.voted_at).toLocaleString('pl-PL')
+            const count = v.apartments_count || 0
+            const aptCell = count > 1
+              ? `${escapeHtml(v.apartment_number ?? '—')} (${count} lokale)`
+              : escapeHtml(v.apartment_number ?? '—')
+            const sharePct = v.share > 0 ? `${(v.share * 100).toFixed(2)}%` : '—'
             return `<tr>
-              <td>${escapeHtml(v.apartment_number ?? '—')}</td>
+              <td>${aptCell}</td>
               <td>${escapeHtml(v.full_name)}</td>
+              <td>${sharePct}</td>
               <td>${voteLabel}</td>
               <td>${votedAt}</td>
             </tr>`
@@ -598,24 +731,29 @@ export default function AdminResolutionsPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Początek głosowania</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Początek głosowania *</label>
                 <input
                   type="date"
+                  required
                   value={form.voting_start}
                   onChange={(e) => setForm({ ...form, voting_start: e.target.value })}
                   className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1">Koniec głosowania</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Koniec głosowania *</label>
                 <input
                   type="date"
+                  required
                   value={form.voting_end}
                   onChange={(e) => setForm({ ...form, voting_end: e.target.value })}
                   className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                 />
               </div>
             </div>
+            <p className="text-xs text-outline">
+              Daty dotyczą całych dni (kalendarz). Aby przedłużyć głosowanie, ustaw późniejszy koniec przy statusie „Głosowanie otwarte”.
+            </p>
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Status</label>
               <select
@@ -627,6 +765,23 @@ export default function AdminResolutionsPage() {
                 <option value="voting">Głosowanie otwarte</option>
                 <option value="closed">Zamknięta</option>
               </select>
+            </div>
+            <div className="pt-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_test}
+                  onChange={(e) => setForm({ ...form, is_test: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 accent-sage"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-charcoal">Uchwała testowa</span>
+                  <span className="block text-xs text-outline">
+                    Mieszkańcy nie zobaczą tej uchwały w panelu ani nie dostaną ogłoszenia.
+                    Cron przypomnień ją pomija — przypomnienie można wysłać ręcznie z listy.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
 
@@ -664,13 +819,25 @@ export default function AdminResolutionsPage() {
                 : 'głos.'
 
             return (
-              <div key={r.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5">
+              <div
+                key={r.id}
+                id={`resolution-${r.id}`}
+                className="bg-white rounded-[var(--radius-card)] shadow-ambient p-5 scroll-mt-24"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>
                         {status.label}
                       </span>
+                      {r.is_test && (
+                        <span
+                          className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800"
+                          title="Uchwała testowa — niewidoczna dla mieszkańców, pomijana przez cron przypomnień"
+                        >
+                          TEST
+                        </span>
+                      )}
                       <span className="text-xs text-outline">{formatDate(r.created_at)}</span>
                     </div>
                     <h3 className="text-sm font-semibold text-charcoal">{r.title}</h3>
@@ -714,6 +881,20 @@ export default function AdminResolutionsPage() {
                         title="Zarejestruj głosy oddane osobiście na zebraniu — przed uruchomieniem głosowania online"
                       >
                         Głosy z zebrania
+                      </button>
+                    )}
+                    {isAdmin && r.status === 'voting' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemindDryRun(r)}
+                        className="p-2 text-outline hover:text-sage transition-colors"
+                        title={
+                          r.reminder_sent_at
+                            ? `Przypomnienie wysłane: ${new Date(r.reminder_sent_at).toLocaleString('pl-PL')}. Kliknij, aby wysłać ponownie.`
+                            : 'Wyślij przypomnienie mieszkańcom, którzy nie oddali głosu'
+                        }
+                      >
+                        <SendIcon className="w-4 h-4" />
                       </button>
                     )}
                     {isAdmin && voteData && voteData.total > 0 && (
@@ -775,7 +956,7 @@ export default function AdminResolutionsPage() {
               role="dialog"
               aria-modal
               aria-labelledby="meeting-votes-title"
-              className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col"
+              className="relative bg-white rounded-[var(--radius-card)] shadow-lg w-full max-w-3xl max-h-[90vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-cream-deep shrink-0">
@@ -808,9 +989,9 @@ export default function AdminResolutionsPage() {
                     {meetingVoteRows.length > 0 && (
                       <div>
                         <h3 className="text-xs font-semibold text-outline uppercase tracking-wide mb-2">
-                          Zarejestrowane głosy
+                          Zarejestrowane głosy ({meetingVoteRows.length})
                         </h3>
-                        <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)]">
+                        <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)] max-h-80 overflow-y-auto">
                           {meetingVoteRows
                             .slice()
                             .sort((a, b) =>
@@ -829,7 +1010,11 @@ export default function AdminResolutionsPage() {
                                     {row.full_name}
                                   </span>
                                   <span className="text-xs text-outline">
-                                    lokal {row.apartment_number ?? '—'} · {voteLabel(row.vote)}
+                                    {(row.apartments_count ?? 0) > 1
+                                      ? `lokale ${row.apartment_number ?? '—'} (${row.apartments_count})`
+                                      : `lokal ${row.apartment_number ?? '—'}`}
+                                    {row.share > 0 && ` · udział ${(row.share * 100).toFixed(2)}%`}
+                                    {' · '}{voteLabel(row.vote)}
                                   </span>
                                 </span>
                                 <button
@@ -864,12 +1049,22 @@ export default function AdminResolutionsPage() {
                           )
                           .slice()
                           .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
-                          .map(r => (
+                          .map(r => {
+                            const owned = meetingApartments[r.id] || []
+                            const aptLabel = owned.length > 1
+                              ? ` · lokale ${owned.join(', ')}`
+                              : owned.length === 1
+                                ? ` · lokal ${owned[0]}`
+                                : r.apartment_number
+                                  ? ` · lokal ${r.apartment_number}`
+                                  : ''
+                            return (
                             <option key={r.id} value={r.id}>
                               {r.full_name}
-                              {r.apartment_number ? ` · lokal ${r.apartment_number}` : ''}
+                              {aptLabel}
                             </option>
-                          ))}
+                            )
+                          })}
                       </select>
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -897,6 +1092,96 @@ export default function AdminResolutionsPage() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {remindModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remind-modal-title"
+          >
+            <div className="bg-white rounded-[var(--radius-card)] shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-cream-deep shrink-0">
+                <h2 id="remind-modal-title" className="text-lg font-semibold text-charcoal pr-2">
+                  Wyślij przypomnienie
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setRemindModal(null)}
+                  className="text-outline hover:text-charcoal shrink-0"
+                  aria-label="Zamknij"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-5 py-4 space-y-3 text-sm">
+                <p className="text-slate leading-relaxed">
+                  Uchwała: <strong className="text-charcoal">{remindModal.resolution.title}</strong>
+                </p>
+                <p className="text-xs text-outline">
+                  Poniżej lista uprawnionych mieszkańców, którzy jeszcze nie oddali głosu.
+                  Odznacz osoby, do których <strong>nie</strong> chcesz wysyłać przypomnienia.
+                </p>
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={toggleRemindAll}
+                    className="text-sage hover:underline"
+                  >
+                    {remindModal.selected.size === remindModal.recipients.length
+                      ? 'Odznacz wszystkich'
+                      : 'Zaznacz wszystkich'}
+                  </button>
+                  <span className="text-outline">
+                    Zaznaczonych: {remindModal.selected.size} / {remindModal.recipients.length}
+                  </span>
+                </div>
+                <ul className="divide-y divide-cream-deep border border-cream-deep rounded-[var(--radius-input)]">
+                  {remindModal.recipients.map((email) => {
+                    const checked = remindModal.selected.has(email)
+                    return (
+                      <li key={email} className="px-3 py-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleRemindEmail(email)}
+                            className="w-4 h-4"
+                          />
+                          <span className="font-mono text-sm text-charcoal break-all">
+                            {email}
+                          </span>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+              <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-cream-deep shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setRemindModal(null)}
+                  disabled={remindModal.sending}
+                  className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] border border-cream-deep text-slate hover:bg-cream-deep/50 disabled:opacity-50"
+                >
+                  Anuluj
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemindSend}
+                  disabled={remindModal.sending || remindModal.selected.size === 0}
+                  className="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-button)] bg-sage text-white hover:bg-sage/90 disabled:opacity-50"
+                >
+                  {remindModal.sending
+                    ? 'Wysyłanie…'
+                    : `Wyślij do zaznaczonych (${remindModal.selected.size})`}
+                </button>
               </div>
             </div>
           </div>,

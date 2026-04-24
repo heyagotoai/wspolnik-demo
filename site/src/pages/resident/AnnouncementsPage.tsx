@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { getReadIds, markRead } from '../../lib/readAnnouncements'
-import { findResolutionIdByTitle, resolutionTitleFromVotingAnnouncement } from '../../lib/votingAnnouncement'
+import {
+  buildVotingAnnouncementBody,
+  dedupeVotingAnnouncementsByResolution,
+  findResolutionForVotingAnnouncement,
+  resolutionTitleFromVotingAnnouncement,
+  findResolutionIdByTitle,
+} from '../../lib/votingAnnouncement'
+import type { ResolutionSnapshotForAnnouncement } from '../../lib/votingAnnouncement'
 import { DemoHelpCallout } from '../../demo/DemoHelpCallout'
 
 interface Announcement {
@@ -15,15 +22,27 @@ interface Announcement {
   created_at: string
 }
 
-interface ResolutionRow {
-  id: string
-  title: string
+function formatAnnouncementDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('pl-PL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function getDisplayFullContent(
+  a: Announcement,
+  resolutions: readonly ResolutionSnapshotForAnnouncement[],
+): string {
+  const r = findResolutionForVotingAnnouncement(a.title, resolutions)
+  if (r) return buildVotingAnnouncementBody(r, formatAnnouncementDate)
+  return a.content
 }
 
 export default function AnnouncementsPage() {
   const { user } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [resolutions, setResolutions] = useState<ResolutionRow[]>([])
+  const [resolutions, setResolutions] = useState<ResolutionSnapshotForAnnouncement[]>([])
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -36,26 +55,35 @@ export default function AnnouncementsPage() {
           .select('id, title, content, excerpt, is_pinned, created_at')
           .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false }),
-        supabase.from('resolutions').select('id, title'),
+        supabase.from('resolutions').select('id, title, status, voting_start, voting_end'),
       ])
 
-      if (resData) setResolutions(resData as ResolutionRow[])
+      const resList = (resData ?? []) as ResolutionSnapshotForAnnouncement[]
+      if (resData) setResolutions(resList)
 
-      if (data && user) {
+      if (!data) {
+        setLoading(false)
+        return
+      }
+
+      const deduped = dedupeVotingAnnouncementsByResolution(data, resList)
+
+      if (user) {
         const readIds = getReadIds(user.id)
-        const unread = new Set(data.filter((a) => !readIds.has(a.id)).map((a) => a.id))
+        const unread = new Set(deduped.filter((a) => !readIds.has(a.id)).map((a) => a.id))
 
-        // Short announcements are fully visible — mark as read immediately
-        const shortIds = data.filter((a) => a.content.length <= 200).map((a) => a.id)
+        const shortIds = deduped
+          .filter((a) => getDisplayFullContent(a, resList).length <= 200)
+          .map((a) => a.id)
         if (shortIds.length > 0) {
           markRead(user.id, shortIds)
           shortIds.forEach((id) => unread.delete(id))
         }
 
         setUnreadIds(unread)
-        setAnnouncements(data)
-      } else if (data) {
-        setAnnouncements(data)
+        setAnnouncements(deduped)
+      } else {
+        setAnnouncements(deduped)
       }
       setLoading(false)
     }
@@ -69,22 +97,18 @@ export default function AnnouncementsPage() {
         next.delete(id)
       } else {
         next.add(id)
-        // Mark as read when user expands a long announcement
         if (user && unreadIds.has(id)) {
           markRead(user.id, [id])
-          setUnreadIds((u) => { const s = new Set(u); s.delete(id); return s })
+          setUnreadIds((u) => {
+            const s = new Set(u)
+            s.delete(id)
+            return s
+          })
         }
       }
       return next
     })
   }
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('pl-PL', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
 
   if (loading) {
     return (
@@ -109,61 +133,65 @@ export default function AnnouncementsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {announcements.map((a) => (
-            <div key={a.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    {unreadIds.has(a.id) && (
-                      <span className="px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
-                        Nowe
-                      </span>
-                    )}
-                    {a.is_pinned && (
-                      <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">
-                        Ważne
-                      </span>
-                    )}
-                    <span className="text-xs text-outline">{formatDate(a.created_at)}</span>
-                  </div>
-                  {(() => {
-                    const resTitle = resolutionTitleFromVotingAnnouncement(a.title)
-                    const resId = resTitle ? findResolutionIdByTitle(resTitle, resolutions) : null
-                    if (resId) {
-                      return (
-                        <h2 className="text-base font-semibold">
-                          <Link
-                            to={`/panel/glosowania#resolution-${resId}`}
-                            className="text-sage hover:text-sage-light"
-                          >
-                            {a.title}
-                          </Link>
-                        </h2>
-                      )
-                    }
-                    return <h2 className="text-base font-semibold text-charcoal">{a.title}</h2>
-                  })()}
-                </div>
-              </div>
+          {announcements.map((a) => {
+            const full = getDisplayFullContent(a, resolutions)
+            const needsExpand = full.length > 200
+            const collapsed = needsExpand && !expanded.has(a.id)
+            const bodyText = collapsed ? `${full.slice(0, 200)}…` : full
 
-              <div className="mt-3 text-sm text-slate leading-relaxed">
-                {expanded.has(a.id) ? (
-                  <p className="whitespace-pre-wrap">{a.content}</p>
-                ) : (
-                  <p>{a.excerpt || a.content.slice(0, 200)}{a.content.length > 200 ? '...' : ''}</p>
+            return (
+              <div key={a.id} className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {unreadIds.has(a.id) && (
+                        <span className="px-2 py-0.5 bg-sage text-white text-xs font-medium rounded-full">
+                          Nowe
+                        </span>
+                      )}
+                      {a.is_pinned && (
+                        <span className="px-2 py-0.5 bg-amber-light text-amber text-xs font-medium rounded-full">
+                          Ważne
+                        </span>
+                      )}
+                      <span className="text-xs text-outline">{formatAnnouncementDate(a.created_at)}</span>
+                    </div>
+                    {(() => {
+                      const resTitle = resolutionTitleFromVotingAnnouncement(a.title)
+                      const resId = resTitle ? findResolutionIdByTitle(resTitle, resolutions) : null
+                      if (resId) {
+                        return (
+                          <h2 className="text-base font-semibold">
+                            <Link
+                              to={`/panel/glosowania#resolution-${resId}`}
+                              className="text-sage hover:text-sage-light"
+                            >
+                              {a.title}
+                            </Link>
+                          </h2>
+                        )
+                      }
+                      return <h2 className="text-base font-semibold text-charcoal">{a.title}</h2>
+                    })()}
+                  </div>
+                </div>
+
+                <div className="mt-3 text-sm text-slate leading-relaxed">
+                  <p className="whitespace-pre-wrap">{bodyText}</p>
+                </div>
+
+                {needsExpand && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(a.id)}
+                    className="mt-3 text-sm text-sage hover:text-sage-light font-medium"
+                  >
+                    {expanded.has(a.id) ? 'Zwiń' : 'Czytaj więcej'}
+                  </button>
                 )}
               </div>
-
-              {a.content.length > 200 && (
-                <button
-                  onClick={() => toggleExpand(a.id)}
-                  className="mt-3 text-sm text-sage hover:text-sage-light font-medium"
-                >
-                  {expanded.has(a.id) ? 'Zwiń' : 'Czytaj więcej'}
-                </button>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

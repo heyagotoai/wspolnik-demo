@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useToast } from '../../components/ui/Toast'
 import { formatCaughtError } from '../../lib/userFacingErrors'
+import { votingPeriodPhase } from '../../lib/resolutionVotingWindow'
 import {
   barWidthPrzeciwPct,
   barWidthWstrzymujePct,
@@ -48,9 +49,14 @@ interface ProfileVoteFields {
   can_vote_resolutions: boolean
 }
 
-const statusLabels: Record<string, { label: string; bg: string; text: string }> = {
+const phaseLabels: Record<
+  'voting' | 'closed' | 'upcoming' | 'ended' | 'draft',
+  { label: string; bg: string; text: string }
+> = {
   draft: { label: 'Szkic', bg: 'bg-cream-deep', text: 'text-slate' },
   voting: { label: 'Głosowanie otwarte', bg: 'bg-sage-pale/40', text: 'text-sage' },
+  upcoming: { label: 'Głosowanie zaplanowane', bg: 'bg-cream-deep', text: 'text-slate' },
+  ended: { label: 'Okres głosowania zakończony', bg: 'bg-cream-deep', text: 'text-slate' },
   closed: { label: 'Zamknięta', bg: 'bg-error-container', text: 'text-error' },
 }
 
@@ -181,11 +187,12 @@ export default function ResidentResolutionsPage() {
       ) : (
         <div className="space-y-4">
           {resolutions.map((r) => {
-            const status = statusLabels[r.status] || statusLabels.draft
+            const phase = votingPeriodPhase(r.status, r.voting_start, r.voting_end)
+            const status = phaseLabels[phase]
             const voteData = results[r.id]
             const myVote = myVotes[r.id]
             const canVote =
-              r.status === 'voting' &&
+              phase === 'voting' &&
               !myVote &&
               voteEligibility !== null &&
               voteEligibility.can_vote_resolutions
@@ -283,7 +290,7 @@ export default function ResidentResolutionsPage() {
                 )}
 
                 {voteEligibility &&
-                  r.status === 'voting' &&
+                  phase === 'voting' &&
                   !myVote &&
                   !voteEligibility.can_vote_resolutions && (
                     <p className="mt-4 text-sm text-slate bg-cream-deep/80 rounded-[var(--radius-input)] px-3 py-2">

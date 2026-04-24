@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { formatCaughtError } from '../../lib/userFacingErrors'
 import { useToast } from '../../components/ui/Toast'
@@ -14,6 +15,13 @@ interface Profile {
   is_active: boolean
   created_at: string
   can_vote_resolutions?: boolean
+  needs_legal_acceptance?: boolean
+  current_privacy_version?: string
+  current_terms_version?: string
+  privacy_accepted_at?: string | null
+  terms_accepted_at?: string | null
+  privacy_version?: string | null
+  terms_version?: string | null
 }
 
 export default function ProfilePage() {
@@ -32,6 +40,7 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [showCurrentPw, setShowCurrentPw] = useState(false)
   const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
 
   const { toast } = useToast()
 
@@ -75,8 +84,20 @@ export default function ProfilePage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (newPassword.length < 6) {
-      toast('Nowe hasło musi mieć minimum 6 znaków', 'error')
+    if (newPassword.length < 8) {
+      toast('Hasło musi mieć minimum 8 znaków', 'error')
+      return
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      toast('Hasło musi zawierać wielką literę', 'error')
+      return
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      toast('Hasło musi zawierać małą literę', 'error')
+      return
+    }
+    if (!/\d/.test(newPassword)) {
+      toast('Hasło musi zawierać cyfrę', 'error')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -108,8 +129,11 @@ export default function ProfilePage() {
       year: 'numeric',
     })
 
-  const roleLabel = (role: string) =>
-    role === 'admin' ? 'Administrator' : 'Mieszkaniec'
+  const roleLabel = (role: string) => {
+    if (role === 'admin') return 'Administrator'
+    if (role === 'manager') return 'Zarządca'
+    return 'Mieszkaniec'
+  }
 
   if (loading) {
     return (
@@ -222,7 +246,9 @@ export default function ProfilePage() {
             <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
               profile.role === 'admin'
                 ? 'bg-amber-light/30 text-amber'
-                : 'bg-sage-pale/40 text-sage'
+                : profile.role === 'manager'
+                  ? 'bg-sky-100 text-sky-800'
+                  : 'bg-sage-pale/40 text-sage'
             }`}>
               {roleLabel(profile.role)}
             </span>
@@ -236,6 +262,65 @@ export default function ProfilePage() {
             <p className="text-sm text-charcoal font-medium">{formatDate(profile.created_at)}</p>
           </div>
         </div>
+      </div>
+
+      {/* Dokumenty prawne — informacja o zaakceptowanych wersjach */}
+      <div className="bg-white rounded-[var(--radius-card)] shadow-ambient p-6 space-y-4">
+        <h2 className="text-base font-semibold text-charcoal">Dokumenty prawne</h2>
+        <p className="text-sm text-slate">
+          Obowiązujące w portalu wersje dokumentów to polityka prywatności{' '}
+          <span className="font-medium text-charcoal">
+            {profile.current_privacy_version ?? '—'}
+          </span>{' '}
+          oraz regulamin portalu WM GABI{' '}
+          <span className="font-medium text-charcoal">
+            {profile.current_terms_version ?? '—'}
+          </span>
+          .
+        </p>
+        {profile.privacy_version && profile.terms_version ? (
+          <p className="text-sm text-slate">
+            Twoja ostatnia akceptacja: polityka (wersja {profile.privacy_version},{' '}
+            {profile.privacy_accepted_at ? formatDate(profile.privacy_accepted_at) : '—'}), regulamin
+            portalu WM GABI (wersja {profile.terms_version},{' '}
+            {profile.terms_accepted_at ? formatDate(profile.terms_accepted_at) : '—'}).
+          </p>
+        ) : (
+          <p className="text-sm text-amber">
+            Nie zapisano jeszcze akceptacji dokumentów — po zalogowaniu uzupełnisz ją w oknie portalu.
+          </p>
+        )}
+        <ul className="text-sm space-y-2">
+          <li>
+            <a
+              href="/docs/polityka-prywatnosci-rodo.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sage font-medium hover:text-sage-light underline"
+            >
+              Polityka prywatności i RODO (PDF)
+            </a>
+          </li>
+          <li>
+            <a
+              href="/docs/regulamin-portalu-wmgabi.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sage font-medium hover:text-sage-light underline"
+            >
+              Regulamin portalu WM GABI (PDF)
+            </a>
+          </li>
+        </ul>
+        <p className="text-sm text-slate border-t border-cream-medium pt-4">
+          W sprawie wycofania zgody na określone cele przetwarzania, żądań dotyczących danych
+          osobowych lub rezygnacji z korzystania z portalu skontaktuj się z administratorem
+          wspólnoty — np. przez{' '}
+          <Link to="/kontakt" className="text-sage font-medium hover:text-sage-light underline">
+            formularz kontaktowy
+          </Link>
+          .
+        </p>
       </div>
 
       {/* Change password card */}
@@ -273,7 +358,7 @@ export default function ProfilePage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-3 py-2 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage pr-10"
               />
               <button
@@ -284,20 +369,29 @@ export default function ProfilePage() {
                 {showNewPw ? 'Ukryj' : 'Pokaż'}
               </button>
             </div>
-            <p className="text-xs text-outline mt-1">Minimum 6 znaków</p>
+            <p className="text-xs text-outline mt-1">Min. 8 znaków, wielka i mała litera, cyfra</p>
           </div>
 
           {/* Confirm password */}
           <div>
             <label className="block text-sm text-slate mb-1">Powtórz nowe hasło</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPw ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full px-3 py-2 pr-14 border border-cream-medium rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPw(!showConfirmPw)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-outline hover:text-slate text-xs"
+              >
+                {showConfirmPw ? 'Ukryj' : 'Pokaż'}
+              </button>
+            </div>
           </div>
 
           <button

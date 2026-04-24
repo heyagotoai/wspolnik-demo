@@ -2,6 +2,83 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-24 — Mieszkańcy bez konta logowania (głosy z zebrania bez email)
+- **Migracja `025_residents_optional_email.sql`** — `email` nullable, partial unique index `residents_email_unique_not_null` (WHERE email IS NOT NULL), kolumna `has_account BOOLEAN DEFAULT true`
+- **`api/models/schemas.py`** — `ResidentCreate.email/password` opcjonalne (validator wymusza parę); `ResidentUpdate` dostaje `email/password` do „nadawania konta"; `ResidentOut.has_account`
+- **`api/routes/residents.py`** — `POST /residents` bez email: placeholder auth user `no-login-<uuid>@no-login.wmgabi.local`, ban ~100 lat, `residents.email=NULL`, `has_account=false`; `PATCH /residents/:id` z email+password przy `has_account=false`: `auth.admin.update_user_by_id` + `ban_duration: "none"` + `has_account=true`; ponowna zmiana → 400
+- **`api/routes/announcements.py`** — filtr pustych emaili w wysyłce (safety net + weryfikacja listy)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — email opcjonalny z hintem, badge „bez konta" w tabeli, tryb „nadaj konto" w edycji (email + hasło dla `has_account=false`)
+- **Testy:** +4 pytest (tworzenie bez konta, walidacja par, nadanie konta, blokada zmiany), +2 vitest (dodanie bez konta, badge); 390/390 pytest, 148/148 vitest
+
+### 2026-04-21 — Uchwały: przypomnienia o nieoddanych głosach + tryb testowy (is_test)
+- **Migracja `024_resolutions_test_and_reminder.sql`** — kolumny `is_test BOOLEAN DEFAULT false`, `reminder_sent_at TIMESTAMPTZ`; indeks częściowy `idx_resolutions_reminder_pending` (status='voting' AND reminder_sent_at IS NULL AND is_test=false)
+- **`api/core/resolution_reminders.py`** (new) — `is_within_reminder_window()` (okno 2 dni przed `voting_end`), `find_pending_voters()` (aktywni, z emailem, nie oddali głosu, uprawnieni wg `voting_eligibility`), `build_reminder_email()`
+- **`api/routes/resolutions.py`** — `POST /resolutions/{id}/remind?dry_run=bool` (admin, wymaga statusu `voting`, ignoruje `is_test` przy ręcznym wywołaniu) + `GET/POST /resolutions/cron/remind-pending` (cron, `CRON_SECRET`) — pomija uchwały testowe, już wysłane i poza oknem; uchwały testowe ukryte dla mieszkańców w `list_resolutions`; skip auto-ogłoszenia przy `is_test=true`
+- **`.github/workflows/cron.yml`** — codzienny harmonogram `0 7 * * *` + `workflow_dispatch` dla `resolutions-remind`
+- **`site/src/pages/admin/ResolutionsPage.tsx`** — checkbox „Uchwała testowa" w formularzu, badge TEST, ikona „Wyślij przypomnienie" (SendIcon) przy uchwałach w głosowaniu z dry-run + potwierdzeniem listy odbiorców
+- **Testy:** `api/tests/test_resolution_reminders.py` (18 testów) + 2 nowe w `test_resolutions.py` (mieszkaniec nie widzi testowych, admin widzi); frontend mock `SendIcon`
+- **Dokumentacja:** `CLAUDE.md` / `.cursorrules` (migracja **024** + zakres **023** — widok importów), endpointy `/remind`, `/cron/remind-pending`, flaga `is_test`; feature-map, ADR-010, karty produktu, operations
+
+### 2026-04-20 — Finanse mieszkańca: „Saldo na dzień: DD-MM-YYYY"
+- **Migracja `023_last_import_activity_view.sql`** — widok `last_import_activity` z globalnymi `last_bank_import_at` / `last_excel_import_at` (wyliczane z `payments.title` + `created_at`); GRANT SELECT dla `authenticated` — widok obchodzi RLS `payments` (sama data, bez kwot i lokali; brak danych wrażliwych)
+- **`site/src/lib/balanceAsOf.ts`** (+ test) — pure helper: `computeBalanceAsOf({ paymentDates, lastBankImportAt, lastExcelImportAt })` → najpóźniejsza data; `formatBalanceAsOfDate` (`YYYY-MM-DD` → `DD-MM-YYYY`)
+- **`site/src/pages/resident/FinancesPage.tsx`** — fetch widoku; etykieta karty „Saldo" (pojedynczy lokal) / „Saldo łączne" (grupa rozliczeniowa) wzbogacona o `na dzień: DD-MM-YYYY`; data = max(`payment_date` zaksięgowanych wpłat widocznych lokali, globalna data importu bankowego, globalna data importu xlsx)
+- **Motywacja:** mieszkaniec wiedział tylko „jakie jest saldo", bez informacji, do kiedy system uwzględnia wpłaty (sam `max(payment_date)` nie pokrywał przypadku, gdy admin zaimportował wyciąg bez dopasowanej wpłaty na ten lokal — RLS ukrywał ten fakt)
+- **Dokumentacja:** `CLAUDE.md`, `.cursorrules`, `docs/operations/01-wdrozenie.md`, `docs/architecture/feature-map.md`
+
+### 2026-04-17 — Jeden właściciel, wiele lokali: zarządzanie + rozbicie finansów + głosowania
+- **`api/routes/residents.py`** — `POST /residents/{id}/apartments` (przypisanie lokalu do istniejącego właściciela) + `DELETE /residents/{id}/apartments/{apartment_id}` (odpięcie); walidacja 404/409
+- **`api/models/schemas.py`** — nowy `ApartmentAssign`; `VoteDetail` rozszerzony o `apartments_count: int` + `share: float`
+- **`api/routes/resolutions.py`** — `GET /:id/votes`: każdy głos wzbogacony o liczbę lokali właściciela, sumę udziałów (`apartments.share`) i listę numerów lokali (pole `apartment_number` = "32, 45" dla wielolokalowców)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — modal „Zarządzaj lokalami" (ikona 🏠 przy wierszu): lista przypisanych lokali z przyciskiem „Odepnij" + dropdown wolnych lokali → „Przypisz"; kolumna „Lokal" pokazuje wszystkie lokale właściciela
+- **`site/src/pages/resident/FinancesPage.tsx`** — rozbicie per lokal (tabela Naliczenia / Wpłaty / Saldo) wyświetlane zawsze przy > 1 lokalu (dotychczas tylko przy grupie rozliczeniowej)
+- **`site/src/pages/admin/ResolutionsPage.tsx`** — lista głosów (UI + PDF): kolumna „Udział", format „lokale 32, 45 (2)" dla wielolokalowców; dropdown „Dodaj głos" pokazuje wszystkie lokale właściciela pobrane z `apartments.owner_resident_id`
+
+### 2026-04-14 — Bezpieczeństwo sesji: stabilna referencja user + auto-wylogowanie po bezczynności
+- **`site/src/hooks/useAuth.ts`** — `onAuthStateChange`: zachowuje stabilną referencję `user` gdy `id` się nie zmienił (fix: `TOKEN_REFRESHED` nie powoduje już odmontowania widoków i utraty stanu formularzy)
+- **`site/src/hooks/useIdleLogout.ts`** — nowy hook: timer bezczynności niezależny od widoczności karty (karta w tle wygasa tak samo jak aktywna); aktywność (`mousemove/mousedown/keydown/touchstart/scroll`) resetuje timer; w trakcie ostrzeżenia wymagany jawny klik; zwraca `{ warning, remainingSec, extend }`
+- **`site/src/components/auth/IdleWarningDialog.tsx`** — modal ostrzeżenia z odliczaniem sekund i przyciskiem „Zostaję — przedłuż sesję"
+- **`site/src/components/auth/AdminRoute.tsx`** — auto-wylogowanie po **15 min** bezczynności + ostrzeżenie przez ostatnie **60 s**
+- **`site/src/components/auth/ProtectedRoute.tsx`** — auto-wylogowanie po **30 min** bezczynności (bez ostrzeżenia)
+
+### 2026-04-05 — Dokumentacja: `KARTA_PRODUKTU` / `KARTA_PRODUKTU_OFERTA` zsynchronizowane z aplikacją
+- **Role:** doprecyzowanie **zarządcy** (read-only + CRUD ogłoszeń/terminów; bez naliczeń, importów, salda, zawiadomień o opłatach)
+- **Panel:** wspólne URL admin/zarządca; **Lokale** — `billing_surname`, podgląd wpłat, ostatnie importy; **Naliczenia** — zawiadomienia o opłatach (PDF, e‑mail, masowo); saldo — **masowa** wysyłka
+- **Powiadomienia:** zawiadomienia o opłatach, e‑mail po tygodniowym backupie
+- **Niefunkcjonalne / bezpieczeństwo:** backup tygodniowy do magazynu plików + retencja plików (~12 tyg.), retencja finansów 5 lat jako proces zautomatyzowany
+- **Oferta:** Wariant B — dopisanie zawiadomień o opłatach, zarządcy, backupu
+
+### 2026-04-04 — Strona publiczna: aktualności z bazy, jawność ogłoszeń, nawigacja
+- **Migracje `021_announcements_is_public.sql`**, **`022_announcements_is_public_default_false.sql`** — kolumna `is_public`, RLS: anon widzi tylko jawne wpisy; zalogowany — pełna lista w panelu; domyślna wartość `false` dla nowych wierszy bez jawnej wartości
+- **`site/src/lib/loadPublicAnnouncements.ts`** — pobieranie + deduplikacja auto-ogłoszeń głosowań; **`announcementPreview`**; testy
+- **`site/src/pages/HomePage.tsx`**, **`NewsPage.tsx`** — treść z Supabase (zamiast mocków); hero: przyciski logowanie / aktualności / kontakt; usunięty podtytuł na `/aktualnosci`; usunięty sidebar „Ważne terminy”; **`TextWithAutoLinks`** — klikalne `http(s)://` w podglądzie
+- **`site/src/pages/admin/AnnouncementsPage.tsx`** — checkbox „Aktualności - widoczne na stronie głównej bez logowania” (`is_public`), badge „Tylko panel”
+- **`api/routes/resolutions.py`** — insert auto-ogłoszenia głosowania z `is_public: false`
+- **`Header.tsx`**, **`Footer.tsx`** — link „Dokumenty” w menu tylko po zalogowaniu
+- **`mockData.ts`** — usunięte nieużywane mocki ogłoszeń/terminów
+- **Dokumentacja:** [[ADR-016-public-announcements-visibility]], `feature-map.md`, `KARTA_PRODUKTU.md`, `KARTA_PRODUKTU_OFERTA.md`, `docs/operations/01-wdrozenie.md`, `memory/postep.md`, **CLAUDE.md** / **.cursorrules** (migracje 021–022)
+
+### 2026-04-04 — Lokale: „Ostatnie importy wpłat” (admin i zarządca)
+- **`site/src/pages/admin/ApartmentsPage.tsx`** — panel z datą ostatniego importu z zestawienia bankowego (`.xls`), ostatniego importu wpłat z Excela (arkusz Dopasowań) oraz najpóźniejszą **zaksięgowaną** datą wpłaty (`confirmed_by_admin`) z **lokalem** (lub wpłatą zbiorczą) i **kwotą** (sort: `payment_date` ↓, `created_at` ↓); identyfikacja importów po tytułach wpłat zgodnych z `api/routes/import_routes.py`
+- **`docs/instrukcja-admina.md`**, **`docs/architecture/feature-map.md`**
+- Panel **Ostatnie importy wpłat** — zwijany (domyślnie zwinięty), nagłówek z chevronem, `aria-expanded` / `aria-controls`
+
+### 2026-04-04 — Crony przeniesione z Vercel do GitHub Actions + retencja danych finansowych
+- **`.github/workflows/cron.yml`** — 4 zadania: naliczenia (06:00 UTC), backup (niedziela 02:00 UTC), retencja wiadomości (1. dzień miesiąca 03:00 UTC), retencja finansowa (1. dzień kwartału 04:00 UTC); `workflow_dispatch` — ręczne uruchomienie z UI GitHub
+- **`POST/GET /api/retention/cron`** — kwartalny cron RODO: carry-forward salda (przeniesienie efektu starych naliczeń/wpłat do `initial_balance` przed usunięciem), usuwanie z `charges`, `payments`, `bank_statements` (fallback `created_at` przy NULL `statement_date`), `audit_log` starszych niż 5 lat; powiadomienia email do adminów/zarządców
+- **`vercel.json`** — usunięte crony (limit 2 na darmowym planie Vercel)
+- Przywrócony cron retencji wiadomości kontaktowych (`/api/contact/cron`) — usunięty wcześniej z powodu limitu Vercel
+- Testy: `api/tests/test_retention.py` (11 testów); `conftest.py` — dodano `lt()` do FakeSupabaseBuilder
+
+### 2026-04-03 — Dokumentacja: obowiązek podbijania wersji przy zmianie PDF regulaminu/polityki
+- **`docs/operations/02-utrzymanie.md`** — sekcja *Zmiana polityki prywatności lub regulaminu* (checklist: env `CURRENT_*_VERSION`, redeploy API); odesłania w **`01-wdrozenie.md`** i **ADR-015**
+
+### 2026-04-03 — RODO: zgody polityki prywatności i regulaminu przy wejściu do portalu
+- **Migracja `020_residents_legal_consent.sql`:** kolumny `privacy_accepted_at`, `terms_accepted_at`, `privacy_version`, `terms_version` w `residents`
+- **Backend:** `GET /api/profile` rozszerzone o `needs_legal_acceptance`, `current_*_version`, zapisane wersje i timestampy; **`POST /api/profile/legal-consent`**; **`CURRENT_PRIVACY_VERSION`** / **`CURRENT_TERMS_VERSION`** w `api/core/config.py` (env)
+- **Frontend:** `LegalConsentGate` w `ProtectedRoute` i `AdminRoute` (modal z checkboxami + linki do PDF); profil — sekcja dokumentów prawnych i kanał kontaktu; **Playwright:** `acceptLegalConsentIfShown()` w `login()`
+- **Dokumentacja:** [[ADR-015-legal-consent-rodo]], `feature-map`, `docs/operations/01-wdrozenie.md`, karty produktu; testy: `test_profile.py`, `conftest` (deep copy + merge `update`), Vitest tras i profilu
+
 ### 2026-03-29 — Uchwały: głosy z zebrania przed publikacją
 - **`POST /api/resolutions/:id/votes/register`** (admin, tylko `status=draft`) — rejestracja głosu mieszkańca oddanego osobiście na zebraniu; te same reguły co `POST /vote` (`voting_eligibility`); **`DELETE /api/resolutions/:id/votes/:resident_id`** — pojedyncze usunięcie w szkicu
 - **Panel admina Uchwały** — przycisk „Głosy z zebrania” przy szkicu; podgląd wyników także dla szkicu z głosami; eksport PDF gdy są głosy

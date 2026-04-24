@@ -11,6 +11,24 @@ export async function login(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Zaloguj się' }).click()
   // Czekaj na przekierowanie — panel mieszkańca lub admina
   await expect(page).toHaveURL(/\/(panel|admin)/, { timeout: 15_000 })
+  await acceptLegalConsentIfShown(page)
+}
+
+/** Gdy obowiązuje okno zgód RODO — zaznacza pola i przechodzi dalej. */
+export async function acceptLegalConsentIfShown(page: Page) {
+  const title = page.getByRole('heading', { name: /Dokumenty prawne/i })
+  try {
+    await title.waitFor({ state: 'visible', timeout: 8000 })
+  } catch {
+    return
+  }
+  const boxes = page.locator('input[type="checkbox"]')
+  const n = await boxes.count()
+  for (let i = 0; i < n; i++) {
+    await boxes.nth(i).check()
+  }
+  await page.getByRole('button', { name: /Akceptuję i przechodzę dalej/i }).click()
+  await expect(title).toBeHidden({ timeout: 15_000 })
 }
 
 /**
