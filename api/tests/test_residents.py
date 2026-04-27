@@ -271,18 +271,48 @@ class TestChangeResidentEmail:
         assert response.status_code == 400
         assert "nie ma konta" in response.json()["detail"]
 
-    def test_zmiana_emaila_na_taki_sam_zwraca_400(self, admin_client, fake_sb):
+    def test_zmiana_emaila_na_taki_sam_jest_idempotentna(self, admin_client, fake_sb):
+        """Ten sam email = no-op (200 OK), bez auth update, bez audit, bez sign-out.
+
+        Dzięki temu race condition (np. dwa szybkie kliknięcia) nie wybucha 400.
+        """
         existing = {
             "id": "r1", "email": "ten-sam@gabi.pl", "full_name": "Adam",
             "apartment_number": "5A", "role": "resident", "is_active": True,
             "has_account": True, "created_at": "2026-04-24T00:00:00",
         }
         fake_sb.set_table_data("residents", [existing])
+        fake_sb.auth.admin = MagicMock()
 
-        response = admin_client.patch(
-            "/api/residents/r1/email", json={"email": "ten-sam@gabi.pl"},
-        )
-        assert response.status_code == 400
+        with patch("api.routes.residents.httpx.post") as httpx_post:
+            response = admin_client.patch(
+                "/api/residents/r1/email", json={"email": "ten-sam@gabi.pl"},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["email"] == "ten-sam@gabi.pl"
+        # No-op — żadnych side effectów
+        assert not fake_sb.auth.admin.update_user_by_id.called
+        assert not httpx_post.called
+
+    def test_zmiana_emaila_case_insensitive_no_op(self, admin_client, fake_sb):
+        """Różnica wielkości liter nie wymusza zmiany — Supabase Auth normalizuje do lowercase."""
+        existing = {
+            "id": "r1", "email": "adam@gabi.pl", "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": True, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+        fake_sb.auth.admin = MagicMock()
+
+        with patch("api.routes.residents.httpx.post") as httpx_post:
+            response = admin_client.patch(
+                "/api/residents/r1/email", json={"email": "Adam@Gabi.PL"},
+            )
+
+        assert response.status_code == 200
+        assert not fake_sb.auth.admin.update_user_by_id.called
+        assert not httpx_post.called
 
     def test_zmiana_emaila_nieistniejacego_zwraca_404(self, admin_client, fake_sb):
         fake_sb.set_table_data("residents", [])

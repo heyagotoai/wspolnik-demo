@@ -278,7 +278,7 @@ def change_resident_email(
 
     existing = (
         sb.table("residents")
-        .select("id, email, has_account")
+        .select("*")
         .eq("id", resident_id)
         .execute()
     )
@@ -294,8 +294,14 @@ def change_resident_email(
 
     old_email = current.get("email")
     new_email = body.email
-    if old_email == new_email:
-        raise HTTPException(status_code=400, detail="Nowy email jest taki sam jak obecny")
+    # Supabase Auth normalizuje email do lowercase — porównujemy case-insensitive,
+    # żeby drobne różnice (np. wielkość liter) nie blokowały i nie tworzyły fałszywego audytu.
+    norm_old = (old_email or "").strip().lower()
+    norm_new = new_email.strip().lower()
+    if norm_old == norm_new:
+        # No-op: email jest już ustawiony. Zwracamy aktualny wiersz (idempotentnie),
+        # bez aktualizacji auth, audit logu i wymuszonego wylogowania — nic się nie zmienia.
+        return current
 
     try:
         sb.auth.admin.update_user_by_id(
