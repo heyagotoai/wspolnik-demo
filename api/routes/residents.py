@@ -324,14 +324,21 @@ def change_resident_email(
     if not result.data:
         raise HTTPException(status_code=404, detail="Mieszkaniec nie znaleziony")
 
-    sb.table("audit_log").insert({
-        "user_id": _admin["sub"],
-        "action": "auth_email_change",
-        "table_name": "residents",
-        "record_id": resident_id,
-        "old_data": {"email": old_email},
-        "new_data": {"email": new_email},
-    }).execute()
+    # Audit log to wymóg RODO, ale gdy pisanie do audit_log się nie powiedzie
+    # (np. brak migracji 026 z rozszerzonym CHECK na `action`), nie chcemy
+    # zwracać 500 — email jest już zmieniony w auth + tabeli `residents`.
+    # Logujemy ostrzeżenie i kontynuujemy, by UI nie pokazywał błędu „udanej" operacji.
+    try:
+        sb.table("audit_log").insert({
+            "user_id": _admin["sub"],
+            "action": "auth_email_change",
+            "table_name": "residents",
+            "record_id": resident_id,
+            "old_data": {"email": old_email},
+            "new_data": {"email": new_email},
+        }).execute()
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("Audit log insert failed for auth_email_change (%s): %s", resident_id, e)
 
     # Mieszkaniec musi zalogować się nowym emailem — zamykamy aktywne sesje.
     _global_sign_out(resident_id)
@@ -379,13 +386,19 @@ def reset_resident_password(
             detail = e.message
         raise HTTPException(status_code=400, detail=f"Błąd resetu hasła: {detail}")
 
-    sb.table("audit_log").insert({
-        "user_id": _admin["sub"],
-        "action": "auth_password_reset",
-        "table_name": "residents",
-        "record_id": resident_id,
-        "new_data": {"reset": True},
-    }).execute()
+    # Hasło już zmienione w auth.users — błąd audit logu (np. brak migracji 026
+    # rozszerzającej CHECK constraint o 'auth_password_reset') nie może zwrócić
+    # 500, bo admin zobaczyłby błąd, mimo że hasło faktycznie zostało zresetowane.
+    try:
+        sb.table("audit_log").insert({
+            "user_id": _admin["sub"],
+            "action": "auth_password_reset",
+            "table_name": "residents",
+            "record_id": resident_id,
+            "new_data": {"reset": True},
+        }).execute()
+    except Exception as e:  # noqa: BLE001
+        _logger.warning("Audit log insert failed for auth_password_reset (%s): %s", resident_id, e)
 
     # Stare sesje muszą zostać unieważnione, inaczej zalogowane urządzenia
     # zachowują dostęp aż do wygaśnięcia access_token (~1h).

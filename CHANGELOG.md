@@ -2,6 +2,12 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-27 — Poprawka: audyt przy zmianie email / resetcie hasła (migracja 026)
+- **Przyczyna:** CHECK constraint `audit_log_action_check` (migracje 013/015) dopuszczał tylko m.in. `create` / `update` / `votes_reset` — endpointy `PATCH /residents/{id}/email` i `POST /residents/{id}/reset-password` wstawiały `auth_email_change` / `auth_password_reset`, co powodowało **błąd po udanej zmianie** w auth + `residents` (500 bez `detail` → generyczny komunikat w UI, mimo zapisanego emaila/hasła).
+- **`supabase/migrations/026_audit_log_auth_actions.sql`** — rozszerza CHECK o `auth_email_change` i `auth_password_reset`.
+- **`api/routes/residents.py`** — `try`/`except` wokół `INSERT` do `audit_log` dla obu operacji: przy niepowodzeniu audytu — `warning` w logach, odpowiedź nadal **200** (operacja w auth już wykonana); po migracji 026 INSERT przechodzi normalnie.
+- **Dokumentacja operacyjna:** `docs/operations/01-wdrozenie.md` (zakres migracji 012–026), `CLAUDE.md` / `.cursorrules`, `feature-map.md`, `memory/postep.md`.
+
 ### 2026-04-27 — Admin może zmienić email i zresetować hasło mieszkańca
 - **`api/routes/residents.py`** — dwa nowe endpointy (admin only, dla `has_account=true`):
   - `PATCH /residents/{id}/email` — zmiana adresu email; aktualizuje `auth.users.email` (`email_confirm=True`) + `residents.email`; audit log `auth_email_change` (stary + nowy email)

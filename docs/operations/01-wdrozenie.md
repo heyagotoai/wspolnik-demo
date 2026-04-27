@@ -47,7 +47,7 @@ SQL Editor → New Query → skopiuj i uruchom **po kolei**:
 011_initial_balance_date.sql — data salda początkowego
 ```
 
-Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–024** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`, **021–022** jawność ogłoszeń `is_public` i domyślna wartość, **023** widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, **024** `resolutions.is_test` + `reminder_sent_at` + indeks częściowy dla przypomnień o uchwałach).
+Następnie uruchom **po kolei** pozostałe pliki z `supabase/migrations/` o numerach **012–026** (m.in. głosowania, audit, manager, grupy rozliczeniowe, zgody RODO w `residents`, **021–022** jawność ogłoszeń `is_public` i domyślna wartość, **023** widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, **024** `resolutions.is_test` + `reminder_sent_at` + indeks częściowy dla przypomnień o uchwałach, **025** `residents.email` nullable + `has_account`, **026** rozszerzenie CHECK `audit_log.action` o `auth_email_change` i `auth_password_reset` — wymagane dla audytu przy awaryjnej zmianie email/hasła mieszkańca).
 
 **Kolejność jest ważna!** Każda migracja zależy od poprzednich.
 
