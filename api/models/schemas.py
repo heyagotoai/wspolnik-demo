@@ -112,6 +112,18 @@ class ResidentOut(BaseModel):
     created_at: str
 
 
+class ResidentEmailUpdate(BaseModel):
+    """Zmiana adresu email mieszkańca z kontem (admin)."""
+
+    email: EmailStr
+
+
+class PasswordResetOut(BaseModel):
+    """Wynik resetu hasła — hasło zwracane jednokrotnie do przekazania mieszkańcowi."""
+
+    password: str
+
+
 class ApartmentAssign(BaseModel):
     apartment_id: str = Field(..., min_length=1)
 

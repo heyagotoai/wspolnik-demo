@@ -12,7 +12,7 @@ Pokryte scenariusze:
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 # --- Health check (publiczny) ------------------------------------------------
@@ -220,6 +220,141 @@ class TestUpdateResident:
             "email": "adam@gabi.pl",
         })
         assert response.status_code == 422
+
+
+# --- PATCH /api/residents/:id/email ------------------------------------------
+
+class TestChangeResidentEmail:
+    def test_zmiana_emaila_sukces(self, admin_client, fake_sb):
+        existing = {
+            "id": "r1", "email": "stary@gabi.pl", "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": True, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+        fake_sb.auth.admin = MagicMock()
+
+        with patch("api.routes.residents.httpx.post") as httpx_post:
+            httpx_post.return_value = SimpleNamespace(status_code=204, text="")
+            response = admin_client.patch(
+                "/api/residents/r1/email", json={"email": "nowy@gabi.pl"},
+            )
+        assert response.status_code == 200, response.text
+        assert response.json()["email"] == "nowy@gabi.pl"
+
+        # auth.admin.update_user_by_id wywołane z email + email_confirm
+        assert fake_sb.auth.admin.update_user_by_id.called
+        args, _ = fake_sb.auth.admin.update_user_by_id.call_args
+        assert args[0] == "r1"
+        assert args[1]["email"] == "nowy@gabi.pl"
+        assert args[1]["email_confirm"] is True
+        # Hasło NIE może być zmieniane przy samej zmianie emaila
+        assert "password" not in args[1]
+
+        # Wszystkie sesje mieszkańca muszą zostać unieważnione (REST logout)
+        assert httpx_post.called
+        url = httpx_post.call_args[0][0]
+        assert url.endswith("/auth/v1/admin/users/r1/logout")
+        assert httpx_post.call_args[1]["params"]["scope"] == "global"
+
+    def test_zmiana_emaila_dla_mieszkanca_bez_konta_zwraca_400(self, admin_client, fake_sb):
+        existing = {
+            "id": "r1", "email": None, "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": False, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+
+        response = admin_client.patch(
+            "/api/residents/r1/email", json={"email": "nowy@gabi.pl"},
+        )
+        assert response.status_code == 400
+        assert "nie ma konta" in response.json()["detail"]
+
+    def test_zmiana_emaila_na_taki_sam_zwraca_400(self, admin_client, fake_sb):
+        existing = {
+            "id": "r1", "email": "ten-sam@gabi.pl", "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": True, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+
+        response = admin_client.patch(
+            "/api/residents/r1/email", json={"email": "ten-sam@gabi.pl"},
+        )
+        assert response.status_code == 400
+
+    def test_zmiana_emaila_nieistniejacego_zwraca_404(self, admin_client, fake_sb):
+        fake_sb.set_table_data("residents", [])
+
+        response = admin_client.patch(
+            "/api/residents/not-exist/email", json={"email": "nowy@gabi.pl"},
+        )
+        assert response.status_code == 404
+
+    def test_zmiana_emaila_walidacja_formatu(self, admin_client):
+        response = admin_client.patch(
+            "/api/residents/r1/email", json={"email": "nie-email"},
+        )
+        assert response.status_code == 422
+
+
+# --- POST /api/residents/:id/reset-password ----------------------------------
+
+class TestResetResidentPassword:
+    def test_reset_hasla_zwraca_haslo(self, admin_client, fake_sb):
+        existing = {
+            "id": "r1", "email": "adam@gabi.pl", "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": True, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+        fake_sb.auth.admin = MagicMock()
+
+        with patch("api.routes.residents.httpx.post") as httpx_post:
+            httpx_post.return_value = SimpleNamespace(status_code=204, text="")
+            response = admin_client.post("/api/residents/r1/reset-password")
+        assert response.status_code == 200, response.text
+        password = response.json()["password"]
+
+        # Hasło spełnia wymagania siły (12 znaków, A-Z, a-z, cyfra)
+        assert len(password) == 12
+        assert any(c.isupper() for c in password)
+        assert any(c.islower() for c in password)
+        assert any(c.isdigit() for c in password)
+        # Bez znaków łatwo mylonych
+        assert not any(c in "0O1lI" for c in password)
+
+        # auth.admin.update_user_by_id wywołane z password (i NIE z email)
+        assert fake_sb.auth.admin.update_user_by_id.called
+        args, _ = fake_sb.auth.admin.update_user_by_id.call_args
+        assert args[0] == "r1"
+        assert args[1]["password"] == password
+        assert "email" not in args[1]
+
+        # Stare sesje wszystkich urządzeń muszą zostać unieważnione
+        assert httpx_post.called
+        url = httpx_post.call_args[0][0]
+        assert url.endswith("/auth/v1/admin/users/r1/logout")
+        assert httpx_post.call_args[1]["params"]["scope"] == "global"
+
+    def test_reset_hasla_dla_mieszkanca_bez_konta_zwraca_400(self, admin_client, fake_sb):
+        existing = {
+            "id": "r1", "email": None, "full_name": "Adam",
+            "apartment_number": "5A", "role": "resident", "is_active": True,
+            "has_account": False, "created_at": "2026-04-24T00:00:00",
+        }
+        fake_sb.set_table_data("residents", [existing])
+
+        response = admin_client.post("/api/residents/r1/reset-password")
+        assert response.status_code == 400
+        assert "nie ma konta" in response.json()["detail"]
+
+    def test_reset_hasla_nieistniejacego_zwraca_404(self, admin_client, fake_sb):
+        fake_sb.set_table_data("residents", [])
+
+        response = admin_client.post("/api/residents/not-exist/reset-password")
+        assert response.status_code == 404
 
 
 # --- DELETE /api/residents/:id -----------------------------------------------

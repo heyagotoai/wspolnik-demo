@@ -2,6 +2,16 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-04-27 — Admin może zmienić email i zresetować hasło mieszkańca
+- **`api/routes/residents.py`** — dwa nowe endpointy (admin only, dla `has_account=true`):
+  - `PATCH /residents/{id}/email` — zmiana adresu email; aktualizuje `auth.users.email` (`email_confirm=True`) + `residents.email`; audit log `auth_email_change` (stary + nowy email)
+  - `POST /residents/{id}/reset-password` — generuje 12-znakowe losowe hasło bez znaków mylących (`0/O/1/l/I`); aktualizuje `auth.users.password`; zwraca hasło **jednokrotnie** w odpowiedzi (system nie zachowuje); audit log `auth_password_reset` (sam fakt, bez hasła)
+  - Helper `_global_sign_out()` — po każdej zmianie wymuszone wylogowanie wszystkich aktywnych sesji mieszkańca przez REST `POST /auth/v1/admin/users/{id}/logout?scope=global` (best-effort, błąd loguje warning)
+- **`api/models/schemas.py`** — `ResidentEmailUpdate` (EmailStr), `PasswordResetOut` (`{password}`)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — w edycji mieszkańca z kontem: input email odblokowany + przycisk **„Zmień email"** (osobna operacja z confirm), sekcja **„Hasło"** z przyciskiem **„Wygeneruj nowe hasło"** → modal pokazujący hasło raz (font monospace, akcja **Kopiuj** → `navigator.clipboard`); mieszkaniec bez konta nie widzi nowych elementów (zostaje istniejąca ścieżka „nadaj konto")
+- **Motywacja:** dotychczas mieszkaniec, który zapomniał hasła lub zmienił adres, musiał czekać na ścieżkę self-service (reset przez email) — admin nie miał szybkiej drogi awaryjnej. Wymuszone wylogowanie unieważnia wszystkie istniejące sesje, nie tylko refresh token (~1h access_token)
+- **Testy:** +8 pytest (`test_residents.py` — sukces zmiany email/hasła z weryfikacją sign-out, blokady dla `has_account=false`, 404, walidacje, weryfikacja składu hasła i braku znaków mylących), +3 vitest (`ResidentsPage.test.tsx` — zmiana email, generowanie hasła + modal + copy, ukrycie akcji dla `has_account=false`); 398/398 pytest, 153/153 vitest
+
 ### 2026-04-24 — Mieszkańcy bez konta logowania (głosy z zebrania bez email)
 - **Migracja `025_residents_optional_email.sql`** — `email` nullable, partial unique index `residents_email_unique_not_null` (WHERE email IS NOT NULL), kolumna `has_account BOOLEAN DEFAULT true`
 - **`api/models/schemas.py`** — `ResidentCreate.email/password` opcjonalne (validator wymusza parę); `ResidentUpdate` dostaje `email/password` do „nadawania konta"; `ResidentOut.has_account`

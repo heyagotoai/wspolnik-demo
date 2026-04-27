@@ -44,6 +44,24 @@ Pulpit · Lokale · Naliczenia · **Grupy rozliczeniowe** (tylko administrator) 
 
 > Mieszkaniec może zalogować się dopiero po aktywacji konta przez link z emaila.
 
+**Zmiana adresu email mieszkańca (mieszkaniec z kontem):**
+1. Otwórz edycję mieszkańca, wpisz nowy adres w polu **Email**
+2. Kliknij **Zmień email** obok pola → potwierdź w okienku
+3. Mieszkaniec od tej chwili loguje się nowym adresem; **wszystkie aktywne sesje** (np. na innym urządzeniu) zostają wylogowane
+4. Operacja zapisuje się w **Dzienniku operacji** (`auth_email_change`)
+
+> System nie wysyła powiadomienia mailem o zmianie — przekaż mieszkańcowi nowy adres bezpośrednio.
+
+**Awaryjny reset hasła mieszkańca (mieszkaniec z kontem):**
+1. Otwórz edycję mieszkańca → **Wygeneruj nowe hasło** → potwierdź
+2. Wyświetli się okno z nowym 12-znakowym hasłem (bez znaków łatwych do pomylenia: `0/O/1/l/I`)
+3. Kliknij **Kopiuj** i przekaż hasło mieszkańcowi (telefon/SMS) — **po zamknięciu okna hasła nie zobaczysz ponownie** (system go nie zachowuje)
+4. Stare hasło natychmiast przestaje działać; **wszystkie aktywne sesje** mieszkańca zostają wylogowane
+5. Po zalogowaniu mieszkaniec może zmienić hasło w swoim **Profilu**
+6. Operacja zapisuje się w **Dzienniku operacji** (`auth_password_reset`, bez samego hasła)
+
+> Reset jest dostępny **tylko dla mieszkańców z kontem**. Mieszkaniec „bez konta" (badge w tabeli) najpierw musi dostać konto: w edycji wpisz email + hasło i zapisz.
+
 **Rola zarządcy vs administrator:**
 
 | Funkcja | Administrator | Zarządca |

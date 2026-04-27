@@ -50,7 +50,7 @@ Konta mieszkańców **nie rejestrują się samodzielnie** — administrator twor
 Ten sam zestaw adresów URL co u zarządcy; **pełny zakres operacji** poniżej ma **administrator**. Szczegóły ograniczeń zarządcy — w tabeli ról (pkt 2).
 
 - **Dashboard** — statystyki (mieszkańcy, lokale, ogłoszenia, dokumenty)
-- **Mieszkańcy** — dodawanie (konto e‑mail/hasło), edycja, dezaktywacja, usuwanie; powiązanie z lokalem
+- **Mieszkańcy** — dodawanie (konto e‑mail/hasło lub rejestr „bez konta" do głosów z zebrania), edycja, dezaktywacja, usuwanie; powiązanie z lokalem; **awaryjna zmiana adresu e‑mail i wygenerowanie nowego hasła** przez administratora (hasło widoczne raz w okienku do skopiowania, wszystkie aktywne sesje mieszkańca są wylogowane)
 - **Lokale** — CRUD: numer, m², udział %, liczba zameldowanych, właściciel, opcjonalna grupa rozliczeniowa, **nazwisko rozliczeniowe** (dopasowanie importu bankowego), saldo początkowe + data; zbiorcza data salda; **podgląd listy wpłat** lokalu; skrót **ostatnich importów** wpłat (bank / Excel)
 - **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), dopasowanie numerów (także złożone przypadki)
 - **Import wpłat (Excel)** — arkusz dopasowań; wiele dat/kwot; wpłaty zbiorcze z podziałem; **deduplikacja** po parze (lokal, data)

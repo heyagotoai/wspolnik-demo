@@ -55,7 +55,7 @@ Brak publicznej rejestracji — administrator zakłada konta mieszkańcom (zapro
 Ten sam zestaw tras URL co u zarządcy; pełny zakres poniżej = **administrator**. Ograniczenia zarządcy — tabela ról (pkt 2).
 
 - **Dashboard** — statystyki: liczba mieszkańców, lokali, ogłoszeń, dokumentów
-- **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem
+- **Zarządzanie mieszkańcami** — dodawanie (tworzy konto z emailem i hasłem **lub** rejestr „bez konta" do głosów z zebrania), edycja danych, dezaktywacja, usuwanie. Automatyczne powiązanie z lokalem. **Awaryjna zmiana adresu e‑mail i wygenerowanie nowego hasła** przez administratora (nowe hasło widoczne raz w okienku do skopiowania, wszystkie aktywne sesje mieszkańca są wylogowane)
 - **Zarządzanie lokalami** — CRUD: numer lokalu, powierzchnia m², udział procentowy, liczba zameldowanych osób, przypisanie właściciela, opcjonalna grupa rozliczeniowa, **nazwisko rozliczeniowe** (`billing_surname`) pod import bankowy, saldo początkowe + data obowiązywania salda. Hurtowe ustawianie daty salda; **podgląd wpłat** lokalu; skrót **ostatnich importów** (bank / Excel)
 - **Import stanu początkowego (Excel)** — szablon .xlsx, podgląd (dry-run), ustawienie salda i daty dla istniejących lokali; dopasowanie pełnego numeru (np. lokale zbiorcze) lub wiele lokali w jednej komórce
 - **Import wpłat z Excela** — arkusz Dopasowania: kolumny Lokal, Data wpłaty, Kwota (inne ignorowane); wiele dat/kwot po średniku; wpłata zbiorcza = parent + automatyczne rozbicie per lokal; **deduplikacja** po parze (lokal, data) względem bazy i w obrębie tego samego pliku (ponowny import nie dubluje wpłat)

@@ -24,4 +24,4 @@ Powiązane: `CHANGELOG.md`, `docs/architecture/feature-map.md`, `docs/decisions/
 **Zależności:** `api/requirements.txt` — same `==`; `site/package.json` — wersje bez `^` (reprodukowalne buildy). `npm ci` w `site/` po klonowaniu.
 
 ## Środowisko (Windows)
-- **Python:** venv w `D:\_AI\gabi_site\.venv` — interpreter `D:\_AI\gabi_site\.venv\Scripts\python.exe` (pytest/uvicorn z tego środowiska, jeśli `python` nie jest w PATH).
+- **Python:** venv w `D:\_AI\gabi-site\.venv` — interpreter `D:\_AI\gabi-site\.venv\Scripts\python.exe` (pytest/uvicorn z tego środowiska, jeśli `python` nie jest w PATH).

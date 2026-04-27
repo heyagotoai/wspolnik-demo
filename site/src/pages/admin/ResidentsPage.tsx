@@ -49,6 +49,10 @@ export default function ResidentsPage() {
   const [aptModalResident, setAptModalResident] = useState<Resident | null>(null)
   const [aptSelected, setAptSelected] = useState<string>('')
   const [aptBusy, setAptBusy] = useState(false)
+  const [emailBusy, setEmailBusy] = useState(false)
+  const [pwdBusy, setPwdBusy] = useState(false)
+  // Modal pokazujący wygenerowane hasło — admin musi je skopiować raz, system go nie zachowa.
+  const [pwdModal, setPwdModal] = useState<{ resident: Resident; password: string } | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { confirm } = useConfirm()
@@ -139,6 +143,73 @@ export default function ResidentsPage() {
       setTimeout(() => formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 50)
     }
   }, [showForm, editingId])
+
+  const handleChangeEmail = async () => {
+    if (!editingId) return
+    const editingResident = residents.find(r => r.id === editingId)
+    if (!editingResident) return
+    const newEmail = form.email.trim()
+    if (!newEmail) {
+      setError('Podaj nowy adres email.')
+      return
+    }
+    if (newEmail === (editingResident.email ?? '')) {
+      setError('Email nie został zmieniony.')
+      return
+    }
+    const ok = await confirm({
+      title: 'Zmień adres email',
+      message: `Zmienić email mieszkańca "${editingResident.full_name}" z "${editingResident.email ?? '—'}" na "${newEmail}"? Mieszkaniec będzie się logował nowym adresem.`,
+      confirmLabel: 'Zmień adres',
+    })
+    if (!ok) return
+
+    setEmailBusy(true)
+    setError(null)
+    try {
+      await api.patch(`/residents/${editingId}/email`, { email: newEmail })
+      await fetchResidents()
+      toast('Email został zmieniony', 'success')
+    } catch (err) {
+      setError(formatCaughtError(err, 'Błąd zmiany emaila'))
+    }
+    setEmailBusy(false)
+  }
+
+  const handleResetPassword = async () => {
+    if (!editingId) return
+    const editingResident = residents.find(r => r.id === editingId)
+    if (!editingResident) return
+    const ok = await confirm({
+      title: 'Wygeneruj nowe hasło',
+      message: `Wygenerować nowe hasło dla "${editingResident.full_name}"? Dotychczasowe hasło przestanie działać. Nowe hasło zobaczysz raz — przekaż je mieszkańcowi.`,
+      confirmLabel: 'Wygeneruj',
+    })
+    if (!ok) return
+
+    setPwdBusy(true)
+    setError(null)
+    try {
+      const data = await api.post<{ password: string }>(
+        `/residents/${editingId}/reset-password`,
+        {},
+      )
+      setPwdModal({ resident: editingResident, password: data.password })
+    } catch (err) {
+      setError(formatCaughtError(err, 'Błąd resetu hasła'))
+    }
+    setPwdBusy(false)
+  }
+
+  const handleCopyPassword = async () => {
+    if (!pwdModal) return
+    try {
+      await navigator.clipboard.writeText(pwdModal.password)
+      toast('Hasło skopiowane do schowka', 'success')
+    } catch {
+      toast('Nie udało się skopiować — zaznacz i skopiuj ręcznie', 'error')
+    }
+  }
 
   const openAdd = () => {
     setEditingId(null)
@@ -355,27 +426,47 @@ export default function ResidentsPage() {
             {(() => {
               const editingResident = editingId ? residents.find(r => r.id === editingId) : null
               const isGrantAccountMode = editingResident ? !editingResident.has_account : false
-              const emailDisabled = !!editingId && !isGrantAccountMode
+              const isExistingAccountMode = !!editingResident && editingResident.has_account
               const emailLabel = editingId
                 ? (isGrantAccountMode ? 'Email (nadaj konto)' : 'Email')
                 : 'Email (opcjonalnie)'
               const showPasswordField = !editingId || isGrantAccountMode
               const passwordLabel = isGrantAccountMode ? 'Hasło (nadaj konto) *' : 'Hasło (wymagane gdy podany email)'
+              const emailChanged = isExistingAccountMode
+                && form.email.trim() !== ''
+                && form.email.trim() !== (editingResident?.email ?? '')
               return (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-charcoal mb-1">{emailLabel}</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      disabled={emailDisabled}
-                      placeholder={!editingId ? 'puste = mieszkaniec bez konta (tylko rejestr)' : ''}
-                      className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage disabled:opacity-50 disabled:bg-cream"
-                    />
+                    <div className={isExistingAccountMode ? 'flex gap-2' : ''}>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder={!editingId ? 'puste = mieszkaniec bez konta (tylko rejestr)' : ''}
+                        className="flex-1 w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+                      />
+                      {isExistingAccountMode && (
+                        <button
+                          type="button"
+                          onClick={handleChangeEmail}
+                          disabled={!emailChanged || emailBusy}
+                          className="px-3 py-2 bg-sage/10 text-sage text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                          title='Zmień adres email mieszkańca (osobna operacja, niezależna od „Zapisz")'
+                        >
+                          {emailBusy ? '...' : 'Zmień email'}
+                        </button>
+                      )}
+                    </div>
                     {!editingId && (
                       <p className="text-xs text-outline mt-1">
                         Pozostaw puste, jeśli chcesz dodać właściciela do rejestru (np. do głosów z zebrania) bez zakładania konta logowania.
+                      </p>
+                    )}
+                    {isExistingAccountMode && (
+                      <p className="text-xs text-outline mt-1">
+                        Zmiana emaila to osobna operacja — kliknij „Zmień email” obok pola.
                       </p>
                     )}
                   </div>
@@ -390,6 +481,23 @@ export default function ResidentsPage() {
                         placeholder="min. 8 znaków, wielka/mała litera, cyfra"
                         className="w-full px-3 py-2 border border-cream-deep rounded-[var(--radius-input)] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
                       />
+                    </div>
+                  )}
+                  {isExistingAccountMode && (
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal mb-1">Hasło</label>
+                      <button
+                        type="button"
+                        onClick={handleResetPassword}
+                        disabled={pwdBusy}
+                        className="px-3 py-2 bg-amber-light/40 text-amber text-sm font-medium rounded-[var(--radius-button)] hover:bg-amber-light/60 transition-colors disabled:opacity-50"
+                        title="Wygeneruj nowe losowe hasło — admin przekaże je mieszkańcowi"
+                      >
+                        {pwdBusy ? 'Generuję...' : 'Wygeneruj nowe hasło'}
+                      </button>
+                      <p className="text-xs text-outline mt-1">
+                        Nowe hasło zobaczysz raz w okienku — przekaż je mieszkańcowi (system go nie zachowa).
+                      </p>
                     </div>
                   )}
                 </>
@@ -542,6 +650,54 @@ export default function ResidentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: nowe hasło (do skopiowania, pokazywane raz) */}
+      {isAdmin && pwdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4">
+          <div className="bg-white rounded-[var(--radius-card)] shadow-ambient w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-charcoal">Nowe hasło</h2>
+              <button onClick={() => setPwdModal(null)} className="text-outline hover:text-charcoal">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate mb-3">
+              Wygenerowano nowe hasło dla <strong>{pwdModal.resident.full_name}</strong>.
+              Skopiuj je teraz i przekaż mieszkańcowi — po zamknięciu okienka nie będzie już dostępne.
+            </p>
+
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                readOnly
+                value={pwdModal.password}
+                onFocus={(e) => e.currentTarget.select()}
+                className="flex-1 px-3 py-2 font-mono text-sm bg-cream/50 border border-cream-deep rounded-[var(--radius-input)] text-charcoal focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage"
+              />
+              <button
+                onClick={handleCopyPassword}
+                className="px-4 py-2 bg-sage text-white text-sm font-medium rounded-[var(--radius-button)] hover:bg-sage-light transition-colors whitespace-nowrap"
+              >
+                Kopiuj
+              </button>
+            </div>
+
+            <p className="text-xs text-outline mb-4">
+              Dotychczasowe hasło mieszkańca przestało działać. Po zalogowaniu mieszkaniec może zmienić hasło w swoim profilu.
+            </p>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setPwdModal(null)}
+                className="px-4 py-2 text-sm font-medium text-slate hover:text-charcoal transition-colors"
+              >
+                Zamknij
+              </button>
+            </div>
           </div>
         </div>
       )}
