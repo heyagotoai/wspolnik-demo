@@ -2,6 +2,10 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-05-01 — UX: wskaźnik „bez emaila" przy lokalach bez adresu właściciela
+- **`site/src/pages/admin/ChargesPage.tsx`** — fetch emaila właściciela dołączony do zapytania o lokale; chip „bez emaila" zawsze widoczny przy numerze lokalu; „zaznacz wszystkie" i checkbox wiersza pomijają lokale bez emaila; przycisk pojedynczej wysyłki `disabled` z dokładnym komunikatem przyczyny
+- **`site/src/pages/admin/ApartmentsPage.tsx`** — ujednolicony chip „bez emaila" (styl jak w Naliczeniach, widoczny bez wchodzenia w tryb bulk); zastąpił poprzedni symbol ✕ widoczny tylko w trybie bulk
+
 ### 2026-04-27 — Poprawka: audyt przy zmianie email / resetcie hasła (migracja 026)
 - **Przyczyna:** CHECK constraint `audit_log_action_check` (migracje 013/015) dopuszczał tylko m.in. `create` / `update` / `votes_reset` — endpointy `PATCH /residents/{id}/email` i `POST /residents/{id}/reset-password` wstawiały `auth_email_change` / `auth_password_reset`, co powodowało **błąd po udanej zmianie** w auth + `residents` (500 bez `detail` → generyczny komunikat w UI, mimo zapisanego emaila/hasła).
 - **`supabase/migrations/026_audit_log_auth_actions.sql`** — rozszerza CHECK o `auth_email_change` i `auth_password_reset`.

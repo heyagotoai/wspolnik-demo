@@ -16,6 +16,7 @@ interface Apartment {
   declared_occupants: number
   owner_resident_id: string | null
   owner_name: string | null
+  owner_email: string | null
 }
 
 interface Charge {
@@ -180,6 +181,19 @@ export default function AdminChargesPage() {
     ])
 
     if (aptsRes.data) {
+      const ownerIds = Array.from(
+        new Set(aptsRes.data.map((a) => a.owner_resident_id).filter((v): v is string => !!v)),
+      )
+      const emailByOwner: Record<string, string | null> = {}
+      if (ownerIds.length > 0) {
+        const ownersRes = await supabase
+          .from('residents')
+          .select('id, email')
+          .in('id', ownerIds)
+        if (ownersRes.data) {
+          for (const r of ownersRes.data) emailByOwner[r.id] = r.email ?? null
+        }
+      }
       const mapped = aptsRes.data.map((a) => ({
         id: a.id,
         number: a.number,
@@ -187,6 +201,7 @@ export default function AdminChargesPage() {
         declared_occupants: a.declared_occupants ?? 0,
         owner_resident_id: a.owner_resident_id ?? null,
         owner_name: null,
+        owner_email: a.owner_resident_id ? emailByOwner[a.owner_resident_id] ?? null : null,
       }))
       mapped.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
       setApartments(mapped)
@@ -1259,10 +1274,10 @@ export default function AdminChargesPage() {
                         <th className="px-3 py-3 w-10">
                           <input
                             type="checkbox"
-                            checked={zawSelectedIds.size === apartments.filter((a) => a.owner_resident_id).length && zawSelectedIds.size > 0}
+                            checked={zawSelectedIds.size === apartments.filter((a) => a.owner_resident_id && a.owner_email).length && zawSelectedIds.size > 0}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setZawSelectedIds(new Set(apartments.filter((a) => a.owner_resident_id).map((a) => a.id)))
+                                setZawSelectedIds(new Set(apartments.filter((a) => a.owner_resident_id && a.owner_email).map((a) => a.id)))
                               } else {
                                 setZawSelectedIds(new Set())
                               }
@@ -1282,17 +1297,24 @@ export default function AdminChargesPage() {
                     {apartments.map((apt) => {
                       const monthlyCharge = calcMonthlyCharge(apt)
                       const hasOwner = !!apt.owner_resident_id
+                      const hasEmail = hasOwner && !!apt.owner_email
+                      const sendDisabledReason = !hasOwner
+                        ? 'Brak właściciela'
+                        : !hasEmail
+                          ? 'Brak emaila właściciela'
+                          : null
                       return (
                         <tr
                           key={apt.id}
-                          className={`border-b border-cream last:border-0 transition-colors ${zawBulkMode && !hasOwner ? 'opacity-50' : 'hover:bg-cream/50'}`}
+                          className={`border-b border-cream last:border-0 transition-colors ${zawBulkMode && !hasEmail ? 'opacity-50' : 'hover:bg-cream/50'}`}
                         >
                           {zawBulkMode && (
                             <td className="px-3 py-3">
                               <input
                                 type="checkbox"
                                 checked={zawSelectedIds.has(apt.id)}
-                                disabled={!hasOwner}
+                                disabled={!hasEmail}
+                                title={sendDisabledReason ?? undefined}
                                 onChange={(e) => {
                                   const next = new Set(zawSelectedIds)
                                   if (e.target.checked) next.add(apt.id)
@@ -1303,7 +1325,19 @@ export default function AdminChargesPage() {
                               />
                             </td>
                           )}
-                          <td className="px-5 py-3 font-medium text-charcoal">{apt.number}</td>
+                          <td className="px-5 py-3 font-medium text-charcoal">
+                            <div className="flex items-center gap-2">
+                              <span>{apt.number}</span>
+                              {hasOwner && !hasEmail && (
+                                <span
+                                  className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800"
+                                  title="Właściciel nie ma adresu email — pominięty przy wysyłce"
+                                >
+                                  bez emaila
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-5 py-3 text-right text-slate">
                             {apt.area_m2 ? `${apt.area_m2} m²` : '—'}
                           </td>
@@ -1324,9 +1358,9 @@ export default function AdminChargesPage() {
                               {isAdmin && (
                                 <button
                                   onClick={() => handleSendNotification(apt.id)}
-                                  disabled={sendingNotification === apt.id || !hasOwner || monthlyCharge === 0}
+                                  disabled={sendingNotification === apt.id || !hasEmail || monthlyCharge === 0}
                                   className="p-1.5 text-outline hover:text-sage transition-colors disabled:opacity-50"
-                                  title={!hasOwner ? 'Brak właściciela' : 'Wyślij email'}
+                                  title={sendDisabledReason ?? 'Wyślij email'}
                                 >
                                   <SendIcon className="w-4 h-4" />
                                 </button>
