@@ -68,7 +68,7 @@ cd api && pytest
 - Nie wprowadzaj podatności: XSS, SQL injection, command injection
 
 ### Import danych finansowych
-- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`.
+- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`. **Ręczne przypisanie** niedopasowanych: pole formularza `manual_assignments` (JSON `{row_index: [apartment_id,...]}`) — 1 lokal = całość, ≥2 lokale = split (proporcjonalny w grupie / równy bez); odpowiedź zawiera `manual_matched_count`.
 - **Stan początkowy i wpłaty z Excel (.xlsx)** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale.
 - **Deduplikacja wpłat** (import `.xls` i import wpłat `.xlsx`) — para `(apartment_id, payment_date)`; ponowny import nie dubluje zapisów; `docs/decisions/ADR-014-payment-import-deduplication.md`.
 - **MT940** — format eksportu z banku **nie jest jeszcze potwierdzony**; schemat (`payments`, `bank_statements`) jest przygotowany.

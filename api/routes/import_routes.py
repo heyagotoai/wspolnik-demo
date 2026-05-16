@@ -1,13 +1,14 @@
 """Import z Excel: stan początkowy (saldo), wpłaty z arkusza dopasowań, zestawienia bankowe."""
 
 import io
+import json
 import logging
 import re
 import unicodedata
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 
 from api.core.payment_split import compute_split_amounts
@@ -23,6 +24,7 @@ from api.models.schemas import (
 )
 from api.services.bank_statement_parser import (
     ApartmentRecord,
+    MatchedPayment,
     UnmatchedTransaction,
     parse_bank_statement,
 )
@@ -925,6 +927,7 @@ def _build_registry(sb) -> list[ApartmentRecord]:
 async def import_bank_statement(
     file: UploadFile = File(...),
     dry_run: bool = Query(default=True, description="true = tylko podgląd (bez zapisu wpłat)"),
+    manual_assignments: str | None = Form(default=None, description="JSON: {row_index: [apartment_id,...]} — ręczne przypisanie niedopasowanych transakcji"),
     _admin: dict = Depends(require_admin),
 ):
     """
@@ -935,7 +938,10 @@ async def import_bank_statement(
     - nazwiska rozliczeniowego (billing_surname) z rejestru lokali
 
     Tylko wpłaty (kwota > 0) są importowane. Transakcje bez jednoznacznego
-    dopasowania trafiają na listę „niedopasowanych" w odpowiedzi.
+    dopasowania trafiają na listę „niedopasowanych" w odpowiedzi — admin
+    może je ręcznie przypisać do lokali przez parametr ``manual_assignments``
+    (mapa numer_wiersza → lista apartment_id; 1 = pojedynczy lokal,
+    >1 = rozbicie proporcjonalne).
     """
     sb = get_supabase()
 
@@ -978,6 +984,71 @@ async def import_bank_statement(
         a["number"]: {"id": a["id"], "number": a["number"], "billing_group_id": a.get("billing_group_id")}
         for a in (apts_res.data or [])
     }
+    apt_by_id: dict[str, dict] = {
+        a["id"]: {"id": a["id"], "number": a["number"], "billing_group_id": a.get("billing_group_id")}
+        for a in (apts_res.data or [])
+    }
+
+    # Parsowanie ręcznych przypisań i konwersja niedopasowanych na MatchedPayment
+    manual_map: dict[int, list[str]] = {}
+    if manual_assignments:
+        try:
+            raw = json.loads(manual_assignments)
+            if not isinstance(raw, dict):
+                raise ValueError("expected object")
+            for k, v in raw.items():
+                row_idx = int(k)
+                if not isinstance(v, list):
+                    continue
+                ids = [str(x) for x in v if x]
+                if ids:
+                    manual_map[row_idx] = ids
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Nieprawidłowy format manual_assignments: {e}",
+            )
+
+    manual_matched: list[MatchedPayment] = []
+    remaining_unmatched: list[UnmatchedTransaction] = []
+    used_row_indices: set[int] = set()
+    for u in parse_result.unmatched:
+        apt_ids = manual_map.get(u.row_index)
+        if (
+            not apt_ids
+            or u.row_index in used_row_indices
+            or u.payment_date is None
+            or u.amount is None
+            or u.amount <= 0
+        ):
+            remaining_unmatched.append(u)
+            continue
+        resolved_records = [apt_by_id[aid] for aid in apt_ids if aid in apt_by_id]
+        if not resolved_records:
+            remaining_unmatched.append(u)
+            continue
+        used_row_indices.add(u.row_index)
+        group_recs = [
+            ApartmentRecord(
+                apartment_id=r["id"],
+                number=r["number"],
+                billing_surname=None,
+                billing_group_id=r.get("billing_group_id"),
+            )
+            for r in resolved_records
+        ] if len(resolved_records) > 1 else None
+        manual_matched.append(MatchedPayment(
+            apartment_id=resolved_records[0]["id"],
+            apartment_number=",".join(r["number"] for r in resolved_records),
+            billing_group_id=resolved_records[0].get("billing_group_id"),
+            payment_date=u.payment_date,
+            amount=u.amount.quantize(Decimal("0.01")),
+            match_confidence=1.0,
+            match_details="Ręczne przypisanie",
+            group_records=group_recs,
+        ))
+    parse_result.unmatched = remaining_unmatched
+    parse_result.matched.extend(manual_matched)
 
     # Rozwiąż każde dopasowanie na listę lokali:
     # 1. Parser zwrócił group_records (wiele lokali w jednej grupie rozliczeniowej) → split
@@ -1122,6 +1193,9 @@ async def import_bank_statement(
         )
         for m, resolved in new_matched
     ]
+    manual_matched_count = sum(
+        1 for m, _ in new_matched if m.match_details == "Ręczne przypisanie"
+    )
 
     # Duplikaty jako dodatkowe unmatched z jasnym powodem
     for m in skipped_duplicates:
@@ -1131,7 +1205,12 @@ async def import_bank_statement(
             amount=m.amount,
             sender_name="",
             description="",
-            reason=f"Duplikat — wpłata {m.amount} zł na lokal {m.apartment_number} z dnia {m.payment_date.isoformat()} już istnieje",
+            reason=(
+                f"Duplikat — na lokal {m.apartment_number} z dnia "
+                f"{m.payment_date.isoformat()} jest już zaksięgowana wpłata. "
+                f"Jeśli to inna wpłata tego samego dnia, dodaj ją ręcznie "
+                f"w panelu Lokale → Wpłaty."
+            ),
         ))
 
     unmatched_rows = [
@@ -1151,6 +1230,7 @@ async def import_bank_statement(
         total_rows=parse_result.total_rows,
         matched_count=len(matched_rows),
         unmatched_count=len(unmatched_rows),
+        manual_matched_count=manual_matched_count,
         matched=matched_rows,
         unmatched=unmatched_rows,
     )

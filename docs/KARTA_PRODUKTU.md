@@ -64,7 +64,7 @@ Ten sam zestaw adresów URL co u zarządcy; **pełny zakres operacji** poniżej 
 - **Dziennik operacji** — historia zmian finansowych i głosowań, filtry, szczegóły
 - **Wydruk salda** — pismo z saldem, danymi konta, terminem lub informacją o nadpłacie
 - **Powiadomienie e‑mail o saldzie** — wysyłka per mieszkaniec (załącznik PDF) oraz **masowa** z zaznaczeniem lokali
-- **Import zestawienia bankowego (.xls)** — dopasowanie po **nazwisku rozliczeniowym** i numerze lokalu z opisu; dry-run; deduplikacja jak przy imporcie Excel; raport niedopasowań. **MT940** — opcjonalnie, gdy bank udostępnia (osobna ścieżka; status zależy od potwierdzenia formatu)
+- **Import zestawienia bankowego (.xls)** — dopasowanie po **nazwisku rozliczeniowym** i numerze lokalu z opisu; dry-run; deduplikacja jak przy imporcie Excel; raport niedopasowań z możliwością **ręcznego przypisania** każdej niedopasowanej wpłaty do jednego lub kilku lokali (rozbicie proporcjonalne) bezpośrednio w podglądzie importu. **MT940** — opcjonalnie, gdy bank udostępnia (osobna ścieżka; status zależy od potwierdzenia formatu)
 
 ### 3.4 Powiadomienia e‑mail
 

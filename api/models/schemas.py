@@ -503,5 +503,6 @@ class ImportBankStatementResult(BaseModel):
     total_rows: int
     matched_count: int
     unmatched_count: int
+    manual_matched_count: int = 0  # ile z matched pochodzi z ręcznego przypisania
     matched: list[BankStatementMatchedRow]
     unmatched: list[BankStatementUnmatchedRow]

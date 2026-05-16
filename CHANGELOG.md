@@ -2,6 +2,14 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-05-16 — Import .xls: ręczne przypisanie niedopasowanych wpłat do lokali
+- **`api/routes/import_routes.py`** — `POST /import/payments-bank-statement` przyjmuje opcjonalny parametr formularza `manual_assignments` (JSON `{row_index: [apartment_id,...]}`); niedopasowane transakcje z mapy są konwertowane na `MatchedPayment` (`match_details="Ręczne przypisanie"`, `confidence=1.0`) i przechodzą przez istniejący tor: dedup po `(apartment_id, payment_date)` + ewentualny split (1 lokal = całość, ≥2 lokale = rozbicie proporcjonalne wg sumy naliczeń miesiąca; gdy brak naliczeń lub brak wspólnej grupy → podział równy)
+- **`api/models/schemas.py`** — `ImportBankStatementResult.manual_matched_count: int = 0`
+- **`site/src/components/admin/ImportBankStatementModal.tsx`** — kolumna „Przypisanie / powód" w tabeli niedopasowanych: chipy wybranych lokali z przyciskiem ×, dropdown „+ przypisz lokal…" (lista lokali z Supabase), nadawca + opis przelewu w jednej komórce; licznik na przycisku `Zastosuj (X wpłat)` sumuje auto + ręczne; ekran „done" pokazuje linię „w tym X ręcznie przypisanych" przy wyniku
+- **UX duplikatów:** komunikat o duplikacie poprawiony — wskazuje, że jeśli to inna wpłata tego samego dnia, można dodać ją ręcznie w panelu Lokale → Wpłaty (dedup po dacie bez kwoty — istniejące zachowanie, świadoma decyzja)
+- **Motywacja:** zestawienia bankowe zawierają transakcje od nadawców niezwiązanych z nazwiskiem rozliczeniowym (np. firma BILLBIRD płacąca za usługi reklamowe na nieruchomości) — admin musiał dotąd osobno dodać taką wpłatę przez import .xlsx; teraz cała operacja jest w jednym kroku
+- **Testy:** +4 pytest (`test_bank_statement_parser.py` — single, multi z splitem, ignorowanie nieistniejącego row_index, błędny JSON); 49/49 testów importu, 403/403 pytest, 153/153 vitest, tsc clean
+
 ### 2026-05-01 — UX: wskaźnik „bez emaila" przy lokalach bez adresu właściciela
 - **`site/src/pages/admin/ChargesPage.tsx`** — fetch emaila właściciela dołączony do zapytania o lokale; chip „bez emaila" zawsze widoczny przy numerze lokalu; „zaznacz wszystkie" i checkbox wiersza pomijają lokale bez emaila; przycisk pojedynczej wysyłki `disabled` z dokładnym komunikatem przyczyny
 - **`site/src/pages/admin/ApartmentsPage.tsx`** — ujednolicony chip „bez emaila" (styl jak w Naliczeniach, widoczny bez wchodzenia w tryb bulk); zastąpił poprzedni symbol ✕ widoczny tylko w trybie bulk
