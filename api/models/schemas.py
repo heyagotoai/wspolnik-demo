@@ -347,6 +347,52 @@ class ChargeRateOut(BaseModel):
     created_at: str
 
 
+# --- Wpłaty (ręczna korekta) ---
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+class PaymentCreate(BaseModel):
+    apartment_id: str = Field(..., min_length=1)
+    amount: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
+    payment_date: str  # "YYYY-MM-DD"
+    title: str | None = None
+
+    @field_validator("payment_date")
+    @classmethod
+    def _check_date(cls, v: str) -> str:
+        if not _DATE_RE.match(v):
+            raise ValueError("Data w formacie YYYY-MM-DD")
+        return v
+
+
+class PaymentUpdate(BaseModel):
+    apartment_id: str | None = Field(default=None, min_length=1)
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
+    payment_date: str | None = None
+    title: str | None = None
+
+    @field_validator("payment_date")
+    @classmethod
+    def _check_date(cls, v: str | None) -> str | None:
+        if v is not None and not _DATE_RE.match(v):
+            raise ValueError("Data w formacie YYYY-MM-DD")
+        return v
+
+
+class PaymentOut(BaseModel):
+    id: str
+    apartment_id: str | None
+    amount: str
+    payment_date: str
+    title: str | None
+    confirmed_by_admin: bool
+    matched_automatically: bool
+    parent_payment_id: str | None
+    billing_group_id: str | None
+    created_at: str
+
+
 class ChargeGenerateRequest(BaseModel):
     month: str  # "YYYY-MM-DD" (1. dzień miesiąca)
     force: bool = False  # True = usuń istniejące auto-naliczenia i wygeneruj ponownie

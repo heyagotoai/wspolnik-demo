@@ -162,7 +162,8 @@ def fake_sb():
          patch("api.routes.backup.get_supabase", return_value=sb), \
          patch("api.routes.billing_groups.get_supabase", return_value=sb), \
          patch("api.routes.import_routes.get_supabase", return_value=sb), \
-         patch("api.routes.retention.get_supabase", return_value=sb):
+         patch("api.routes.retention.get_supabase", return_value=sb), \
+         patch("api.routes.payments.get_supabase", return_value=sb):
         yield sb
 
 

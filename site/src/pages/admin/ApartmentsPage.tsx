@@ -1141,6 +1141,8 @@ export default function ApartmentsPage() {
           apartmentId={paymentsModalApt.id}
           apartmentNumber={paymentsModalApt.number}
           tablePaymentsTotal={balances[paymentsModalApt.id]?.payments ?? 0}
+          apartments={apartments.map(a => ({ id: a.id, number: a.number }))}
+          onChanged={() => { fetchData() }}
           onClose={() => setPaymentsModalApt(null)}
         />
       )}
