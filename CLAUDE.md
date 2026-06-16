@@ -128,6 +128,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
 - `GET /api/retention/cron` — kwartalny cron RODO: carry-forward salda + usuwanie danych finansowych >5 lat (charges, payments, bank_statements, audit_log); email do adminów/zarządców
+- `/api/payments` — ręczna korekta wpłat (admin): `GET ?apartment_id=` (lista wpłat lokalu), `POST` (dodanie ręczne — gotówka/korekta, `confirmed_by_admin=true`, `matched_automatically=false`, `billing_group_id` z lokalu), `PATCH :id` (kwota/data/tytuł + **przeniesienie do innego lokalu** przez `apartment_id`; `billing_group_id` podąża za lokalem), `DELETE :id` (usunięcie; jeśli wpłata to rozbicie zbiorcze — usuwa wpłatę nadrzędną z kaskadą). **Blokada**: PATCH na wpłatach będących częścią rozbicia zbiorczego (dziecko `parent_payment_id` lub rodzic `apartment_id IS NULL`) → 409. Wszystko logowane triggerem audytu na `payments`. UI: modal „Wpłaty — lokal X" w panelu Lokale (`ApartmentPaymentsModal`)
 - `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
 - `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, `POST /payments-bank-statement`, admin)
 - `GET /api/health` — health check

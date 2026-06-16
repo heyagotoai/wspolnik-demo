@@ -2,6 +2,15 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-06-16 — Ręczna korekta wpłat (przeniesienie / edycja / usunięcie / dodanie)
+- **Motywacja:** automatyczne dopasowanie z importu bankowego czasem przypisuje wpłatę do niewłaściwego lokalu — admin potrzebował drogi do skorygowania bez ręcznego grzebania w bazie.
+- **`api/routes/payments.py`** (nowy router, admin only): `GET /payments?apartment_id=` (lista wpłat lokalu), `POST /payments` (ręczne dodanie — gotówka/korekta; `confirmed_by_admin=true`, `matched_automatically=false`, `billing_group_id` z lokalu), `PATCH /payments/:id` (kwota/data/tytuł + **przeniesienie do innego lokalu** przez `apartment_id`, `billing_group_id` podąża za lokalem), `DELETE /payments/:id` (usunięcie; rozbicie zbiorcze → usuwa wpłatę nadrzędną z kaskadą).
+- **Blokada spójności:** PATCH na wpłacie będącej częścią rozbicia zbiorczego (dziecko z `parent_payment_id` lub rodzic z `apartment_id IS NULL`) → **409** z komunikatem, by usunąć całą wpłatę i wprowadzić ponownie.
+- **`api/models/schemas.py`** — `PaymentCreate`, `PaymentUpdate`, `PaymentOut` (walidacja kwoty > 0, daty `YYYY-MM-DD`).
+- **`site/src/components/admin/ApartmentPaymentsModal.tsx`** — modal „Wpłaty — lokal X" rozbudowany: przycisk „Dodaj wpłatę ręcznie", przy każdej wpłacie ikony Edytuj (kwota/data/tytuł + select przeniesienia do innego lokalu) i Usuń (z `ConfirmDialog`); rozbicia zbiorcze mają tylko Usuń (kasują całą wpłatę nadrzędną). Po każdej zmianie odświeżenie sald w panelu (`onChanged → fetchData`).
+- **Audyt:** operacje logowane istniejącym triggerem `audit_payments` (INSERT/UPDATE/DELETE) — bez nowej migracji.
+- **Testy:** +18 pytest (`test_payments.py` — create/edit/reassign/delete, blokady rozbicia, 404/400/422/auth); tsc clean.
+
 ### 2026-05-16 — Import .xls: ręczne przypisanie niedopasowanych wpłat do lokali
 - **`api/routes/import_routes.py`** — `POST /import/payments-bank-statement` przyjmuje opcjonalny parametr formularza `manual_assignments` (JSON `{row_index: [apartment_id,...]}`); niedopasowane transakcje z mapy są konwertowane na `MatchedPayment` (`match_details="Ręczne przypisanie"`, `confidence=1.0`) i przechodzą przez istniejący tor: dedup po `(apartment_id, payment_date)` + ewentualny split (1 lokal = całość, ≥2 lokale = rozbicie proporcjonalne wg sumy naliczeń miesiąca; gdy brak naliczeń lub brak wspólnej grupy → podział równy)
 - **`api/models/schemas.py`** — `ImportBankStatementResult.manual_matched_count: int = 0`
