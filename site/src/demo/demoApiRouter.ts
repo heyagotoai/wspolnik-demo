@@ -617,6 +617,38 @@ export async function routeDemoApi(
     return { password }
   }
 
+  // Przypisanie lokalu do istniejącego właściciela (jeden właściciel → wiele lokali)
+  const residentAptAssign = pathname.match(/^\/residents\/([^/]+)\/apartments$/)
+  if (residentAptAssign && method === 'POST') {
+    const residentId = residentAptAssign[1]
+    if (!demoStore.residents.some((r) => r.id === residentId)) {
+      throw new Error('Mieszkaniec nie znaleziony')
+    }
+    const b = body as { apartment_id?: string }
+    const apt = demoStore.apartments.find((a) => a.id === b.apartment_id)
+    if (!apt) throw new Error('Lokal nie znaleziony')
+    if (apt.owner_resident_id && apt.owner_resident_id !== residentId) {
+      throw new Error('Lokal ma już przypisanego właściciela')
+    }
+    apt.owner_resident_id = residentId
+    auditPush('apartments', 'update', apt.id)
+    return { detail: `Lokal ${apt.number} przypisany` }
+  }
+
+  // Odpięcie lokalu od właściciela
+  const residentAptUnassign = pathname.match(/^\/residents\/([^/]+)\/apartments\/([^/]+)$/)
+  if (residentAptUnassign && method === 'DELETE') {
+    const [, residentId, apartmentId] = residentAptUnassign
+    const apt = demoStore.apartments.find((a) => a.id === apartmentId)
+    if (!apt) throw new Error('Lokal nie znaleziony')
+    if (apt.owner_resident_id !== residentId) {
+      throw new Error('Ten lokal nie należy do wskazanego mieszkańca')
+    }
+    apt.owner_resident_id = null
+    auditPush('apartments', 'update', apt.id)
+    return { detail: 'Lokal odpięty' }
+  }
+
   if (pathname === '/residents' && method === 'POST') {
     const b = body as { email?: string; full_name?: string; apartment_number?: string; role?: string }
     const id = crypto.randomUUID()

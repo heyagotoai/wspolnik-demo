@@ -99,4 +99,30 @@ describe('demoApiRouter', () => {
     }
     expect(res.password).toHaveLength(12)
   })
+
+  it('DELETE/POST /residents/:id/apartments odpina i ponownie przypisuje lokal', async () => {
+    const owned = demoStore.apartments.find((a) => a.owner_resident_id)!
+    const originalOwner = owned.owner_resident_id!
+
+    // odpięcie od obecnego właściciela → lokal staje się wolny
+    await routeDemoApi('DELETE', `/residents/${originalOwner}/apartments/${owned.id}`)
+    expect(demoStore.apartments.find((a) => a.id === owned.id)?.owner_resident_id).toBeNull()
+
+    // ponowne przypisanie do innego mieszkańca
+    const other = demoStore.residents.find(
+      (x) => x.id !== DEMO_USER_ID && x.id !== originalOwner,
+    )!
+    await routeDemoApi('POST', `/residents/${other.id}/apartments`, { apartment_id: owned.id })
+    expect(demoStore.apartments.find((a) => a.id === owned.id)?.owner_resident_id).toBe(other.id)
+  })
+
+  it('POST /residents/:id/apartments odrzuca lokal z innym właścicielem', async () => {
+    const resident = demoStore.residents.find((x) => x.id !== DEMO_USER_ID)!
+    const taken = demoStore.apartments.find(
+      (a) => a.owner_resident_id && a.owner_resident_id !== resident.id,
+    )!
+    await expect(
+      routeDemoApi('POST', `/residents/${resident.id}/apartments`, { apartment_id: taken.id }),
+    ).rejects.toThrow(/już przypisanego właściciela/)
+  })
 })
