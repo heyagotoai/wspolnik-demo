@@ -69,6 +69,21 @@ export async function routeDemoApi(
 ): Promise<unknown> {
   const { pathname, search } = parsePath(path)
 
+  // Lokalny zapis do dziennika audytu (demo) — odzwierciedla triggery audytu w realnym API
+  const auditPush = (table: string, action: string, record_id: string) => {
+    demoStore.audit_log.push({
+      id: crypto.randomUUID(),
+      user_id: DEMO_USER_ID,
+      user_name: 'Jan Kowalski (demo)',
+      action,
+      table_name: table,
+      record_id,
+      old_data: null,
+      new_data: null,
+      created_at: new Date().toISOString(),
+    })
+  }
+
   // --- Profile ---
   if (pathname === '/profile' && method === 'GET') {
     const r = demoStore.residents.find((x) => x.id === DEMO_USER_ID)
@@ -507,7 +522,101 @@ export async function routeDemoApi(
     return { detail: 'Usunięto' }
   }
 
+  // --- Payments (ręczna korekta wpłat: dodanie/edycja/przeniesienie/usunięcie) ---
+  if (pathname === '/payments' && method === 'POST') {
+    const b = body as { apartment_id?: string; amount?: string; payment_date?: string; title?: string | null }
+    const apt = demoStore.apartments.find((a) => a.id === b.apartment_id)
+    if (!apt) throw new Error('Nie znaleziono lokalu')
+    const amount = parseFloat(String(b.amount ?? '0'))
+    if (!(amount > 0)) throw new Error('Podaj kwotę większą od zera')
+    const id = crypto.randomUUID()
+    demoStore.payments.push({
+      id,
+      apartment_id: apt.id,
+      amount: Math.round(amount * 100) / 100,
+      confirmed_by_admin: true,
+      payment_date: String(b.payment_date ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+      title: (b.title ?? null) || 'Wpłata ręczna (demo)',
+      parent_payment_id: null,
+    })
+    auditPush('payments', 'create', id)
+    return { id, detail: 'Dodano wpłatę' }
+  }
+
+  const paymentOne = pathname.match(/^\/payments\/([^/]+)$/)
+  if (paymentOne && method === 'PATCH') {
+    const id = paymentOne[1]
+    const p = demoStore.payments.find((x) => x.id === id)
+    if (!p) throw new Error('Nie znaleziono wpłaty')
+    // Blokada edycji wpłat będących częścią rozbicia zbiorczego (dziecko lub rodzic)
+    const isParent = demoStore.payments.some((x) => x.parent_payment_id === id)
+    if (p.parent_payment_id || isParent) {
+      throw new Error('Wpłata jest częścią rozbicia zbiorczego — nie można jej edytować.')
+    }
+    const b = body as { amount?: string; payment_date?: string; title?: string | null; apartment_id?: string }
+    if (b.amount !== undefined) {
+      const amount = parseFloat(String(b.amount))
+      if (!(amount > 0)) throw new Error('Podaj kwotę większą od zera')
+      p.amount = Math.round(amount * 100) / 100
+    }
+    if (b.payment_date !== undefined) p.payment_date = String(b.payment_date).slice(0, 10)
+    if (b.title !== undefined) p.title = b.title
+    if (b.apartment_id !== undefined && b.apartment_id !== p.apartment_id) {
+      const target = demoStore.apartments.find((a) => a.id === b.apartment_id)
+      if (!target) throw new Error('Nie znaleziono lokalu docelowego')
+      p.apartment_id = target.id
+    }
+    auditPush('payments', 'update', id)
+    return { id, detail: 'Zaktualizowano wpłatę' }
+  }
+
+  if (paymentOne && method === 'DELETE') {
+    const id = paymentOne[1]
+    const p = demoStore.payments.find((x) => x.id === id)
+    if (!p) throw new Error('Nie znaleziono wpłaty')
+    // Rozbicie zbiorcze: usuń wpłatę nadrzędną wraz ze wszystkimi rozbiciami (kaskada)
+    const parentId = p.parent_payment_id ?? id
+    const toRemove = demoStore.payments.filter(
+      (x) => x.id === parentId || x.parent_payment_id === parentId || x.id === id,
+    )
+    for (const rm of toRemove) {
+      const ix = demoStore.payments.findIndex((x) => x.id === rm.id)
+      if (ix >= 0) demoStore.payments.splice(ix, 1)
+    }
+    auditPush('payments', 'delete', id)
+    return { detail: 'Usunięto' }
+  }
+
   // --- Residents (API create/delete) ---
+  // Zmiana adresu email mieszkańca (admin)
+  const residentEmail = pathname.match(/^\/residents\/([^/]+)\/email$/)
+  if (residentEmail && method === 'PATCH') {
+    const id = residentEmail[1]
+    const r = demoStore.residents.find((x) => x.id === id)
+    if (!r) throw new Error('Nie znaleziono mieszkańca')
+    const b = body as { email?: string }
+    const email = String(b.email ?? '').trim().toLowerCase()
+    if (!email || !email.includes('@')) throw new Error('Podaj poprawny adres email')
+    r.email = email
+    auditPush('residents', 'update', id)
+    return { detail: 'Email został zmieniony' }
+  }
+
+  // Reset hasła mieszkańca (admin) — generuje nowe hasło, zwraca jednokrotnie
+  const residentResetPwd = pathname.match(/^\/residents\/([^/]+)\/reset-password$/)
+  if (residentResetPwd && method === 'POST') {
+    const id = residentResetPwd[1]
+    const r = demoStore.residents.find((x) => x.id === id)
+    if (!r) throw new Error('Nie znaleziono mieszkańca')
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    let password = ''
+    for (let i = 0; i < 12; i++) {
+      password += alphabet[Math.floor(Math.random() * alphabet.length)]
+    }
+    auditPush('residents', 'update', id)
+    return { password }
+  }
+
   if (pathname === '/residents' && method === 'POST') {
     const b = body as { email?: string; full_name?: string; apartment_number?: string; role?: string }
     const id = crypto.randomUUID()

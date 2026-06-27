@@ -470,3 +470,89 @@ class TestImportBankStatementEndpoint:
             files={"file": ("test.xls", content, "application/vnd.ms-excel")},
         )
         assert resp.status_code in (401, 403)
+
+    def test_manual_assignment_single_apartment(self, admin_client, fake_sb):
+        """Niedopasowana transakcja z ręcznym przypisaniem trafia do matched."""
+        import json
+        fake_sb.set_table_data("apartments", [
+            {"id": "a10", "number": "10", "billing_surname": "TEST", "billing_group_id": None},
+        ])
+        rows = [
+            ["2026-01-15", "", "", 250.0, "", "", "", "BILLBIRD SA",
+             "", "WIELICKA 28B", "", "FAKTURA ABC"],
+        ]
+        content = _make_xls(SAMPLE_HEADERS, rows)
+        # row_index = 2 (nagłówek + 1-indexed pierwszy wiersz danych)
+        resp = admin_client.post(
+            "/api/import/payments-bank-statement?dry_run=true",
+            files={"file": ("zestawienie.xls", content, "application/vnd.ms-excel")},
+            data={"manual_assignments": json.dumps({"2": ["a10"]})},
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["matched_count"] == 1
+        assert data["manual_matched_count"] == 1
+        assert data["matched"][0]["apartment_number"] == "10"
+        assert "Ręczne" in data["matched"][0]["match_details"]
+        assert data["unmatched_count"] == 0
+
+    def test_manual_assignment_multi_apartment_split(self, admin_client, fake_sb):
+        """Ręczne przypisanie do wielu lokali → rozbicie wpłaty."""
+        import json
+        fake_sb.set_table_data("apartments", [
+            {"id": "a5", "number": "5", "billing_surname": "TEST", "billing_group_id": None},
+            {"id": "a6", "number": "6", "billing_surname": "TEST2", "billing_group_id": None},
+        ])
+        rows = [
+            ["2026-01-20", "", "", 100.0, "", "", "", "ANONIM",
+             "", "", "", "PRZELEW"],
+        ]
+        content = _make_xls(SAMPLE_HEADERS, rows)
+        resp = admin_client.post(
+            "/api/import/payments-bank-statement?dry_run=true",
+            files={"file": ("zestawienie.xls", content, "application/vnd.ms-excel")},
+            data={"manual_assignments": json.dumps({"2": ["a5", "a6"]})},
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["matched_count"] == 1
+        assert data["manual_matched_count"] == 1
+        assert "Ręczne" in data["matched"][0]["match_details"]
+        assert "rozbicie" in data["matched"][0]["match_details"].lower()
+        assert data["unmatched_count"] == 0
+
+    def test_manual_assignment_ignored_when_already_matched(self, admin_client, fake_sb):
+        """Ręczne przypisanie do row_index = niedopasowanego nie wpływa na auto-matched."""
+        import json
+        fake_sb.set_table_data("apartments", [
+            {"id": "a33", "number": "33", "billing_surname": "JANTZEN", "billing_group_id": None},
+        ])
+        rows = [
+            ["2026-01-15", "", "", 500.0, "", "", "", "JAN JANTZEN",
+             "", "UL GDAŃSKA 58/33", "", "CZYNSZ ZA LOKAL NR 33"],
+        ]
+        content = _make_xls(SAMPLE_HEADERS, rows)
+        # manual_assignments dla row_index który nie istnieje w unmatched → ignorowane
+        resp = admin_client.post(
+            "/api/import/payments-bank-statement?dry_run=true",
+            files={"file": ("zestawienie.xls", content, "application/vnd.ms-excel")},
+            data={"manual_assignments": json.dumps({"99": ["a33"]})},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["matched_count"] == 1
+        assert data["manual_matched_count"] == 0
+        assert data["matched"][0]["match_details"] != "Ręczne przypisanie"
+
+    def test_manual_assignment_invalid_json(self, admin_client, fake_sb):
+        """Niepoprawny JSON w manual_assignments → 422."""
+        fake_sb.set_table_data("apartments", [
+            {"id": "a1", "number": "1", "billing_surname": "TEST", "billing_group_id": None},
+        ])
+        content = _make_xls(SAMPLE_HEADERS, [])
+        resp = admin_client.post(
+            "/api/import/payments-bank-statement?dry_run=true",
+            files={"file": ("test.xls", content, "application/vnd.ms-excel")},
+            data={"manual_assignments": "{not-json"},
+        )
+        assert resp.status_code == 422

@@ -940,8 +940,13 @@ export default function ApartmentsPage() {
                     <td className="px-5 py-3 font-medium text-charcoal">
                       <div className="flex items-center gap-1.5">
                         <span>{apt.number}</span>
-                        {bulkMode && !hasEmail && (
-                          <span className="text-amber-500 text-xs" title="Brak adresu email">✕</span>
+                        {!!apt.owner_resident_id && !hasEmail && (
+                          <span
+                            className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800"
+                            title="Właściciel nie ma adresu email — pominięty przy wysyłce"
+                          >
+                            bez emaila
+                          </span>
                         )}
                         {apt.billing_group_name && (
                           <span className="px-1.5 py-0.5 bg-sage-pale/30 text-sage text-[10px] font-medium rounded-full" title={`Grupa: ${apt.billing_group_name}`}>
@@ -1141,6 +1146,8 @@ export default function ApartmentsPage() {
           apartmentId={paymentsModalApt.id}
           apartmentNumber={paymentsModalApt.number}
           tablePaymentsTotal={balances[paymentsModalApt.id]?.payments ?? 0}
+          apartments={apartments.map(a => ({ id: a.id, number: a.number }))}
+          onChanged={() => { fetchData() }}
           onClose={() => setPaymentsModalApt(null)}
         />
       )}

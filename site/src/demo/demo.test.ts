@@ -35,4 +35,68 @@ describe('demoApiRouter', () => {
     expect(Array.isArray(list)).toBe(true)
     expect(list.length).toBeGreaterThanOrEqual(2)
   })
+
+  it('POST /payments dodaje wpłatę ręczną do lokalu', async () => {
+    const apt = demoStore.apartments[0]
+    const before = demoStore.payments.length
+    const res = (await routeDemoApi('POST', '/payments', {
+      apartment_id: apt.id,
+      amount: '123.45',
+      payment_date: '2026-01-15',
+      title: 'Korekta',
+    })) as { id: string }
+    expect(res.id).toBeTruthy()
+    expect(demoStore.payments.length).toBe(before + 1)
+    const added = demoStore.payments.find((p) => p.id === res.id)
+    expect(added?.apartment_id).toBe(apt.id)
+    expect(added?.amount).toBe(123.45)
+    expect(added?.confirmed_by_admin).toBe(true)
+  })
+
+  it('PATCH /payments/:id przenosi wpłatę do innego lokalu', async () => {
+    const apt = demoStore.apartments[0]
+    const other = demoStore.apartments[1]
+    const created = (await routeDemoApi('POST', '/payments', {
+      apartment_id: apt.id,
+      amount: '50.00',
+      payment_date: '2026-02-01',
+      title: 'Gotówka',
+    })) as { id: string }
+    await routeDemoApi('PATCH', `/payments/${created.id}`, {
+      amount: '60.00',
+      payment_date: '2026-02-02',
+      title: 'Gotówka (korekta)',
+      apartment_id: other.id,
+    })
+    const moved = demoStore.payments.find((p) => p.id === created.id)
+    expect(moved?.apartment_id).toBe(other.id)
+    expect(moved?.amount).toBe(60)
+  })
+
+  it('DELETE /payments/:id usuwa wpłatę', async () => {
+    const apt = demoStore.apartments[0]
+    const created = (await routeDemoApi('POST', '/payments', {
+      apartment_id: apt.id,
+      amount: '10.00',
+      payment_date: '2026-03-01',
+      title: null,
+    })) as { id: string }
+    await routeDemoApi('DELETE', `/payments/${created.id}`)
+    expect(demoStore.payments.some((p) => p.id === created.id)).toBe(false)
+  })
+
+  it('PATCH /residents/:id/email zmienia adres email', async () => {
+    const r = demoStore.residents.find((x) => x.id !== DEMO_USER_ID)!
+    await routeDemoApi('PATCH', `/residents/${r.id}/email`, { email: 'Nowy@Demo.PL' })
+    const updated = demoStore.residents.find((x) => x.id === r.id)
+    expect(updated?.email).toBe('nowy@demo.pl')
+  })
+
+  it('POST /residents/:id/reset-password zwraca nowe hasło', async () => {
+    const r = demoStore.residents.find((x) => x.id !== DEMO_USER_ID)!
+    const res = (await routeDemoApi('POST', `/residents/${r.id}/reset-password`, {})) as {
+      password: string
+    }
+    expect(res.password).toHaveLength(12)
+  })
 })

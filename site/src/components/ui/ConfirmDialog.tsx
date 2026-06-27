@@ -47,7 +47,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Dialog overlay */}
       {options && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
           <div
             className="absolute inset-0 bg-charcoal/40"
             onClick={() => handleClose(false)}

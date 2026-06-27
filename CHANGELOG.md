@@ -2,6 +2,43 @@
 
 ## [Faza 1] — Fundament (w trakcie)
 
+### 2026-06-16 — Ręczna korekta wpłat (przeniesienie / edycja / usunięcie / dodanie)
+- **Motywacja:** automatyczne dopasowanie z importu bankowego czasem przypisuje wpłatę do niewłaściwego lokalu — admin potrzebował drogi do skorygowania bez ręcznego grzebania w bazie.
+- **`api/routes/payments.py`** (nowy router, admin only): `GET /payments?apartment_id=` (lista wpłat lokalu), `POST /payments` (ręczne dodanie — gotówka/korekta; `confirmed_by_admin=true`, `matched_automatically=false`, `billing_group_id` z lokalu), `PATCH /payments/:id` (kwota/data/tytuł + **przeniesienie do innego lokalu** przez `apartment_id`, `billing_group_id` podąża za lokalem), `DELETE /payments/:id` (usunięcie; rozbicie zbiorcze → usuwa wpłatę nadrzędną z kaskadą).
+- **Blokada spójności:** PATCH na wpłacie będącej częścią rozbicia zbiorczego (dziecko z `parent_payment_id` lub rodzic z `apartment_id IS NULL`) → **409** z komunikatem, by usunąć całą wpłatę i wprowadzić ponownie.
+- **`api/models/schemas.py`** — `PaymentCreate`, `PaymentUpdate`, `PaymentOut` (walidacja kwoty > 0, daty `YYYY-MM-DD`).
+- **`site/src/components/admin/ApartmentPaymentsModal.tsx`** — modal „Wpłaty — lokal X" rozbudowany: przycisk „Dodaj wpłatę ręcznie", przy każdej wpłacie ikony Edytuj (kwota/data/tytuł + select przeniesienia do innego lokalu) i Usuń (z `ConfirmDialog`); rozbicia zbiorcze mają tylko Usuń (kasują całą wpłatę nadrzędną). Po każdej zmianie odświeżenie sald w panelu (`onChanged → fetchData`).
+- **Audyt:** operacje logowane istniejącym triggerem `audit_payments` (INSERT/UPDATE/DELETE) — bez nowej migracji.
+- **Testy:** +18 pytest (`test_payments.py` — create/edit/reassign/delete, blokady rozbicia, 404/400/422/auth); tsc clean.
+
+### 2026-05-16 — Import .xls: ręczne przypisanie niedopasowanych wpłat do lokali
+- **`api/routes/import_routes.py`** — `POST /import/payments-bank-statement` przyjmuje opcjonalny parametr formularza `manual_assignments` (JSON `{row_index: [apartment_id,...]}`); niedopasowane transakcje z mapy są konwertowane na `MatchedPayment` (`match_details="Ręczne przypisanie"`, `confidence=1.0`) i przechodzą przez istniejący tor: dedup po `(apartment_id, payment_date)` + ewentualny split (1 lokal = całość, ≥2 lokale = rozbicie proporcjonalne wg sumy naliczeń miesiąca; gdy brak naliczeń lub brak wspólnej grupy → podział równy)
+- **`api/models/schemas.py`** — `ImportBankStatementResult.manual_matched_count: int = 0`
+- **`site/src/components/admin/ImportBankStatementModal.tsx`** — kolumna „Przypisanie / powód" w tabeli niedopasowanych: chipy wybranych lokali z przyciskiem ×, dropdown „+ przypisz lokal…" (lista lokali z Supabase), nadawca + opis przelewu w jednej komórce; licznik na przycisku `Zastosuj (X wpłat)` sumuje auto + ręczne; ekran „done" pokazuje linię „w tym X ręcznie przypisanych" przy wyniku
+- **UX duplikatów:** komunikat o duplikacie poprawiony — wskazuje, że jeśli to inna wpłata tego samego dnia, można dodać ją ręcznie w panelu Lokale → Wpłaty (dedup po dacie bez kwoty — istniejące zachowanie, świadoma decyzja)
+- **Motywacja:** zestawienia bankowe zawierają transakcje od nadawców niezwiązanych z nazwiskiem rozliczeniowym (np. firma BILLBIRD płacąca za usługi reklamowe na nieruchomości) — admin musiał dotąd osobno dodać taką wpłatę przez import .xlsx; teraz cała operacja jest w jednym kroku
+- **Testy:** +4 pytest (`test_bank_statement_parser.py` — single, multi z splitem, ignorowanie nieistniejącego row_index, błędny JSON); 49/49 testów importu, 403/403 pytest, 153/153 vitest, tsc clean
+
+### 2026-05-01 — UX: wskaźnik „bez emaila" przy lokalach bez adresu właściciela
+- **`site/src/pages/admin/ChargesPage.tsx`** — fetch emaila właściciela dołączony do zapytania o lokale; chip „bez emaila" zawsze widoczny przy numerze lokalu; „zaznacz wszystkie" i checkbox wiersza pomijają lokale bez emaila; przycisk pojedynczej wysyłki `disabled` z dokładnym komunikatem przyczyny
+- **`site/src/pages/admin/ApartmentsPage.tsx`** — ujednolicony chip „bez emaila" (styl jak w Naliczeniach, widoczny bez wchodzenia w tryb bulk); zastąpił poprzedni symbol ✕ widoczny tylko w trybie bulk
+
+### 2026-04-27 — Poprawka: audyt przy zmianie email / resetcie hasła (migracja 026)
+- **Przyczyna:** CHECK constraint `audit_log_action_check` (migracje 013/015) dopuszczał tylko m.in. `create` / `update` / `votes_reset` — endpointy `PATCH /residents/{id}/email` i `POST /residents/{id}/reset-password` wstawiały `auth_email_change` / `auth_password_reset`, co powodowało **błąd po udanej zmianie** w auth + `residents` (500 bez `detail` → generyczny komunikat w UI, mimo zapisanego emaila/hasła).
+- **`supabase/migrations/026_audit_log_auth_actions.sql`** — rozszerza CHECK o `auth_email_change` i `auth_password_reset`.
+- **`api/routes/residents.py`** — `try`/`except` wokół `INSERT` do `audit_log` dla obu operacji: przy niepowodzeniu audytu — `warning` w logach, odpowiedź nadal **200** (operacja w auth już wykonana); po migracji 026 INSERT przechodzi normalnie.
+- **Dokumentacja operacyjna:** `docs/operations/01-wdrozenie.md` (zakres migracji 012–026), `CLAUDE.md` / `.cursorrules`, `feature-map.md`, `memory/postep.md`.
+
+### 2026-04-27 — Admin może zmienić email i zresetować hasło mieszkańca
+- **`api/routes/residents.py`** — dwa nowe endpointy (admin only, dla `has_account=true`):
+  - `PATCH /residents/{id}/email` — zmiana adresu email; aktualizuje `auth.users.email` (`email_confirm=True`) + `residents.email`; audit log `auth_email_change` (stary + nowy email)
+  - `POST /residents/{id}/reset-password` — generuje 12-znakowe losowe hasło bez znaków mylących (`0/O/1/l/I`); aktualizuje `auth.users.password`; zwraca hasło **jednokrotnie** w odpowiedzi (system nie zachowuje); audit log `auth_password_reset` (sam fakt, bez hasła)
+  - Helper `_global_sign_out()` — po każdej zmianie wymuszone wylogowanie wszystkich aktywnych sesji mieszkańca przez REST `POST /auth/v1/admin/users/{id}/logout?scope=global` (best-effort, błąd loguje warning)
+- **`api/models/schemas.py`** — `ResidentEmailUpdate` (EmailStr), `PasswordResetOut` (`{password}`)
+- **`site/src/pages/admin/ResidentsPage.tsx`** — w edycji mieszkańca z kontem: input email odblokowany + przycisk **„Zmień email"** (osobna operacja z confirm), sekcja **„Hasło"** z przyciskiem **„Wygeneruj nowe hasło"** → modal pokazujący hasło raz (font monospace, akcja **Kopiuj** → `navigator.clipboard`); mieszkaniec bez konta nie widzi nowych elementów (zostaje istniejąca ścieżka „nadaj konto")
+- **Motywacja:** dotychczas mieszkaniec, który zapomniał hasła lub zmienił adres, musiał czekać na ścieżkę self-service (reset przez email) — admin nie miał szybkiej drogi awaryjnej. Wymuszone wylogowanie unieważnia wszystkie istniejące sesje, nie tylko refresh token (~1h access_token)
+- **Testy:** +8 pytest (`test_residents.py` — sukces zmiany email/hasła z weryfikacją sign-out, blokady dla `has_account=false`, 404, walidacje, weryfikacja składu hasła i braku znaków mylących), +3 vitest (`ResidentsPage.test.tsx` — zmiana email, generowanie hasła + modal + copy, ukrycie akcji dla `has_account=false`); 398/398 pytest, 153/153 vitest
+
 ### 2026-04-24 — Mieszkańcy bez konta logowania (głosy z zebrania bez email)
 - **Migracja `025_residents_optional_email.sql`** — `email` nullable, partial unique index `residents_email_unique_not_null` (WHERE email IS NOT NULL), kolumna `has_account BOOLEAN DEFAULT true`
 - **`api/models/schemas.py`** — `ResidentCreate.email/password` opcjonalne (validator wymusza parę); `ResidentUpdate` dostaje `email/password` do „nadawania konta"; `ResidentOut.has_account`

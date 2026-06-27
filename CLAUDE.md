@@ -47,7 +47,7 @@ cd site && npm test
 cd api && pytest
 ```
 
-**Python (venv, Windows):** interpreter projektu to **`D:\_AI\gabi_site\.venv\Scripts\python.exe`** (katalog venv: `.venv` w katalogu głównym repo). Gdy w terminalu brak `python`/`pytest` w PATH, użyj tej ścieżki lub `.\.venv\Scripts\Activate.ps1` przed komendami w `api/`.
+**Python (venv, Windows):** interpreter projektu to **`D:\_AI\gabi-site\.venv\Scripts\python.exe`** (katalog venv: `.venv` w katalogu głównym repo). Gdy w terminalu brak `python`/`pytest` w PATH, użyj tej ścieżki lub `.\.venv\Scripts\Activate.ps1` przed komendami w `api/`. Świeża instalacja Pythona (np. winget) — czasem wymaga **nowej sesji terminala**, zanim `python` trafi do PATH.
 
 ## Zasady implementacji
 
@@ -67,7 +67,7 @@ cd api && pytest
 - Nie commituj `.env` — sekrety tylko w zmiennych środowiskowych
 
 ### Import danych finansowych
-- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`.
+- **Zestawienie bankowe (.xls)** — `POST /api/import/payments-bank-statement` (xlrd, dopasowanie po `apartments.billing_surname` i numerach lokali z opisu/adresu przelewu). Parser: `api/services/bank_statement_parser.py`. **Ręczne przypisanie** niedopasowanych: pole formularza `manual_assignments` (JSON `{row_index: [apartment_id,...]}`) — 1 lokal = całość, ≥2 lokale = split (proporcjonalny w grupie / równy bez); odpowiedź zawiera `manual_matched_count`.
 - **Stan początkowy i wpłaty z Excel (.xlsx)** — `GET/POST /api/import` (szablon, `initial-state`, `payments`, `payments-template`, `openpyxl`), UI w panelu Lokale.
 - **Deduplikacja wpłat** (import `.xls` i import wpłat `.xlsx`) — para `(apartment_id, payment_date)`; ponowny import tego samego pliku nie dubluje zapisów; szczegóły: `docs/decisions/ADR-014-payment-import-deduplication.md`.
 - **MT940** — niewymagane; pozostajemy przy zestawieniach bankowych w `.xls` i imporcie ręcznym `.xlsx`.
@@ -117,10 +117,10 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - Storage: bucket "documents" (prywatny, max 10MB, tylko PDF)
 - Edge Function: `send-email` — relay SMTP do az.pl (patrz ADR-011)
 - Storage: bucket "backups" (prywatny, max 50MB, JSON — tygodniowy backup cron)
-- Migracje 001-025 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`, 021 `announcements.is_public`, 022 domyślna wartość `is_public`, 023 widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, 024 `resolutions.is_test` + `reminder_sent_at`, 025 `residents.email` nullable + `has_account`) — uruchamiane przez SQL Editor w dashboardzie Supabase
+- Migracje 001-026 (m.in. 017 zarządca, 018 grupy rozliczeniowe, 019 billing_surname, 020 zgody RODO w `residents`, 021 `announcements.is_public`, 022 domyślna wartość `is_public`, 023 widok `last_import_activity` dla „Saldo na dzień" w panelu mieszkańca, 024 `resolutions.is_test` + `reminder_sent_at`, 025 `residents.email` nullable + `has_account`, 026 `audit_log.action`: `auth_email_change` + `auth_password_reset`) — uruchamiane przez SQL Editor w dashboardzie Supabase
 
 ## API endpoints
-- `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user); email + password **opcjonalne** — brak = mieszkaniec „bez konta" (`has_account=false`, placeholder auth user z banem ~100 lat, `residents.email=NULL`); `PATCH /residents/:id` z email+password dla `has_account=false` → nadanie konta (unban + `has_account=true`); `POST /residents/{id}/apartments` + `DELETE /residents/{id}/apartments/{apt_id}` — przypisanie/odpięcie lokalu do istniejącego właściciela (jeden właściciel → wiele lokali)
+- `POST /api/residents` — CRUD mieszkańców (admin, tworzy auth user); email + password **opcjonalne** — brak = mieszkaniec „bez konta" (`has_account=false`, placeholder auth user z banem ~100 lat, `residents.email=NULL`); `PATCH /residents/:id` z email+password dla `has_account=false` → nadanie konta (unban + `has_account=true`); **`PATCH /residents/{id}/email`** (admin, dla `has_account=true`) — zmiana adresu email + audit log `auth_email_change` + wymuszone wylogowanie wszystkich sesji (REST `POST /auth/v1/admin/users/{id}/logout?scope=global`); **`POST /residents/{id}/reset-password`** (admin, dla `has_account=true`) — generuje 12-znakowe losowe hasło (bez znaków mylących `0/O/1/l/I`), zwraca **jednokrotnie** w odpowiedzi (system nie zachowuje), audit log `auth_password_reset`, wymuszone wylogowanie wszystkich sesji; `POST /residents/{id}/apartments` + `DELETE /residents/{id}/apartments/{apt_id}` — przypisanie/odpięcie lokalu do istniejącego właściciela (jeden właściciel → wiele lokali)
 - `POST /api/contact` — formularz kontaktowy (publiczny, bez auth, email via Edge Function)
 - `/api/resolutions` — CRUD uchwał + głosowanie + reset głosów; `POST :id/votes/register` (głosy z zebrania, tylko szkic) + `DELETE :id/votes/:resident_id` (pojedynczy głos, tylko szkic); `GET :id/results` — agregacja z wagami udziałów (`apartments.share`, właściciel lokalu); `POST :id/vote` — uprawnienia wg `voting_eligibility` (mieszkaniec; admin/zarządca tylko jako właściciel lokalu); `voting_start`/`voting_end` wymagane przy zapisie; `GET /resolutions/cron/close-ended` (cron, `CRON_SECRET`) — `voting` → `closed` po `voting_end`; **`POST :id/remind?dry_run=bool`** (admin) — przypomnienia e-mail do uprawnionych, którzy nie głosowali (dry-run = lista bez wysyłki; ignoruje `is_test`); **`GET /resolutions/cron/remind-pending`** (cron, `CRON_SECRET`) — codziennie, okno ≤ 2 dni do `voting_end`, pomija `is_test` i już wysłane (`reminder_sent_at IS NULL`); pole **`is_test`** ukrywa uchwałę przed mieszkańcami, blokuje auto-ogłoszenie i cron przypomnień
 - `/api/profile` — profil + `can_vote_resolutions`, zgody RODO: `needs_legal_acceptance`, wersje dokumentów; **`POST /profile/legal-consent`** — akceptacja polityki i regulaminu (wymóg przed panelem); wersje obowiązujące: env `CURRENT_PRIVACY_VERSION`, `CURRENT_TERMS_VERSION`
@@ -128,6 +128,7 @@ Gdy dodajesz nową zasadę, skill lub subagenta do `CLAUDE.md`, **musisz** równ
 - `GET /api/audit` — dziennik operacji (admin lub zarządca, filtry: tabela/akcja/daty, paginacja)
 - `POST /api/backup/cron` — tygodniowy backup do Storage (cron, 12 tyg. retencji, email notification)
 - `GET /api/retention/cron` — kwartalny cron RODO: carry-forward salda + usuwanie danych finansowych >5 lat (charges, payments, bank_statements, audit_log); email do adminów/zarządców
+- `/api/payments` — ręczna korekta wpłat (admin): `GET ?apartment_id=` (lista wpłat lokalu), `POST` (dodanie ręczne — gotówka/korekta, `confirmed_by_admin=true`, `matched_automatically=false`, `billing_group_id` z lokalu), `PATCH :id` (kwota/data/tytuł + **przeniesienie do innego lokalu** przez `apartment_id`; `billing_group_id` podąża za lokalem), `DELETE :id` (usunięcie; jeśli wpłata to rozbicie zbiorcze — usuwa wpłatę nadrzędną z kaskadą). **Blokada**: PATCH na wpłatach będących częścią rozbicia zbiorczego (dziecko `parent_payment_id` lub rodzic `apartment_id IS NULL`) → 409. Wszystko logowane triggerem audytu na `payments`. UI: modal „Wpłaty — lokal X" w panelu Lokale (`ApartmentPaymentsModal`)
 - `/api/billing-groups` — grupy rozliczeniowe (CRUD grup, przypisywanie lokali, rozbicie wpłat, saldo łączne — 8 endpointów)
 - `/api/import` — import z Excel (`GET /template`, `POST /initial-state`, `GET /payments-template`, `POST /payments`, `POST /payments-bank-statement`, admin)
 - `GET /api/health` — health check

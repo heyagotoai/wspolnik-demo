@@ -218,6 +218,109 @@ describe('ResidentsPage', () => {
     expect(screen.getByText('Admin')).toBeInTheDocument()
   })
 
+  it('admin zmienia email mieszkańca z kontem (PATCH /residents/:id/email)', async () => {
+    const user = userEvent.setup()
+    const { api } = await import('../../lib/api')
+    const patchSpy = vi.mocked(api.patch)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan Kowalski')).toBeInTheDocument()
+    })
+
+    // Otwórz edycję pierwszego mieszkańca (Jan Kowalski)
+    const editIcons = screen.getAllByTestId('edit-icon')
+    await user.click(editIcons[0])
+
+    expect(screen.getByText('Edytuj mieszkańca')).toBeInTheDocument()
+    // Przycisk „Zmień email" jest zablokowany dopóki email nie zostanie zmieniony
+    const changeEmailBtn = screen.getByText('Zmień email')
+    expect(changeEmailBtn).toBeDisabled()
+
+    // Zmień email — input email to drugi textbox (po full_name)
+    const textboxes = screen.getAllByRole('textbox')
+    await user.clear(textboxes[1])
+    await user.type(textboxes[1], 'jan.nowy@gabi.pl')
+
+    expect(changeEmailBtn).not.toBeDisabled()
+    await user.click(changeEmailBtn)
+
+    // Potwierdź dialog
+    await user.click(await screen.findByRole('button', { name: 'Zmień adres' }))
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith('/residents/r1/email', { email: 'jan.nowy@gabi.pl' })
+    })
+  })
+
+  it('admin generuje nowe hasło — modal pokazuje hasło i pozwala skopiować', async () => {
+    const user = userEvent.setup()
+    const { api } = await import('../../lib/api')
+    const postSpy = vi.mocked(api.post)
+    postSpy.mockResolvedValueOnce({ password: 'TestHaslo123' })
+
+    const writeTextMock = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan Kowalski')).toBeInTheDocument()
+    })
+
+    const editIcons = screen.getAllByTestId('edit-icon')
+    await user.click(editIcons[0])
+
+    await user.click(screen.getByText('Wygeneruj nowe hasło'))
+
+    // Potwierdź dialog
+    await user.click(await screen.findByRole('button', { name: 'Wygeneruj' }))
+
+    await waitFor(() => {
+      expect(postSpy).toHaveBeenCalledWith('/residents/r1/reset-password', {})
+    })
+
+    // Modal z hasłem
+    await waitFor(() => {
+      expect(screen.getByText('Nowe hasło')).toBeInTheDocument()
+    })
+    expect(screen.getByDisplayValue('TestHaslo123')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Kopiuj'))
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith('TestHaslo123')
+    })
+  })
+
+  it('mieszkaniec bez konta nie widzi przycisku „Wygeneruj nowe hasło"', async () => {
+    mockOrder.mockResolvedValue({
+      data: [
+        { id: 'r3', email: null, full_name: 'Piotr Bez-Konta', apartment_number: '3C', role: 'resident', is_active: true, has_account: false, created_at: '2026-04-01T00:00:00' },
+      ],
+      error: null,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Piotr Bez-Konta')).toBeInTheDocument()
+    })
+
+    const editIcons = screen.getAllByTestId('edit-icon')
+    await user.click(editIcons[0])
+
+    expect(screen.getByText('Edytuj mieszkańca')).toBeInTheDocument()
+    expect(screen.queryByText('Wygeneruj nowe hasło')).not.toBeInTheDocument()
+    expect(screen.queryByText('Zmień email')).not.toBeInTheDocument()
+    // Pole hasła „nadaj konto" jest widoczne
+    expect(screen.getByText(/Hasło \(nadaj konto\)/)).toBeInTheDocument()
+  })
+
   it('zarządca widzi listę ale nie widzi akcji', async () => {
     mockUseRole.mockReturnValue({
       role: 'manager', isAdmin: false, isManager: true, isAdminOrManager: true, isResident: false, loading: false,
